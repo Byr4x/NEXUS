@@ -1,34 +1,32 @@
-import '../globals.css'
-import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
-import Sidebar from '@/components/Sidebar'
+'use client'
+
+import React, { useState } from 'react'
+import { ThemeProvider } from '@/contexts/ThemeContext'
 import Header from '@/components/Header'
+import Sidebar from '@/components/Sidebar'
 
-const inter = Inter({ subsets: ['latin'] })
-
-export const metadata: Metadata = {
-  title: 'Admin Dashboard',
-  description: 'A powerful admin dashboard built with Next.js',
-}
-
-export default function AdminLayout({
+export default function Layout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen)
+  }
+
   return (
-    <html lang="en">
-      <body className={inter.className}>
-          <div className="min-h-screen grid grid-cols-1 xl:grid-cols-6 border-primary">
-            <Sidebar />
-            <div className="xl:col-span-5 flex flex-col h-screen">
-              <Header />
-              <main className={`flex-1 overflow-y-scroll p-5 pt-3 bg-gray-500`}>
-                  {children}
-              </main>
-            </div>
-          </div>
-      </body>
-    </html>
+    <ThemeProvider>
+      <div className="min-h-screen flex flex-col">
+        <Header toggleSidebar={toggleSidebar} isSidebarOpen={isSidebarOpen} />
+        <div className="flex flex-1 overflow-hidden">
+          <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
+          <main className="flex-1 overflow-y-auto p-5 pt-3">
+            {children}
+          </main>
+        </div>
+      </div>
+    </ThemeProvider>
   )
 }

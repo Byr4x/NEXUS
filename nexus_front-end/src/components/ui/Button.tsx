@@ -1,22 +1,23 @@
-import React from 'react'
+import React from 'react';
+import { TextField, Button as MuiButton, ButtonProps } from '@mui/material';
 
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'danger'
-}
+export const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<typeof TextField>>((props, ref) => (
+  <TextField
+    variant="outlined"
+    fullWidth
+    inputRef={ref}
+    {...props}
+  />
+));
 
-export function Button({ children, variant = 'primary', className, ...props }: ButtonProps) {
-  const baseStyle = 'px-4 py-2 rounded font-semibold'
-  const variantStyles = {
-    primary: 'bg-blue-500 text-white hover:bg-blue-600',
-    secondary: 'bg-gray-200 text-gray-800 hover:bg-gray-300',
-    danger: 'bg-red-500 text-white hover:bg-red-600'
-  }
+Input.displayName = 'Input';
 
-  const classes = `${baseStyle} ${variantStyles[variant]} ${className || ''}`
+export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>((props, ref) => (
+  <MuiButton
+    variant="contained"
+    ref={ref}
+    {...props}
+  />
+));
 
-  return (
-    <button className={classes} {...props}>
-      {children}
-    </button>
-  )
-}
+Button.displayName = 'Button';
