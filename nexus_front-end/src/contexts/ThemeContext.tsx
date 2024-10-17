@@ -2,38 +2,46 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
 
-type Theme = 'light' | 'dark'
-
-type ThemeContextType = {
+interface ThemeContextType {
   isDarkMode: boolean
-  toggleTheme: () => void
+  toggleDarkMode: () => void
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [isDarkMode, setIsDarkMode] = useState(false)
+export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
   useEffect(() => {
-    const isDark = localStorage.getItem('darkMode') === 'true'
-    setIsDarkMode(isDark)
+    const storedMode = localStorage.getItem('toolpad-mode')
+    if (storedMode === 'dark') {
+      setIsDarkMode(true)
+      document.documentElement.classList.add('dark')
+    } else if (storedMode === 'light') {
+      setIsDarkMode(false)
+      document.documentElement.classList.remove('dark')
+    } else {
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+      setIsDarkMode(prefersDark)
+      document.documentElement.classList.toggle('dark', prefersDark)
+    }
   }, [])
 
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', isDarkMode)
-    localStorage.setItem('darkMode', isDarkMode.toString())
-  }, [isDarkMode])
-
-  const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode)
+  const toggleDarkMode = () => {
+    setIsDarkMode(prev => {
+      const newMode = !prev
+      localStorage.setItem('toolpad-mode', newMode ? 'dark' : 'light')
+      document.documentElement.classList.toggle('dark', newMode)
+      return newMode
+    })
   }
 
   return (
-    <ThemeContext.Provider value={{ isDarkMode, toggleTheme }}>
+    <ThemeContext.Provider value={{ isDarkMode, toggleDarkMode }}>
       {children}
     </ThemeContext.Provider>
-  )
-}
+  );
+};
 
 export function useTheme() {
   const context = useContext(ThemeContext)
