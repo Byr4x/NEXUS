@@ -44,7 +44,7 @@ export default function Products() {
     'rgba(238, 231, 211, 0.7)', // beige
     'rgba(0, 0, 0, 0.8)',      // black (slightly transparent)
     'rgba(255, 255, 255, 0.9)', // white (slightly transparent)
-    'rgba(0, 0, 0, 0.05)',        // transparent
+    'rgba(0, 0, 0, 0.3)',        // transparent
   ]
 
   const maizeColor = 'rgba(255, 254, 238, 0.7)'
@@ -277,7 +277,7 @@ export default function Products() {
                     style={{ backgroundColor: color }}
                     onClick={() => setBagColor(color)}
                   >
-                    {color === 'rgba(0, 0, 0, 0.05)' && (
+                    {color === 'rgba(0, 0, 0, 0.3)' && (
                       <>
                         <div className="absolute inset-0 bg-white dark:bg-gray-700 rounded-full" />
                         <div className="absolute inset-0 flex items-center justify-center">
@@ -391,7 +391,7 @@ export default function Products() {
             ref={canvasRef}
             width={canvasSize.width}
             height={canvasSize.height}
-            className="w-full h-full object-contain outline outline-offset-4 outline-dashed outline-gray-300 dark:outline-gray-600 rounded-xl"
+            className={`w-full h-full object-contain outline outline-offset-4 outline-dashed outline-gray-300 dark:outline-gray-600 rounded-xl bg-light-image dark:bg-dark-image bg-cover bg-center`}
           />
         </div>
       </div>

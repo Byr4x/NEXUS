@@ -23,6 +23,10 @@ const config: Config = {
           '50%': { opacity: '1' },
         },
       },
+      backgroundImage: {
+        'dark-image': "url('https://www.semana.com/resizer/v2/TXYNYBTBSJFWJOKAWZ2FPSAKUM.jpg?auth=a09223b46e0d3e9b00e655c7e827e7f335ff4ada894e213e6111763eb7e45998&smart=true&quality=75&width=1280&height=1280')",
+        'light-image': "url('https://res.cloudinary.com/db5lqptwu/image/upload/v1729278252/logos/spaixnfoxwcs3t8tiu7m.jpg')",
+      },
     },
   },
   darkMode: "class",
