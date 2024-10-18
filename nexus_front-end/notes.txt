@@ -1,1 +1,10 @@
 https://react-icons.github.io/react-icons/
+https://www.rochehermanos.com/es/listado-productos/productos-por-formato/bolsas
+
+TUBULAR https://res.cloudinary.com/db5lqptwu/image/upload/v1729257739/logos/tubular.png
+SEMI-TUBULAR https://res.cloudinary.com/db5lqptwu/image/upload/v1729257739/logos/semi-tubular.png
+LAMINA https://res.cloudinary.com/db5lqptwu/image/upload/v1729257739/logos/lamina.png
+BOLSA https://res.cloudinary.com/db5lqptwu/image/upload/v1729257739/logos/bolsa.png
+
+FUELLE LATERAL https://res.cloudinary.com/db5lqptwu/image/upload/v1729274913/logos/fuelle-lat.png
+FUELLE FONDO https://res.cloudinary.com/db5lqptwu/image/upload/v1729274913/logos/fuelle-fon.png
