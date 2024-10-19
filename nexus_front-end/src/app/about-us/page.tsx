@@ -98,7 +98,7 @@ export default function AboutUs() {
             </p>
           </div>
         </motion.div>
-      </div>
+        </div>
     </div>
   )
 }

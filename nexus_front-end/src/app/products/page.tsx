@@ -7,6 +7,7 @@ import { Tooltip } from "@nextui-org/tooltip";
 type ProductType = 'Tubular' | 'Semi-tubular' | 'Lamina' | 'Bolsa'
 type MaterialType = 'Alta Densidad' | 'Baja Densidad' | 'Polipropileno' | 'Maíz'
 type GussetType = 'Lateral' | 'Fondo' | 'Ninguno'
+type FlapType = 'Sin Solapa' | 'Interna' | 'Interna Doble' | 'Volada'
 
 const productTypes: { type: ProductType; imageUrl: string }[] = [
   { type: 'Tubular', imageUrl: 'https://res.cloudinary.com/db5lqptwu/image/upload/v1729257739/logos/tubular.png' },
@@ -21,6 +22,13 @@ const gussetTypes: { type: GussetType; imageUrl: string }[] = [
   { type: 'Fondo', imageUrl: 'https://res.cloudinary.com/db5lqptwu/image/upload/v1729274913/logos/fuelle-fon.png' },
 ]
 
+const flapTypes: { type: FlapType; imageUrl: string }[] = [
+  { type: 'Sin Solapa', imageUrl: 'https://res.cloudinary.com/db5lqptwu/image/upload/v1729257739/logos/bolsa.png' },
+  { type: 'Interna', imageUrl: 'https://res.cloudinary.com/db5lqptwu/image/upload/v1729274913/logos/solapa-interna.png' },
+  { type: 'Interna Doble', imageUrl: 'https://res.cloudinary.com/db5lqptwu/image/upload/v1729274913/logos/solapa-interna-doble.png' },
+  { type: 'Volada', imageUrl: 'https://res.cloudinary.com/db5lqptwu/image/upload/v1729274913/logos/solapa-volada.png' },
+]
+
 export default function Products() {
   const [productType, setProductType] = useState<ProductType>('Tubular')
   const [materialType, setMaterialType] = useState<MaterialType>('Alta Densidad')
@@ -33,6 +41,9 @@ export default function Products() {
   const [gussetType, setGussetType] = useState<GussetType>('Ninguno')
   const [gusset, setGusset] = useState(0)
   const [isGussetSelectorOpen, setIsGussetSelectorOpen] = useState(false)
+  const [flapType, setFlapType] = useState<FlapType>('Sin Solapa')
+  const [flapSize, setFlapSize] = useState(0)
+  const [isFlapSelectorOpen, setIsFlapSelectorOpen] = useState(false)
 
   const plasticColors = [
     'rgba(255, 0, 0, 0.7)',    // red
@@ -44,14 +55,14 @@ export default function Products() {
     'rgba(238, 231, 211, 0.7)', // beige
     'rgba(0, 0, 0, 0.8)',      // black (slightly transparent)
     'rgba(255, 255, 255, 0.9)', // white (slightly transparent)
-    'rgba(0, 0, 0, 0.3)',        // transparent
+    'rgba(0, 0, 0, 0.1)',        // transparent
   ]
 
   const maizeColor = 'rgba(255, 254, 238, 0.7)'
 
   useEffect(() => {
     drawCanvas()
-  }, [width, length, canvasSize, productType, bagColor, gussetType, gusset])
+  }, [width, length, canvasSize, productType, bagColor, gussetType, gusset, flapType, flapSize])
 
   useEffect(() => {
     if (materialType === 'Maíz') {
@@ -198,6 +209,31 @@ export default function Products() {
 
       ctx.stroke()
     }
+
+    // Draw flap
+    if (productType === 'Bolsa' && gussetType !== 'Lateral' && flapType !== 'Sin Solapa') {
+      ctx.strokeStyle = '#000000'
+      ctx.lineWidth = 2
+      ctx.beginPath()
+
+      const flapY = flapType === 'Volada' ? bagY - (flapSize * scaleY) : bagY + (flapSize * scaleY)
+
+      ctx.moveTo(bagX, flapY)
+      ctx.lineTo(bagX + bagWidth, flapY)
+
+      // Measurement line for flap
+      drawArrow(bagX - 20, bagY, bagX - 20, flapY)
+      drawArrow(bagX - 20, flapY, bagX - 20, bagY)
+
+      // Measurement text for flap
+      ctx.save()
+      ctx.translate(bagX - 35, (flapY + bagY) / 2)
+      ctx.rotate(-Math.PI / 2)
+      ctx.fillText(`${flapSize} cm`, 0, 0)
+      ctx.restore()
+
+      ctx.stroke()
+    }
   }
 
   const renderDesigner = (): JSX.Element => {
@@ -277,7 +313,7 @@ export default function Products() {
                     style={{ backgroundColor: color }}
                     onClick={() => setBagColor(color)}
                   >
-                    {color === 'rgba(0, 0, 0, 0.3)' && (
+                    {color === 'rgba(0, 0, 0, 0.1)' && (
                       <>
                         <div className="absolute inset-0 bg-white dark:bg-gray-700 rounded-full" />
                         <div className="absolute inset-0 flex items-center justify-center">
@@ -379,6 +415,64 @@ export default function Products() {
             )}
           </>
         )}
+
+        {/* Flap Selector (for 'Bolsa' type and when gusset is not 'Lateral') */}
+        {productType === 'Bolsa' && gussetType !== 'Lateral' && (
+          <>
+            <div>
+              <label htmlFor="flapSelector" className="block text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Seleccionar Tipo de Solapa
+              </label>
+              <div
+                id="flapSelector"
+                className="flex justify-between items-center cursor-pointer bg-gray-100 dark:bg-gray-700 p-3 rounded text-lg"
+                onClick={() => setIsFlapSelectorOpen(!isFlapSelectorOpen)}
+              >
+                <span className="text-gray-800 dark:text-gray-200">{flapType}</span>
+                {isFlapSelectorOpen ? <IoIosArrowUp size={24} /> : <IoIosArrowDown size={24} />}
+              </div>
+            </div>
+
+            {isFlapSelectorOpen && (
+              <div className="grid grid-cols-2 gap-6 mb-6">
+                {flapTypes.map((flap) => (
+                  <div
+                    key={flap.type}
+                    className={`cursor-pointer border p-4 rounded ${
+                      flapType === flap.type ? 'border-sky-500' : 'border-gray-300 dark:border-gray-600'
+                    } flex flex-col items-center justify-center h-48`}
+                    onClick={() => setFlapType(flap.type)}
+                  >
+                    <img
+                      src={flap.imageUrl}
+                      alt={flap.type}
+                      className={`w-28 h-28 object-contain ${
+                        flapType === flap.type ? 'opacity-100 scale-110' : 'opacity-65'
+                      } transition-all duration-200`}
+                    />
+                    <p className="text-center mt-4 text-lg font-medium text-gray-800 dark:text-gray-200">{flap.type}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Flap Size Input */}
+            {flapType !== 'Sin Solapa' && (
+              <div>
+                <label htmlFor="flapSize" className="block text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Tamaño de Solapa (cm)
+                </label>
+                <input
+                  id="flapSize"
+                  type="number"
+                  value={flapSize}
+                  onChange={(e) => setFlapSize(Number(e.target.value))}
+                  className="w-full border p-3 rounded bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-lg"
+                />
+              </div>
+            )}
+          </>
+        )}
       </div>
     );
   }
@@ -391,7 +485,7 @@ export default function Products() {
             ref={canvasRef}
             width={canvasSize.width}
             height={canvasSize.height}
-            className={`w-full h-full object-contain outline outline-offset-4 outline-dashed outline-gray-300 dark:outline-gray-600 rounded-xl bg-light-image dark:bg-dark-image bg-cover bg-center`}
+            className={`w-full h-full object-contain outline outline-offset-4 outline-dashed outline-gray-300 dark:outline-gray-600 rounded-xl`}
           />
         </div>
       </div>

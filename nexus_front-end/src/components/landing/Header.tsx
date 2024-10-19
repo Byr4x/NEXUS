@@ -26,8 +26,8 @@ export default function Header() {
           </a>
         </motion.h1>
         <nav className="hidden md:flex space-x-6">
-          {['Inicio', 'Productos', 'Sobre Nosotros', 'Contacto', 'POT'].map((item, index) => {
-            const itemPath = item === 'Inicio' ? '/' : item === 'Productos' ? '/products' :item === 'Sobre Nosotros' ? '/about-us' : `/${item.toLowerCase().replace(' ', '-')}`
+          {['Inicio', 'Productos', 'Sobre Nosotros', 'Contáctanos', 'POT'].map((item, index) => {
+            const itemPath = item === 'Inicio' ? '/' : item === 'Productos' ? '/products' : item === 'Sobre Nosotros' ? '/about-us' : item === 'Contáctanos' ? '/contact-us' : `/${item.toLowerCase().replace(' ', '-')}`
             const isActive = pathname === itemPath
             return (
               <motion.a
