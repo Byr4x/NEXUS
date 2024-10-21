@@ -10,29 +10,29 @@ const contactInfo = [
   { icon: MapPin, text: 'Carrera 43A # 61Sur 152 INT. 227 Sabaneta, Antioquia', href: 'https://maps.app.goo.gl/6ZoDc8KPwECo4TXMA' },
 ]
 
-const salesAdvisors = [
-  {
-    name: 'Jose Camilo Estrada',
-    image: 'https://res.cloudinary.com/db5lqptwu/image/upload/v1729353160/logos/camilo.jpg',
-    position: 'Asesor Comercial',
-    email: 'camilo.estrada@beiplas.com',
-    phone: '301 2700 ext. 111',
-  },
-  {
-    name: 'Juan Sebastian Estrada',
-    image: 'https://res.cloudinary.com/db5lqptwu/image/upload/v1729353160/logos/sebastian.jpg',
-    position: 'Asesor Comercial',
-    email: 'jsebastian@beiplas.com',
-    phone: '301 2700 ext. 112',
-  },
-  {
-    name: 'Huber Agudelo Bedoya',
-    image: 'https://res.cloudinary.com/db5lqptwu/image/upload/v1729354098/logos/huber.jpg',
-    position: 'Asesor Comercial',
-    email: 'ventas3@beiplas.com',
-    phone: '301 2700 ext. 104',
-  }
-]
+// const salesAdvisors = [
+//   {
+//     name: 'Jose Camilo Estrada',
+//     image: 'https://res.cloudinary.com/db5lqptwu/image/upload/v1729353160/logos/camilo.jpg',
+//     position: 'Asesor Comercial',
+//     email: 'camilo.estrada@beiplas.com',
+//     phone: '301 2700 ext. 111',
+//   },
+//   {
+//     name: 'Juan Sebastian Estrada',
+//     image: 'https://res.cloudinary.com/db5lqptwu/image/upload/v1729353160/logos/sebastian.jpg',
+//     position: 'Asesor Comercial',
+//     email: 'jsebastian@beiplas.com',
+//     phone: '301 2700 ext. 112',
+//   },
+//   {
+//     name: 'Huber Agudelo Bedoya',
+//     image: 'https://res.cloudinary.com/db5lqptwu/image/upload/v1729354098/logos/huber.jpg',
+//     position: 'Asesor Comercial',
+//     email: 'ventas3@beiplas.com',
+//     phone: '301 2700 ext. 104',
+//   }
+// ]
 
 export default function ContactUs() {
   return (
@@ -100,7 +100,7 @@ export default function ContactUs() {
           </motion.div>
         </div>
 
-        <motion.div
+        {/* <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.8 }}
@@ -137,7 +137,7 @@ export default function ContactUs() {
               </div>
             ))}
           </div>
-        </motion.div>
+        </motion.div> */}
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
