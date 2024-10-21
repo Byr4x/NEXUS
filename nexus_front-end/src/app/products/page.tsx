@@ -720,15 +720,6 @@ export default function Products() {
     );
   }
 
-  const renderDesigner = (): JSX.Element => {
-    // This function will be implemented later for the product design tab
-    return (
-      <div>
-        {/* Product design components will go here */}
-      </div>
-    );
-  }
-
   const renderBagPreview = (): JSX.Element => {
     return (
       <div className="w-full lg:w-1/2 flex justify-center items-center mt-8 lg:mt-0">
