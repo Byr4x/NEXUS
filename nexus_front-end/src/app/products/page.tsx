@@ -5,6 +5,7 @@ import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io'
 import { Tooltip } from "@nextui-org/tooltip";
 import { Tab } from '@headlessui/react'
 import jsPDF from 'jspdf'
+import { Switch } from "@nextui-org/switch";
 
 type ProductType = 'Tubular' | 'Semi-tubular' | 'Lamina' | 'Bolsa'
 type MaterialType = 'Alta Densidad' | 'Baja Densidad' | 'Polipropileno' | 'Maíz'
@@ -56,6 +57,7 @@ export default function Products() {
   const [troquelType, setTroquelType] = useState<TroquelType>('Sin Troquel')
   const [isTroquelSelectorOpen, setIsTroquelSelectorOpen] = useState(false)
   const [activeTab, setActiveTab] = useState(0)
+  const [useInches, setUseInches] = useState(false)
 
   const plasticColors = [
     'rgba(255, 0, 0, 0.7)',    // red
@@ -135,8 +137,9 @@ export default function Products() {
     }
   }
 
-  const handleGussetSizeChange = (size: number) => {
-    setGusset(size)
+  const handleGussetSizeChange = (value: number) => {
+    const newGusset = convertToCm(value)
+    setGusset(newGusset)
     if (gussetType === 'Lateral') {
       setTroquelType('Camiseta')
     }
@@ -148,6 +151,18 @@ export default function Products() {
 
   const handleTroquelTypeChange = (type: TroquelType) => {
     setTroquelType(type)
+  }
+
+  const handleWidthChange = (value: number) => {
+    setWidth(convertToCm(value))
+  }
+
+  const handleLengthChange = (value: number) => {
+    setLength(convertToCm(value))
+  }
+
+  const handleFlapSizeChange = (value: number) => {
+    setFlapSize(convertToCm(value))
   }
 
   const drawCanvas = () => {
@@ -420,6 +435,14 @@ export default function Products() {
     pdf.save('diseno-producto.pdf')
   }
 
+  const convertToCm = (value: number): number => {
+    return useInches ? Math.round(value * 2.54 * 100) / 100 : value
+  }
+
+  const convertFromCm = (value: number): number => {
+    return useInches ? Math.round(value / 2.54 * 100) / 100 : value
+  }
+
   const renderStyle = (): JSX.Element => {
     return (
       <div className="w-full flex flex-col gap-6">
@@ -512,30 +535,43 @@ export default function Products() {
           </div>
         )}
 
+        {/* Unit Toggle */}
+        <div className="flex items-center justify-between">
+          <span className="text-lg font-medium text-gray-700 dark:text-gray-300">Unidad de medida</span>
+          <div className="flex items-center space-x-2">
+            <span className="text-sm text-gray-600 dark:text-gray-400">cm</span>
+            <Switch
+              checked={useInches}
+              onChange={(e) => setUseInches(e.target.checked)}
+            />
+            <span className="text-sm text-gray-600 dark:text-gray-400">in</span>
+          </div>
+        </div>
+
         {/* Dimensions Inputs */}
         <div className="flex gap-6">
           <div className="w-1/2">
             <label htmlFor="width" className="block text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Ancho (cm)
+              Ancho ({useInches ? 'in' : 'cm'})
             </label>
             <input
               id="width"
               type="number"
-              value={width}
-              onChange={(e) => setWidth(Number(e.target.value))}
+              value={convertFromCm(width)}
+              onChange={(e) => handleWidthChange(Number(e.target.value))}
               className="w-full border p-3 rounded bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-lg"
             />
           </div>
           {['Lamina', 'Bolsa'].includes(productType) && (
             <div className="w-1/2">
               <label htmlFor="length" className="block text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Largo (cm)
+                Largo ({useInches ? 'in' : 'cm'})
               </label>
               <input
                 id="length"
                 type="number"
-                value={length}
-                onChange={(e) => setLength(Number(e.target.value))}
+                value={convertFromCm(length)}
+                onChange={(e) => handleLengthChange(Number(e.target.value))}
                 className="w-full border p-3 rounded bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-lg"
               />
             </div>
@@ -586,12 +622,12 @@ export default function Products() {
             {gussetType !== 'Ninguno' && (
               <div>
                 <label htmlFor="gusset" className="block text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Fuelle {gussetType === 'Lateral' ? 'Lateral' : 'de Fondo'} (cm)
+                  Fuelle {gussetType === 'Lateral' ? 'Lateral' : 'de Fondo'} ({useInches ? 'in' : 'cm'})
                 </label>
                 <input
                   id="gusset"
                   type="number"
-                  value={gusset}
+                  value={convertFromCm(gusset)}
                   onChange={(e) => handleGussetSizeChange(Number(e.target.value))}
                   className="w-full border p-3 rounded bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-lg"
                 />
@@ -644,13 +680,13 @@ export default function Products() {
             {flapType !== 'Sin Solapa' && (
               <div>
                 <label htmlFor="flapSize" className="block text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Tamaño de Solapa (cm)
+                  Tamaño de Solapa ({useInches ? 'in' : 'cm'})
                 </label>
                 <input
                   id="flapSize"
                   type="number"
-                  value={flapSize}
-                  onChange={(e) => setFlapSize(Number(e.target.value))}
+                  value={convertFromCm(flapSize)}
+                  onChange={(e) => handleFlapSizeChange(Number(e.target.value))}
                   className="w-full border p-3 rounded bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-lg"
                 />
               </div>
