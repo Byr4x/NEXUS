@@ -19,6 +19,7 @@
     "@nextui-org/react": "^2.4.8",
     "@nextui-org/tooltip": "^2.0.41",
     "@toolpad/core": "^0.7.0",
+    "@types/fabric": "^5.3.9",
     "@types/react-resizable": "^3.0.8",
     "chart.js": "^4.4.4",
     "fabric": "^6.4.3",

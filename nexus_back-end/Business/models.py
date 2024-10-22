@@ -53,9 +53,14 @@ class Reference(models.Model):
     material = models.ForeignKey(Material, on_delete=models.PROTECT, related_name='references', related_query_name='reference')
     width = models.DecimalField(max_digits=10, decimal_places=2)
     length = models.DecimalField(max_digits=10, decimal_places=2)
+    measure_unit_choices = {
+        0: 'cm',
+        1: 'pulg'
+    }
+    measure_unit = models.PositiveIntegerField(choices=measure_unit_choices, default=0)
     caliber = models.DecimalField(max_digits=10, decimal_places=2)
     film_color = models.CharField(max_length=25)
-    additive = ArrayField(models.CharField(max_length=30))
+    additive = ArrayField(models.CharField(max_length=30), null=True, blank=True)
     sealing_type_choices = {
         0: 'Sin sellado',
         1: 'Lateral',
@@ -127,10 +132,28 @@ class Reference(models.Model):
         if self.flap_type != 0:
             after_length += f' + S{self.flap_size}'
 
+        if self.measure_unit == 0:
+            after_length += f' CM'
+        elif self.measure_unit == 1:
+            after_length += f' PULG'
+
+        after_all = ''
+
+        if self.tape == 1:
+            after_all += f'CINTA RES'
+        elif self.tape == 2:
+            after_all += f'CINTA SEG'
+        elif self.die_cut_type == 1:
+            after_all += f'RIÑON'
+        elif self.die_cut_type == 2:
+            after_all += f'CAMISETA'
+        elif self.die_cut_type == 3:
+            after_all += f'PERFORACIONES'
+
         self.reference = f'{self.product_type.name.upper()} {self.material.name.upper()} {self.width}{after_width} x {self.length}{after_length}'
 
         if self.caliber > 0:
-            self.reference += f' CAL {self.caliber}'
+            self.reference += f' CAL {self.caliber} {after_all}'
 
         super().save(*args, **kwargs)
 
