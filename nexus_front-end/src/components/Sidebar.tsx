@@ -3,7 +3,9 @@
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LuChevronRight, LuLayoutDashboard, LuUsers, LuFileText } from 'react-icons/lu'
+import { RiArrowDropRightLine, RiDashboardLine, RiProductHuntLine, RiGroupLine, RiTeamLine } from 'react-icons/ri'
+import { MdOutlinePrecisionManufacturing, MdOutlinePlaylistAddCircle } from "react-icons/md";
+import { LiaUsersCogSolid, LiaHandshakeSolid, LiaUserTieSolid, LiaIndustrySolid, LiaFileInvoiceDollarSolid  } from 'react-icons/lia'
 import { useTheme } from '@/contexts/ThemeContext'
 
 interface SidebarLink {
@@ -17,30 +19,45 @@ const sidebarLinks: SidebarLink[] = [
   {
     href: '/pot',
     label: 'Dashboard',
-    icon: <LuLayoutDashboard size={24} />,
+    icon: <RiDashboardLine size={24} />,
   },
   {
-    href: '/pot/users',
-    label: 'Usuarios',
-    icon: <LuUsers size={24}/>,
+    href: '/pot/customers',
+    label: 'Clientes',
+    icon: <LiaHandshakeSolid  size={24} />,
     subMenu: [
-      { href: '/pot/users/roles', label: 'Roles', icon: <LuChevronRight /> },
+      { href: '/pot/customers/references', label: 'Referencias', icon: <RiProductHuntLine size={20} /> },
+    ]
+  },
+  {
+    href: '/pot/purchase-orders',
+    label: 'Ordenes de compra',
+    icon: <LiaFileInvoiceDollarSolid  size={24} />
+  },
+  {
+    href: '/pot/production',
+    label: 'Producción',
+    icon: <LiaIndustrySolid size={24} />,
+    subMenu: [
+      { href: '/pot/production/touch', label: 'Touch', icon: <MdOutlinePlaylistAddCircle size={20} /> },
+      { href: '/pot/production/machines', label: 'Maquinaria', icon: <MdOutlinePrecisionManufacturing size={20} /> },
     ]
   },
   {
     href: '/pot/employees',
-    label: 'Empleados',
-    icon: <LuFileText size={24} />
+    label: 'Personal',
+    icon: <RiTeamLine size={24}/>,
+    subMenu: [
+      { href: '/pot/employees/positions', label: 'Cargos', icon: <LiaUserTieSolid size={20} /> },
+    ]
   },
   {
-    href: '/pot/employees',
-    label: 'Ordenes de compra',
-    icon: <LuFileText size={24}   />
-  },
-  {
-    href: '/pot/employees',
-    label: 'Ordenes de trabajo',
-    icon: <LuFileText size={24} />
+    href: '/pot/users',
+    label: 'Usuarios',
+    icon: <RiGroupLine size={24}/>,
+    subMenu: [
+      { href: '/pot/users/roles', label: 'Roles', icon: <LiaUsersCogSolid size={20} /> },
+    ]
   },
 ]
 
@@ -86,15 +103,15 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen, isMinimized, setIs
     : 'w-64'
 
   return (
-    <div className={`h-full overflow-y-auto fixed top-16 left-0 ${sidebarWidth} flex flex-col z-40 transition-all duration-300 ${isOpen ? "translate-x-0" : "-translate-x-full"} bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 shadow-xl shadow-sky-500/10 mt-2 border-r border-gray-200 dark:border-sky-500`}>
+    <div className={`h-full overflow-y-auto fixed top-16 left-0 ${sidebarWidth} flex flex-col z-40 transition-all duration-500 ${isOpen ? "translate-x-0" : "-translate-x-full"} bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 shadow-xl shadow-sky-500/10 mt-2 border-r border-gray-200 dark:border-sky-500`}>
       <nav className='p-2'>
         <ul>
           {sidebarLinks.map((link) => (
             <li key={link.href}>
-              <div className='justify-items-center'>
+              <div className={isMinimized ? "justify-items-center" : ""}>
                 <Link
                   href={link.href}
-                  className={`flex items-center justify-between px-2 py-2 rounded-lg transition-colors duration-200 ${
+                  className={`flex justify-between px-2 py-2 rounded-lg  ${
                     (pathname === link.href || (link.subMenu && link.subMenu.some(subLink => pathname === subLink.href)))
                       ? 'bg-sky-500/10 dark:bg-sky-500/10 text-sky-500' 
                       : 'hover:bg-gray-500/20 dark:hover:bg-gray-600/20 hover:text-black dark:hover:text-white'
@@ -106,11 +123,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen, isMinimized, setIs
                     {!isMinimized && <span>{link.label}</span>}
                   </span>
                   {link.subMenu && !isMinimized && (
-                    <LuChevronRight className={`transition-transform duration-300 ${activeSubmenu === link.href ? 'rotate-90' : ''}`} />
+                    <RiArrowDropRightLine className={`transition-transform duration-200 ${activeSubmenu === link.href ? 'rotate-90' : ''}`} size={24}/>
                   )}
                 </Link>
                 {link.subMenu && activeSubmenu === link.href && !isMinimized && (
-                  <ul className="pl-4 overflow-hidden transition-all h-auto mb-1">
+                  <ul className="pl-4 overflow-hidden h-auto mb-2">
                     {link.subMenu.map((subLink) => (
                       <li key={subLink.href}>
                         <Link
@@ -119,9 +136,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen, isMinimized, setIs
                             pathname === subLink.href 
                               ? "text-gray-900 dark:text-white before:bg-sky-500 font-semibold" 
                               : "before:bg-black dark:before:bg-white"
-                          } before:rounded-full before:-left-[6.5px] before:top-1/2 before:-translate-y-1/2 before:border-3 transition-colors before:border-white dark:before:border-gray-900 hover:text-black dark:hover:text-white text-sm`}
+                          } before:rounded-full before:-left-[6.5px] before:top-1/2 before:-translate-y-1/2 before:border-3 before:border-white dark:before:border-gray-900 hover:text-black dark:hover:text-white text-sm flex items-center`}
                         >
-                          {subLink.label}
+                          {subLink.icon}
+                          <span className="ml-2">{subLink.label}</span>
                         </Link>
                       </li>
                     ))}

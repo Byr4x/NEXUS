@@ -56,9 +56,9 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar, isSidebarOpen, isMinimiz
               animate={{ opacity: 1, y: 0 }}
               className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-cyan-300 to-blue-800"
             >
-              <a href='http://localhost:3000/' className='flex items-center'>
+              <a href='http://localhost:3000/pot' className='flex items-center'>
                 <img src='https://res.cloudinary.com/db5lqptwu/image/upload/v1729079758/logos/n0dak8ohwtbuxy6xwuvu.png' alt="Beiplas logo" className='mr-2 w-10 h-10' />
-                NEXUS
+                NEXTop 
               </a>
             </motion.h1>
           </div>

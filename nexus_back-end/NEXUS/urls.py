@@ -21,5 +21,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('beiplas/business/', include('Business.urls')),
     path('beiplas/production/', include('Production.urls')),
-    path('', include('myapp.urls')),
+    path('beiplas/auth/', include('AUTH.urls')),
 ]

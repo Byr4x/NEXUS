@@ -382,8 +382,29 @@ export default function Products() {
         ctx.restore()
       } else {
         // For internal flaps
+        ctx.save()
+        ctx.strokeStyle = '#000000' // Normal line for the top flap
+        ctx.beginPath()
         ctx.moveTo(bagX, flapY)
         ctx.lineTo(bagX + bagWidth, flapY)
+        ctx.stroke()
+        ctx.restore()
+
+        // Add dotted line for 'Interna Doble'
+        if (flapType === 'Interna Doble') {
+          const doubleFlapY = flapY + (flapSize * scaleY) / 9.8 // Position the second line halfway between the first line and the bag top
+          ctx.save()
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.5)' // Set opacity to 50% for a more visible look
+          const dotSpacing = 10 // Increase space between dots
+          const dotWidth = 3 // Width of each dot
+          const dotHeight = 1 // Height of each dot (smaller than width to make it more elongated)
+          for (let x = bagX; x <= bagX + bagWidth; x += dotSpacing) {
+            ctx.beginPath()
+            ctx.ellipse(x, doubleFlapY, dotWidth, dotHeight, 0, 0, Math.PI * 2)
+            ctx.fill()
+          }
+          ctx.restore()
+        }
 
         // Measurement line for internal flap
         drawArrow(bagX + 20, bagY + 5, bagX + 20, flapY - 5)
@@ -398,6 +419,49 @@ export default function Products() {
         ctx.restore()
       }
 
+      ctx.stroke()
+    }
+
+    // Draw troquel
+    if (productType === 'Bolsa' && troquelType === 'Riñón') {
+      ctx.strokeStyle = '#000000'
+      ctx.lineWidth = 2
+      ctx.beginPath()
+
+      const ellipseWidth = bagWidth * 0.25
+      let ellipseHeight, ellipseY
+
+      if (flapType === 'Sin Solapa') {
+        ellipseHeight = bagHeight * 0.083  // 8.3% of bag height if no flap
+        ellipseY = bagY + bagHeight * 0.035 + ellipseHeight / 2
+      } else {
+        const flapPixels = flapSize * scaleY
+        ellipseHeight = flapPixels * 0.6  // 60% of flap height
+        ellipseY = bagY + flapPixels * 0.2 + ellipseHeight / 2
+      }
+
+      const ellipseX = bagX + bagWidth / 2
+
+      // Draw a more rectangular shape with rounded sides
+      const radius = ellipseHeight / 2
+      const straightPartWidth = ellipseWidth - radius * 2
+
+      ctx.moveTo(ellipseX - straightPartWidth / 2, ellipseY - ellipseHeight / 2)
+      ctx.lineTo(ellipseX + straightPartWidth / 2, ellipseY - ellipseHeight / 2)
+      ctx.arcTo(ellipseX + ellipseWidth / 2, ellipseY - ellipseHeight / 2, ellipseX + ellipseWidth / 2, ellipseY, radius)
+      ctx.arcTo(ellipseX + ellipseWidth / 2, ellipseY + ellipseHeight / 2, ellipseX + straightPartWidth / 2, ellipseY + ellipseHeight / 2, radius)
+      ctx.lineTo(ellipseX - straightPartWidth / 2, ellipseY + ellipseHeight / 2)
+      ctx.arcTo(ellipseX - ellipseWidth / 2, ellipseY + ellipseHeight / 2, ellipseX - ellipseWidth / 2, ellipseY, radius)
+      ctx.arcTo(ellipseX - ellipseWidth / 2, ellipseY - ellipseHeight / 2, ellipseX - straightPartWidth / 2, ellipseY - ellipseHeight / 2, radius)
+      ctx.closePath()
+
+      // Clear the area inside the shape
+      ctx.save()
+      ctx.clip()
+      ctx.clearRect(ellipseX - ellipseWidth / 2, ellipseY - ellipseHeight / 2, ellipseWidth, ellipseHeight)
+      ctx.restore()
+
+      // Stroke the outline
       ctx.stroke()
     }
   }

@@ -27,9 +27,6 @@ export default function RootLayout({
         <ThemeProvider>
           <ClientWrapper>{children}</ClientWrapper>
         </ThemeProvider>
-        <Tooltip content="Rodolfo" className='bg-gray-200 text-black dark:bg-gray-800 dark:text-white'>
-          <img src="https://res.cloudinary.com/db5lqptwu/image/upload/v1729621638/logos/rodolfo.gif" alt="Rodolfo" className="fixed bottom-0 left-0 w-[10%] hover:cursor-pointer" />
-        </Tooltip>
       </body>
     </html>
   )
