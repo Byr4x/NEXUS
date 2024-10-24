@@ -3,9 +3,9 @@
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { RiArrowDropRightLine, RiDashboardLine, RiProductHuntLine, RiGroupLine, RiTeamLine } from 'react-icons/ri'
+import { RiArrowDropRightLine, RiDashboardLine, RiProductHuntLine, RiGroupLine, RiTeamLine, RiAdminLine } from 'react-icons/ri'
 import { MdOutlinePrecisionManufacturing, MdOutlinePlaylistAddCircle } from "react-icons/md";
-import { LiaUsersCogSolid, LiaHandshakeSolid, LiaUserTieSolid, LiaIndustrySolid, LiaFileInvoiceDollarSolid  } from 'react-icons/lia'
+import { LiaUsersCogSolid, LiaHandshakeSolid, LiaUserTieSolid, LiaIndustrySolid, LiaFileInvoiceDollarSolid } from 'react-icons/lia'
 import { useTheme } from '@/contexts/ThemeContext'
 
 interface SidebarLink {
@@ -22,17 +22,9 @@ const sidebarLinks: SidebarLink[] = [
     icon: <RiDashboardLine size={24} />,
   },
   {
-    href: '/pot/customers',
-    label: 'Clientes',
-    icon: <LiaHandshakeSolid  size={24} />,
-    subMenu: [
-      { href: '/pot/customers/references', label: 'Referencias', icon: <RiProductHuntLine size={20} /> },
-    ]
-  },
-  {
     href: '/pot/purchase-orders',
     label: 'Ordenes de compra',
-    icon: <LiaFileInvoiceDollarSolid  size={24} />
+    icon: <LiaFileInvoiceDollarSolid size={24} />
   },
   {
     href: '/pot/production',
@@ -44,17 +36,25 @@ const sidebarLinks: SidebarLink[] = [
     ]
   },
   {
+    href: '/pot/customers',
+    label: 'Clientes',
+    icon: <LiaHandshakeSolid size={24} />,
+    subMenu: [
+      { href: '/pot/customers/references', label: 'Referencias', icon: <RiProductHuntLine size={20} /> },
+    ]
+  },
+  {
     href: '/pot/employees',
     label: 'Personal',
-    icon: <RiTeamLine size={24}/>,
+    icon: <RiTeamLine size={24} />,
     subMenu: [
       { href: '/pot/employees/positions', label: 'Cargos', icon: <LiaUserTieSolid size={20} /> },
     ]
   },
   {
-    href: '/pot/users',
-    label: 'Usuarios',
-    icon: <RiGroupLine size={24}/>,
+    href: '/pot/credentials',
+    label: 'Credenciales',
+    icon: <RiAdminLine size={24} />,
     subMenu: [
       { href: '/pot/users/roles', label: 'Roles', icon: <LiaUsersCogSolid size={20} /> },
     ]
@@ -71,7 +71,6 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen, isMinimized, setIsMinimized }) => {
   const [activeSubmenu, setActiveSubmenu] = useState("")
   const pathname = usePathname()
-  const { isDarkMode } = useTheme()
   const [windowWidth, setWindowWidth] = useState(0)
 
   useEffect(() => {
@@ -111,11 +110,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen, isMinimized, setIs
               <div className={isMinimized ? "justify-items-center" : ""}>
                 <Link
                   href={link.href}
-                  className={`flex justify-between px-2 py-2 rounded-lg  ${
-                    (pathname === link.href || (link.subMenu && link.subMenu.some(subLink => pathname === subLink.href)))
-                      ? 'bg-sky-500/10 dark:bg-sky-500/10 text-sky-500' 
+                  className={`flex justify-between px-2 py-2 rounded-lg  ${(pathname === link.href || (link.subMenu && link.subMenu.some(subLink => pathname === subLink.href)))
+                      ? 'bg-sky-500/10 dark:bg-sky-500/10 text-sky-500'
                       : 'hover:bg-gray-500/20 dark:hover:bg-gray-600/20 hover:text-black dark:hover:text-white'
-                  }`}
+                    }`}
                   onClick={() => handleNavClick(link.href)}
                 >
                   <span className="flex items-center gap-2">
@@ -123,7 +121,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen, isMinimized, setIs
                     {!isMinimized && <span>{link.label}</span>}
                   </span>
                   {link.subMenu && !isMinimized && (
-                    <RiArrowDropRightLine className={`transition-transform duration-200 ${activeSubmenu === link.href ? 'rotate-90' : ''}`} size={24}/>
+                    <RiArrowDropRightLine className={`transition-transform duration-200 ${activeSubmenu === link.href ? 'rotate-90' : ''}`} size={24} />
                   )}
                 </Link>
                 {link.subMenu && activeSubmenu === link.href && !isMinimized && (
@@ -132,11 +130,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen, isMinimized, setIs
                       <li key={subLink.href}>
                         <Link
                           href={subLink.href}
-                          className={`py-2 px-4 border-l border-gray-500 block relative before:w-3 before:h-3 before:absolute ${
-                            pathname === subLink.href 
-                              ? "text-gray-900 dark:text-white before:bg-sky-500 font-semibold" 
+                          className={`py-2 px-4 border-l border-gray-500 block relative before:w-3 before:h-3 before:absolute ${pathname === subLink.href
+                              ? "text-gray-900 dark:text-white before:bg-sky-500 font-semibold"
                               : "before:bg-black dark:before:bg-white"
-                          } before:rounded-full before:-left-[6.5px] before:top-1/2 before:-translate-y-1/2 before:border-3 before:border-white dark:before:border-gray-900 hover:text-black dark:hover:text-white text-sm flex items-center`}
+                            } before:rounded-full before:-left-[6.5px] before:top-1/2 before:-translate-y-1/2 before:border-3 before:border-white dark:before:border-gray-900 hover:text-black dark:hover:text-white text-sm flex items-center`}
                         >
                           {subLink.icon}
                           <span className="ml-2">{subLink.label}</span>

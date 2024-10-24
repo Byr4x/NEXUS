@@ -7,6 +7,9 @@ class Supplier(models.Model):
     email = models.EmailField(unique=True, null=True, blank=True)
     phone_number = models.CharField(max_length=15, null=True, blank=True)
     contact = models.CharField(max_length=200, null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.company_name
@@ -21,6 +24,9 @@ class RawMaterial(models.Model):
         3: 'Tintas y pigmentos'
     }
     raw_material_type = models.PositiveIntegerField(choices=raw_mateial_type_choices, default=0)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
 class Machine(models.Model):    
     name = models.CharField(max_length=30)
@@ -32,7 +38,10 @@ class Machine(models.Model):
         4: 'Manualidad'
     }
     area = models.PositiveIntegerField(choices=area_choices, default=0)
-    
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
 class WorkOrder(models.Model):
     po_detail = models.ForeignKey(PODetail, on_delete=models.PROTECT, related_name='work_order', related_query_name='work_order_query')
     production_observations = models.TextField(null=True, blank=True)
@@ -51,6 +60,8 @@ class WorkOrder(models.Model):
     }
     status = models.PositiveIntegerField(choices=status_choices, default=0)
     termination_reason = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def save(self, *args, **kwargs):
 
@@ -101,11 +112,15 @@ class Extrusion(models.Model):
     caliber = models.DecimalField(max_digits=10, decimal_places=2)
     observations = models.TextField()
     next = models.PositiveIntegerField(choices=next_choices.items(), default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
 class R_RawMaterial_Extrusion(models.Model):
     extrusion = models.ForeignKey(Extrusion, on_delete=models.CASCADE, related_name='materials', related_query_name='material')
     raw_material = models.ForeignKey(RawMaterial, on_delete=models.PROTECT, related_name='extrusions', related_query_name='extrusion')
     quantity = models.DecimalField(max_digits=10, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
 class Printing(models.Model):
     work_order = models.ForeignKey(WorkOrder, on_delete=models.CASCADE, related_name='printing', related_query_name='printing_query')
@@ -113,6 +128,8 @@ class Printing(models.Model):
     is_new = models.BooleanField()
     observations = models.TextField()
     next = models.PositiveIntegerField(choices=next_choices.items(), default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
 class Sealing(models.Model):
     work_order = models.ForeignKey(WorkOrder, on_delete=models.CASCADE, related_name='sealing', related_query_name='sealing_query')
@@ -123,12 +140,16 @@ class Sealing(models.Model):
     bundle_units = models.PositiveIntegerField()
     observations = models.TextField()
     next = models.PositiveIntegerField(choices=next_choices.items(), default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
 class Handicraf(models.Model):
     work_order = models.ForeignKey(WorkOrder, on_delete=models.CASCADE, related_name='handicraft', related_query_name='handicraft_query')
     machine = models.ForeignKey(Machine, on_delete=models.PROTECT, related_name='handicrafts', related_query_name='handicraft')
     observations = models.TextField()
     next = models.PositiveIntegerField(choices=next_choices.items(), default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
 class Touch(models.Model):
     work_order = models.ForeignKey(WorkOrder, on_delete=models.CASCADE, related_name='touch', related_query_name='touch_query')
@@ -144,6 +165,8 @@ class Touch(models.Model):
     total_finished_units = models.PositiveIntegerField(default=0)
     total_waste_weight = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     theorical_quantity = models.PositiveIntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
 class TouchDetails(models.Model):
     touch = models.ForeignKey(Touch, on_delete=models.CASCADE, related_name='details', related_query_name='detail')

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { ChevronDown, User, Settings, LogOut, Moon, Sun, Menu, PanelLeftOpen, PanelLeftClose } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useTheme } from '@/contexts/ThemeContext'
+import { usePathname } from 'next/navigation'
 
 interface HeaderProps {
   toggleSidebar: () => void
@@ -16,6 +17,17 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar, isSidebarOpen, isMinimiz
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const { isDarkMode, toggleDarkMode } = useTheme()
   const [windowWidth, setWindowWidth] = useState(0)
+  const pathname = usePathname()
+
+  const getPageName = (path: string) => {
+    const routes: { [key: string]: string } = {
+      '/pot': 'Dashboard',
+      '/pot/employees': 'Empleados',
+      '/pot/employees/positions': 'Cargos',
+      // Añade más rutas según sea necesario
+    }
+    return routes[path] || ''
+  }
 
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth)
@@ -61,6 +73,26 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar, isSidebarOpen, isMinimiz
                 NEXTop 
               </a>
             </motion.h1>
+            {getPageName(pathname) && (
+              <div className="flex items-center ml-4">
+                <motion.span
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5, duration: 0.3 }}
+                  className="text-2xl font-semibold text-gray-600 dark:text-gray-300 mr-2"
+                >
+                  |
+                </motion.span>
+                <motion.span
+                  initial={{ opacity: 0, x: -25 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 1, duration: 0.5 }}
+                  className="text-2xl font-semibold text-gray-600 dark:text-gray-300 -left-0 animate-pulse"
+                >
+                  {getPageName(pathname)}
+                </motion.span>
+              </div>
+            )}
           </div>
           <div className="flex items-center space-x-4">
             <motion.button
@@ -95,15 +127,15 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar, isSidebarOpen, isMinimiz
               </motion.h1>
               {isMenuOpen && (
                 <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white dark:bg-gray-700" role="menu">
-                  <a href="#" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center" role="menuitem">
+                  <a href="#" className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center" role="menuitem">
                     <User size={16} className="mr-2" />
                     Profile
                   </a>
-                  <a href="#" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center" role="menuitem">
+                  <a href="#" className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center" role="menuitem">
                     <Settings size={16} className="mr-2" />
                     Settings
                   </a>
-                  <a href="/" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center" role="menuitem">
+                  <a href="/" className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center" role="menuitem">
                     <LogOut size={16} className="mr-2" />
                     Logout
                   </a>

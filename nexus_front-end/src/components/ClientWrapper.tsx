@@ -6,6 +6,7 @@ import Footer from '@/components/landing/Footer'
 import { useTheme } from '@/contexts/ThemeContext'
 import { usePathname } from 'next/navigation'
 import { Tooltip } from "@nextui-org/tooltip";
+import { motion } from 'framer-motion'
 
 export default function ClientWrapper({
   children,
@@ -20,12 +21,12 @@ export default function ClientWrapper({
   if (isPotPath) {
     return (
       <div className={isDarkMode ? 'dark' : ''}>
-      <div className="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
-        <main className="pt-20">
-          {children}
-        </main>
+        <div className="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
+          <main className="pt-16">
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
     )
   }
 
@@ -37,9 +38,16 @@ export default function ClientWrapper({
           {children}
         </main>
         <Footer />
-        <Tooltip content="Rodolfo" className='bg-gray-200 text-black dark:bg-gray-800 dark:text-white'>
-          <img src="https://res.cloudinary.com/db5lqptwu/image/upload/v1729621638/logos/rodolfo.gif" alt="Rodolfo" className="fixed bottom-0 left-0 w-[10%] hover:cursor-pointer" />
-        </Tooltip>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 2 }}
+          className='fixed bottom-0 left-0 w-[10%]'
+        >
+          <Tooltip content="Rodolfo" className='bg-gray-200 text-black dark:bg-gray-800 dark:text-white'>
+            <img src="https://res.cloudinary.com/db5lqptwu/image/upload/v1729621638/logos/rodolfo.gif" alt="Rodolfo" className="hover:cursor-pointer" />
+          </Tooltip>
+        </motion.div>
       </div>
     </div>
   )

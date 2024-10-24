@@ -9,13 +9,19 @@ class Customer(models.Model):
     contact_email = models.EmailField(unique=True, null=True, blank=True)
     contact_phone_number = models.CharField(max_length=15, null=True, blank=True)
     location = models.CharField(max_length=200)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f'{self.company_name} - {self.contact}'
 
 class Position(models.Model):
     name = models.CharField(max_length=100)
-    description = models.TextField()
+    description = models.TextField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.name
@@ -27,6 +33,9 @@ class Employee(models.Model):
     email = models.EmailField(unique=True, null=True, blank=True)
     entity = models.CharField(max_length=200, default='Beiplas')
     position = models.ForeignKey(Position, on_delete=models.PROTECT)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f'{self.first_name} {self.second_name} - {self.entity}'
@@ -34,6 +43,9 @@ class Employee(models.Model):
 class ProductType(models.Model):
     name = models.CharField(max_length=25)
     description = models.TextField()
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.name
@@ -42,6 +54,9 @@ class Material(models.Model):
     name = models.CharField(max_length=25)
     description = models.TextField()
     weight_constant = models.DecimalField(max_digits=8, decimal_places=6)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.name
@@ -115,6 +130,9 @@ class Reference(models.Model):
     pantones_quantity = models.PositiveBigIntegerField()
     pantones_codes = ArrayField(models.PositiveIntegerField(), null=True, blank=True)
     sketch_ult = models.URLField(default='https://res.cloudinary.com/db5lqptwu/image/upload/v1728476524/sketches/hlmgblou2onqaf0efh6b.webp')
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def save(self, *args, **kwargs):
         after_width = ''
@@ -169,6 +187,8 @@ class PurchaseOrder(models.Model):
     iva = models.DecimalField(max_digits=10, decimal_places=2, editable=False)
     total = models.DecimalField(max_digits=10, decimal_places=2, editable=False)
     delivery_date = models.DateField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def save(self, *args, **kwargs):
         self.iva = self.subtotal * Decimal('0.19')
@@ -195,6 +215,8 @@ class Payment(models.Model):
     time_unit = models.PositiveIntegerField(choices=time_unit_choices, default=0)
     quantity = models.PositiveIntegerField(null=True, blank=True)
     advance = models.DecimalField(null=True, blank=True, max_digits=10, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.method
@@ -271,7 +293,8 @@ class PODetail(models.Model):
     observations = models.TextField(null=True, blank=True)
     is_new_sketch = models.BooleanField(default=False)
     sketch_ult = models.URLField(default='https://res.cloudinary.com/db5lqptwu/image/upload/v1728476524/sketches/hlmgblou2onqaf0efh6b.webp')
-    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     wo_number = models.PositiveIntegerField(null=True, blank=True, editable=False)
 
     def save(self, *args, **kwargs):

@@ -4,7 +4,7 @@ import { Inter } from 'next/font/google'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 import { Metadata } from 'next'
 import ClientWrapper from '@/components/ClientWrapper'
-import { Tooltip } from "@nextui-org/tooltip";
+import { NextUIProvider } from '@nextui-org/react'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -25,7 +25,9 @@ export default function RootLayout({
     <html lang="es">
       <body className={`${inter.className} antialiased`}>
         <ThemeProvider>
-          <ClientWrapper>{children}</ClientWrapper>
+          <NextUIProvider>
+            <ClientWrapper>{children}</ClientWrapper>
+          </NextUIProvider>
         </ThemeProvider>
       </body>
     </html>
