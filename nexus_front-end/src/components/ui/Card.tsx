@@ -32,13 +32,13 @@ export const Card: React.FC<CardProps> = ({
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
-      className={cardClasses}
+      className={`${cardClasses} flex flex-col h-full`}
     >
-      <div className="flex justify-between items-start mb-2">
-        <h2 className={`text-xl font-semibold ${textClasses}`}>{title}</h2>
+      <div className={`flex-grow ${!description ? 'flex items-center justify-center' : ''}`}>
+        <h2 className={`font-semibold ${textClasses} ${!description ? 'text-center text-3xl' : 'text-xl'}`}>{title}</h2>
+        {description && <p className={descriptionClasses}>{description}</p>}
       </div>
-      <p className={descriptionClasses}>{description}</p>
-      <div className="flex justify-between space-x-2">
+      <div className="flex justify-between space-x-2 mt-4">
         {showSwitch && (
           <Switch
             checked={switchState}
@@ -49,7 +49,7 @@ export const Card: React.FC<CardProps> = ({
         <div className="flex justify-end space-x-2">
           {onView && (
             <button
-              className="text-blue-500 hover:text-blue-600 transition-colors"
+              className={`${switchState ? 'text-sky-500 hover:text-sky-700 dark:hover:text-cyan-600' : 'text-gray-400'} transition-colors`}
               onClick={onView}
             >
               <LuView size={22} />
@@ -57,7 +57,7 @@ export const Card: React.FC<CardProps> = ({
           )}
           {onEdit && (
             <button
-              className={`${switchState ? 'text-sky-500 hover:text-sky-600' : 'text-gray-400'} transition-colors`}
+              className={`${switchState ? 'text-orange-500 hover:text-orange-700' : 'text-gray-400'} transition-colors`}
               onClick={onEdit}
               disabled={!switchState}
             >
@@ -66,7 +66,7 @@ export const Card: React.FC<CardProps> = ({
           )}
           {onDelete && (
             <button
-              className={`${switchState ? 'text-red-500 hover:text-red-600' : 'text-gray-400'} transition-colors`}
+              className={`${switchState ? 'text-red-500 hover:text-red-700' : 'text-gray-400'} transition-colors`}
               onClick={onDelete}
               disabled={!switchState}
             >

@@ -32,7 +32,7 @@ class Employee(models.Model):
     phone_number = models.CharField(max_length=15)
     email = models.EmailField(unique=True, null=True, blank=True)
     entity = models.CharField(max_length=200, default='Beiplas')
-    position = models.ForeignKey(Position, on_delete=models.PROTECT)
+    position = models.ForeignKey(Position, on_delete=models.PROTECT, related_name='employees', related_query_name='employee')
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -199,7 +199,7 @@ class PurchaseOrder(models.Model):
         return f'Orden de Compra #{self.id} - {self.order_date} - {self.customer.company_name}'
 
 class Payment(models.Model):
-    purchase_order = models.ForeignKey(PurchaseOrder, on_delete=models.CASCADE, related_name='payment')
+    purchase_order = models.ForeignKey(PurchaseOrder, on_delete=models.CASCADE, related_name='payments', related_query_name='payment')
     method_choices = {
         0: 'CONTADO',
         1: 'CRÉDITO'

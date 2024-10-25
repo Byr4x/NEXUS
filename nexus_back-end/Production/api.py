@@ -44,12 +44,19 @@ class BaseViewSet(viewsets.ModelViewSet):
         }, status=status.HTTP_400_BAD_REQUEST)
 
     def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        instance.delete()
-        return Response({
-            "status": "success",
-            "message": f"{self.format_model_name()} deleted successfully."
-        }, status=status.HTTP_204_NO_CONTENT)
+        try:
+            instance = self.get_object()
+            instance.delete()
+            return Response({
+                "status": "success",
+                "message": f"{self.format_model_name()} deleted successfully."
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({
+                "status": "error",
+                "message": f"Failed to delete {(self.format_model_name()).lower()}.",
+                "error": str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
     
 class SupplierViewSet(BaseViewSet):
     queryset = Supplier.objects.all()

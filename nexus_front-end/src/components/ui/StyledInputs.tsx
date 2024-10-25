@@ -156,7 +156,7 @@ interface TextAreaProps {
 
 export const TextArea: React.FC<TextAreaProps> = ({ label, name, value, onChange, placeholder }) => (
   <div className="mb-4">
-    <label htmlFor={name} className="block mb-2 text-gray-700 dark:text-gray-300">{label}</label>
+    <label htmlFor={name} className="block mb|1-2 text-gray-700 dark:text-gray-300">{label}</label>
     <textarea
       id={name}
       name={name}

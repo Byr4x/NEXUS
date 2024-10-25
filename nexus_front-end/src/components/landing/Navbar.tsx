@@ -6,7 +6,7 @@ import { Moon, Sun, Menu, X } from 'lucide-react'
 import { usePathname } from 'next/navigation'
 import { useTheme } from '@/contexts/ThemeContext'
 
-export default function Header() {
+export default function Navbar() {
   const { isDarkMode, toggleDarkMode } = useTheme()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const toggleMobileMenu = () => setMobileMenuOpen(!mobileMenuOpen)
