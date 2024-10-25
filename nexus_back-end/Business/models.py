@@ -28,7 +28,7 @@ class Position(models.Model):
 
 class Employee(models.Model):
     first_name = models.CharField(max_length=100)
-    second_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
     phone_number = models.CharField(max_length=15)
     email = models.EmailField(unique=True, null=True, blank=True)
     entity = models.CharField(max_length=200, default='Beiplas')

@@ -50,7 +50,7 @@ export default function Layout({
           isMinimized={isMinimized}
           setIsMinimized={setIsMinimized}
         />
-        <main className={`flex-1 overflow-y-auto p-5 ml-0 ${mainContentClass()} transition-all duration-500`}>
+        <main className={`flex-1 pt-20 overflow-y-auto p-5 ml-0 ${mainContentClass()} transition-all duration-500 overflow-y-auto`}>
           {children}
         </main>
       </div>

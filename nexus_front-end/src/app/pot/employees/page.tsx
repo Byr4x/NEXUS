@@ -1,17 +1,21 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { LuPlus, LuClipboardEdit, LuTrash2, LuX } from 'react-icons/lu';
 import axios from 'axios';
-import Select from 'react-select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from '@/components/ui/Table';
+import { LuView, LuClipboardEdit, LuTrash2 } from 'react-icons/lu';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table';
 import { Switch } from '@/components/ui/Switch';
+import { TextInput, SelectInput } from '@/components/ui/StyledInputs';
+import FormModal from '@/components/modals/FormModal';
+import ViewModal from '@/components/modals/ViewModal';
+import TopTableElements from '@/components/ui/TopTableElements';
+import { showAlert, showToast } from '@/components/ui/Alerts';
 
 interface Employee {
   id: number;
   first_name: string;
-  second_name: string;
+  last_name: string;
   phone_number: string;
   email: string;
   entity: string;
@@ -27,16 +31,19 @@ interface Position {
 export default function EmployeesPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isFormModalOpen, setFormModalOpen] = useState(false);
+  const [isViewModalOpen, setViewModalOpen] = useState(false);
   const [currentEmployee, setCurrentEmployee] = useState<Employee | null>(null);
   const [formData, setFormData] = useState({
     first_name: '',
-    second_name: '',
+    last_name: '',
     phone_number: '',
     email: '',
     entity: '',
-    position: 0
+    position: 0,
+    is_active: true
   });
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     fetchEmployees();
@@ -49,6 +56,7 @@ export default function EmployeesPage() {
       setEmployees(response.data);
     } catch (error) {
       console.error('Error fetching employees:', error);
+      showToast('Error fetching employees', 'error');
     }
   };
 
@@ -58,44 +66,46 @@ export default function EmployeesPage() {
       setPositions(response.data);
     } catch (error) {
       console.error('Error fetching positions:', error);
+      showToast('Error fetching positions', 'error');
     }
   };
 
-  const options = positions.map(pos => ({ value: pos.id, label: pos.name }));
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleSelectChange = (selectedOption: any) => {
-    setFormData({ ...formData, position: selectedOption ? selectedOption.value : 0 });
-    console.log(formData)
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      let response;
+      let message = '';
+
       if (currentEmployee) {
-        await axios.put(`http://127.0.0.1:8000/beiplas/business/employees/${currentEmployee.id}/`, formData);
+        response = await axios.put(`http://127.0.0.1:8000/beiplas/business/employees/${currentEmployee.id}/`, formData);
+        message = 'Empleado actualizado correctamente';
       } else {
-        await axios.post('http://127.0.0.1:8000/beiplas/business/employees/', formData);
+        response = await axios.post('http://127.0.0.1:8000/beiplas/business/employees/', formData);
+        message = 'Empleado creado correctamente';
       }
-      fetchEmployees();
-      setIsModalOpen(false);
-      setCurrentEmployee(null);
-      setFormData({
-        first_name: '',
-        second_name: '',
-        phone_number: '',
-        email: '',
-        entity: '',
-        position: 0
-      });
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        console.error('Error submitting employee:', error.message);
+
+      if (response.data.status === 'success') {
+        showToast(message, 'success');
+        fetchEmployees();
+        setFormModalOpen(false);
+        setCurrentEmployee(null);
+        setFormData({
+          first_name: '',
+          last_name: '',
+          phone_number: '',
+          email: '',
+          entity: '',
+          position: 0,
+          is_active: true
+        });
       } else {
-        console.error('Unexpected error:', error);
+        showToast(response.data.message, 'error');
+      }
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        showToast(error.response.data.message || 'An error occurred', 'error');
+      } else {
+        showToast('An unexpected error occurred', 'error');
       }
     }
   };
@@ -104,81 +114,208 @@ export default function EmployeesPage() {
     setCurrentEmployee(employee);
     setFormData({
       first_name: employee.first_name,
-      second_name: employee.second_name,
+      last_name: employee.last_name,
       phone_number: employee.phone_number,
       email: employee.email,
       entity: employee.entity,
-      position: employee.position
+      position: employee.position,
+      is_active: employee.is_active
     });
-    setIsModalOpen(true);
+    setFormModalOpen(true);
+  };
+
+  const handleView = (employee: Employee) => {
+    setCurrentEmployee(employee);
+    setViewModalOpen(true);
   };
 
   const handleDelete = async (id: number) => {
-    if (window.confirm('¿Estás seguro de que quieres eliminar este empleado?')) {
-      try {
-        await axios.delete(`http://127.0.0.1:8000/beiplas/business/employees/${id}/`);
-        fetchEmployees();
-      } catch (error) {
-        console.error('Error deleting employee:', error);
+    showAlert(
+      {
+        title: '¿Estás seguro de eliminar este empleado?',
+        text: 'No podrás revertir esta acción',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Eliminar',
+        cancelButtonText: 'Cancelar'
+      },
+      async () => {
+        try {
+          const response = await axios.delete(`http://127.0.0.1:8000/beiplas/business/employees/${id}/`);
+          if (response.status === 204) {
+            showToast('Empleado eliminado correctamente', 'success');
+            fetchEmployees();
+          } else {
+            showToast(response.data.message, 'error');
+          }
+        } catch (error) {
+          if (axios.isAxiosError(error) && error.response) {
+            showToast(error.response.data.message || 'Error al eliminar el empleado', 'error');
+          } else {
+            showToast('An unexpected error occurred', 'error');
+          }
+        }
+      },
+      () => {
+        showToast('Eliminación cancelada', 'info');
       }
-    }
+    );
   };
 
   const handleSwitchChange = async (id: number, currentStatus: boolean) => {
-    try {
-      const newStatus = !currentStatus;
-      const employee = employees.find(e => e.id === id);
-      if (!employee) {
-        console.error('Employee not found');
-        return;
+    showAlert(
+      {
+        title: 'Confirmar cambio de estado',
+        text: `¿Quieres ${currentStatus ? 'desactivar' : 'activar'} este empleado?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: currentStatus ? 'Desactivar' : 'Activar',
+        cancelButtonText: 'Cancelar'
+      },
+      async () => {
+        try {
+          const newStatus = !currentStatus;
+          const employee = employees.find(e => e.id === id);
+          if (!employee) {
+            showToast('Employee not found', 'error');
+            return;
+          }
+
+          const updatedData = {
+            ...employee,
+            is_active: newStatus
+          };
+
+          const response = await axios.patch(`http://127.0.0.1:8000/beiplas/business/employees/${id}/`, updatedData);
+          if (response.data.status === 'success') {
+            showToast(response.data.message, 'success');
+            setEmployees(employees.map(e =>
+              e.id === id ? { ...e, is_active: newStatus } : e
+            ));
+          } else {
+            showToast(response.data.message, 'error');
+          }
+        } catch (error) {
+          if (axios.isAxiosError(error) && error.response) {
+            showToast(error.response.data.message || 'Error updating employee status', 'error');
+          } else {
+            showToast('An unexpected error occurred', 'error');
+          }
+        }
+      },
+      () => {
+        showToast('Cambio de estado cancelado', 'info');
       }
-      
-      const updatedData = {
-        ...employee,
-        is_active: newStatus
-      };
-      
-      await axios.patch(`http://127.0.0.1:8000/beiplas/business/employees/${id}/`, updatedData);
-      setEmployees(employees.map(e => 
-        e.id === id ? { ...e, is_active: newStatus } : e
-      ));
-    } catch (error) {
-      console.error('Error updating employee status:', error);
-      if (axios.isAxiosError(error) && error.response) {
-        console.error('Server response:', error.response.data);
-      }
+    );
+  };
+
+  const handleCancel = () => {
+    setCurrentEmployee(null);
+    setFormData({
+      first_name: '',
+      last_name: '',
+      phone_number: '',
+      email: '',
+      entity: '',
+      position: 0,
+      is_active: true
+    });
+    setFormModalOpen(false);
+    showToast('Acción cancelada', 'info');
+  };
+
+  const handleSearch = (searchTerm: string) => {
+    setSearchTerm(searchTerm);
+  };
+
+  const filteredEmployees = useMemo(() => {
+    return employees.filter(employee =>
+      `${employee.first_name} ${employee.last_name}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      employee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      employee.entity.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [employees, searchTerm]);
+
+  const filterOptions = [
+    { key: 'first_name', label: 'Nombres' },
+    { key: 'last_name', label: 'Apellidos' },
+    { key: 'email', label: 'Email' },
+    { key: 'entity', label: 'Entidad' },
+    { key: 'is_active', label: 'Estado' }
+  ];
+
+  const handleFilter = (field: string | null, order: 'asc' | 'desc') => {
+    if (field === null) {
+      fetchEmployees();
+    } else {
+      const sortedEmployees = [...employees].sort((a, b) => {
+        if (a[field as keyof Employee] < b[field as keyof Employee]) return order === 'asc' ? -1 : 1;
+        if (a[field as keyof Employee] > b[field as keyof Employee]) return order === 'asc' ? 1 : -1;
+        return 0;
+      });
+      setEmployees(sortedEmployees);
     }
+  };
+
+  const positionsOptions = positions.map(pos => ({ value: pos.id, label: pos.name }));
+
+  const handleSelectChange = (selectedOption: any) => {
+    setFormData({ ...formData, position: selectedOption ? selectedOption.value : 0 });
+  };
+
+  const inputs = {
+    first_name: <TextInput label="Nombres" name="first_name" value={formData.first_name} onChange={(e) => setFormData({ ...formData, first_name: e.target.value })} />,
+    last_name: <TextInput label="Apellidos" name="last_name" value={formData.last_name} onChange={(e) => setFormData({ ...formData, last_name: e.target.value })} />,
+    phone_number: <TextInput label="Número de Teléfono" name="phone_number" value={formData.phone_number} onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })} />,
+    email: <TextInput label="Email" name="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />,
+    entity: <TextInput label="Entidad" name="entity" value={formData.entity} onChange={(e) => setFormData({ ...formData, entity: e.target.value })} />,
+    position: <SelectInput
+      label="Cargo"
+      name="position"
+      value={positionsOptions.find(option => option.value === formData.position)}
+      onChange={handleSelectChange}
+      options={positionsOptions}
+    />
+
+  };
+
+  const viewContent = {
+    first_name: <div><strong className="block mb-1">Primer Nombre</strong> <p className="dark:text-gray-300">{currentEmployee?.first_name}</p></div>,
+    last_name: <div><strong className="block mb-1">Segundo Nombre</strong> <p className="dark:text-gray-300">{currentEmployee?.last_name}</p></div>,
+    phone_number: <div><strong className="block mb-1">Número de Teléfono</strong> <p className="dark:text-gray-300">{currentEmployee?.phone_number}</p></div>,
+    email: <div><strong className="block mb-1">Email</strong> <p className="dark:text-gray-300">{currentEmployee?.email}</p></div>,
+    entity: <div><strong className="block mb-1">Entidad</strong> <p className="dark:text-gray-300">{currentEmployee?.entity}</p></div>,
+    position: <div><strong className="block mb-1">Cargo</strong> <p className="dark:text-gray-300">{positions.find(p => p.id === currentEmployee?.position)?.name || 'N/A'}</p></div>,
+    is_active: <div><strong className="block mb-1">Estado</strong> <p className={`inline-block py-1 px-2 rounded-lg font-semibold w-36 text-center ${currentEmployee?.is_active ? 'text-green-500 bg-green-500/10' : 'text-red-500 bg-red-500/10'}`}>{currentEmployee?.is_active ? 'Activo' : 'Inactivo'}</p></div>
   };
 
   return (
     <div className="container">
-      <motion.button
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 rounded-lg mb-2 flex items-center transition-colors"
-        onClick={() => setIsModalOpen(true)}
-      >
-        <LuPlus className="mr-2" /> Agregar Empleado
-      </motion.button>
+      <TopTableElements
+        onAdd={() => setFormModalOpen(true)}
+        onSearch={handleSearch}
+        onFilter={handleFilter}
+        filterOptions={filterOptions}
+      />
 
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
       >
         <Table>
           <TableHeader>
-              <TableHead>Nombre</TableHead>
-              <TableHead>Teléfono</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Entidad</TableHead>
-              <TableHead>Cargo</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead>Acciones</TableHead>
+            <TableHead>Nombre</TableHead>
+            <TableHead>Teléfono</TableHead>
+            <TableHead>Email</TableHead>
+            <TableHead>Entidad</TableHead>
+            <TableHead>Cargo</TableHead>
+            <TableHead>Estado</TableHead>
+            <TableHead>Acciones</TableHead>
           </TableHeader>
           <TableBody>
-            {employees.map((employee) => (  
+            {filteredEmployees.map((employee) => (
               <TableRow key={employee.id}>
-                <TableCell className={employee.is_active ? '' : 'opacity-40'}>{employee.first_name} {employee.second_name}</TableCell>
+                <TableCell className={employee.is_active ? '' : 'opacity-40'}>{employee.first_name} {employee.last_name}</TableCell>
                 <TableCell className={employee.is_active ? '' : 'opacity-40'}>{employee.phone_number}</TableCell>
                 <TableCell className={employee.is_active ? '' : 'opacity-40'}>{employee.email}</TableCell>
                 <TableCell className={employee.is_active ? '' : 'opacity-40'}>{employee.entity}</TableCell>
@@ -192,16 +329,22 @@ export default function EmployeesPage() {
                     size='sm'
                   />
                 </TableCell>
-                <TableCell className={employee.is_active ? '' : 'opacity-40'}>
+                <TableCell className={employee.is_active ? '' : 'bg-white/30 dark:bg-gray-800/30'}>
                   <button
-                    className={`${employee.is_active ? 'text-sky-500 hover:text-sky-600' : 'text-gray-400'} mr-3 transition-colors`}
+                    className={`text-sky-500 hover:text-sky-700 mr-3 transition-colors`}
+                    onClick={() => handleView(employee)}
+                  >
+                    <LuView size={20} />
+                  </button>
+                  <button
+                    className={`${employee.is_active ? 'text-orange-500 hover:text-orange-700' : 'text-gray-400 opacity-40'} mr-3 transition-colors`}
                     onClick={() => handleEdit(employee)}
                     disabled={!employee.is_active}
                   >
                     <LuClipboardEdit size={20} />
                   </button>
                   <button
-                    className={`${employee.is_active ? 'text-red-500 hover:text-red-600' : 'text-gray-400'} transition-colors`}
+                    className={`${employee.is_active ? 'text-red-500 hover:text-red-700' : 'text-gray-400 opacity-40'} transition-colors`}
                     onClick={() => handleDelete(employee.id)}
                     disabled={!employee.is_active}
                   >
@@ -214,100 +357,24 @@ export default function EmployeesPage() {
         </Table>
       </motion.div>
 
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white dark:bg-gray-800 p-6 rounded-lg w-full max-w-md shadow-xl"
-          >
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                {currentEmployee ? 'Editar Empleado' : 'Agregar Empleado'}
-              </h2>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100 transition-colors">
-                <LuX size={24} />
-              </button>
-            </div>
-            <form onSubmit={handleSubmit}>
-              <div className="mb-4">
-                <label htmlFor="firstName" className="block mb-2">Primer Nombre</label>
-                <input
-                  type="text"
-                  id="firstName"
-                  name="first_name"
-                  value={formData.first_name}
-                  onChange={handleInputChange}
-                  className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
-                  required
-                />
-              </div>
-              <div className="mb-4">
-                <label htmlFor="secondName" className="block mb-2">Segundo Nombre</label>
-                <input
-                  type="text"
-                  id="secondName"
-                  name="second_name"
-                  value={formData.second_name}
-                  onChange={handleInputChange}
-                  className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
-                  required
-                />
-              </div>
-              <div className="mb-4">
-                <label htmlFor="phoneNumber" className="block mb-2">Número de Teléfono</label>
-                <input
-                  type="text"
-                  id="phoneNumber"
-                  name="phone_number"
-                  value={formData.phone_number}
-                  onChange={handleInputChange}
-                  className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
-                  required
-                />
-              </div>
-              <div className="mb-4">
-                <label htmlFor="email" className="block mb-2">Email</label>
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
-                  required
-                />
-              </div>
-              <div className="mb-4">
-                <label htmlFor="entity" className="block mb-2">Entidad</label>
-                <input
-                  type="text"
-                  id="entity"
-                  name="entity"
-                  value={formData.entity}
-                  onChange={handleInputChange}
-                  className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
-                  required
-                />
-              </div>
-              <div className="mb-4">
-                <label htmlFor="position" className="block mb-2">Cargo</label>
-                <Select
-                  id="position"
-                  name="position"
-                  value={options.find(option => option.value === formData.position)}
-                  onChange={handleSelectChange}
-                  options={options}
-                  className="dark:bg-gray-700 dark:border-gray-600"
-                  isClearable
-                />
-              </div>
-              <button type="submit" className="bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 rounded-lg w-full transition-colors">
-                {currentEmployee ? 'Actualizar' : 'Crear'}
-              </button>
-            </form>
-          </motion.div>
-        </div>
+      {isFormModalOpen && (
+        <FormModal
+          title={currentEmployee ? 'Editar Empleado' : 'Agregar Empleado'}
+          layout={[['first_name', 'last_name'], ['phone_number', 'email'], ['entity', 'position']]}
+          inputs={inputs}
+          onSubmit={handleFormSubmit}
+          onCancel={handleCancel}
+          submitLabel={currentEmployee ? 'Actualizar' : 'Crear'}
+        />
+      )}
+
+      {isViewModalOpen && currentEmployee && (
+        <ViewModal
+          title="Detalles del Empleado"
+          layout={[['first_name', 'last_name'], ['phone_number', 'email'], ['entity', 'position'], ['is_active']]}
+          content={viewContent}
+          onClose={() => setViewModalOpen(false)}
+        />
       )}
     </div>
   );

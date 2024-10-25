@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { LuPlus, LuSearch, LuFilter, LuArrowDownWideNarrow, LuArrowUpWideNarrow } from 'react-icons/lu';
 
@@ -20,9 +20,12 @@ const TopTableElements: React.FC<TopTableElementsProps> = ({ onAdd, onSearch, on
   const [currentField, setCurrentField] = useState<string | null>(null);
   const [currentOrder, setCurrentOrder] = useState<'asc' | 'desc'>('asc');
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
+  useEffect(() => {
     onSearch(searchTerm);
+  }, [searchTerm, onSearch]);
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
   };
 
   const toggleOrder = () => {
@@ -49,18 +52,18 @@ const TopTableElements: React.FC<TopTableElementsProps> = ({ onAdd, onSearch, on
       </motion.button>
 
       <div className="flex items-center gap-2">
-        <form onSubmit={handleSearch} className="relative">
+        <div className="relative">
           <input
             type="text"
             placeholder="Buscar..."
-            className="pl-10 pr-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            className="pl-10 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={handleSearchChange}
           />
-          <button type="submit" className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-300">
+          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-300">
             <LuSearch />
-          </button>
-        </form>
+          </span>
+        </div>
 
         <div className="relative">
           <div className="flex rounded-lg overflow-hidden">

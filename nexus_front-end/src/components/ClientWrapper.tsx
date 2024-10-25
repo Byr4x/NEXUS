@@ -22,8 +22,8 @@ export default function ClientWrapper({
     return (
       <div className={isDarkMode ? 'dark' : ''}>
         <div className="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
-          <main className="pt-16">
-            {children}
+          <main>
+              {children}
           </main>
         </div>
       </div>
@@ -34,7 +34,7 @@ export default function ClientWrapper({
     <div className={isDarkMode ? 'dark' : ''}>
       <div className="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
         <Navbar />
-        <main className="pt-20">
+        <main className="mt-20">
           {children}
         </main>
         <Footer />

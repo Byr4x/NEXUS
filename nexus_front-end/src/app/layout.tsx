@@ -25,9 +25,7 @@ export default function RootLayout({
     <html lang="es">
       <body className={`${inter.className} antialiased`}>
         <ThemeProvider>
-          <NextUIProvider>
             <ClientWrapper>{children}</ClientWrapper>
-          </NextUIProvider>
         </ThemeProvider>
       </body>
     </html>

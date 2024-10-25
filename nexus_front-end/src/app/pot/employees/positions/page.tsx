@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import axios from 'axios'
 import { Card } from '@/components/ui/Card'
@@ -22,6 +22,7 @@ export default function PositionsPage() {
   const [isFormModalOpen, setFormModalOpen] = useState(false)
   const [currentPosition, setCurrentPosition] = useState<Position | null>(null)
   const [formData, setFormData] = useState({ name: '', description: '', is_active: true })
+  const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
     fetchPositions()
@@ -107,6 +108,9 @@ export default function PositionsPage() {
             showToast('An unexpected error occurred', 'error')
           }
         }
+      },
+      () => {
+        showToast('Eliminación cancelada', 'info')
       }
     )
   }
@@ -152,6 +156,10 @@ export default function PositionsPage() {
             showToast('An unexpected error occurred', 'error')
           }
         }
+      },
+      () => {
+        // This function is called when the user cancels the action
+        showToast('Cambio de estado cancelado', 'info')
       }
     )
   }
@@ -165,12 +173,19 @@ export default function PositionsPage() {
     setCurrentPosition(null)
     setFormData({ name: '', description: '', is_active: true })
     setFormModalOpen(false)
+    showToast('Acción cancelada', 'info')
   }
 
   const handleSearch = (searchTerm: string) => {
-    // Implement search logic here
-    console.log('Searching for:', searchTerm);
+    setSearchTerm(searchTerm);
   };
+
+  const filteredPositions = useMemo(() => {
+    return positions.filter(position =>
+      position.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      position.description.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [positions, searchTerm]);
 
   const filterOptions = [
     { key: 'name', label: 'Nombre' },
@@ -207,7 +222,7 @@ export default function PositionsPage() {
         animate={{ opacity: 1 }}
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
       >
-        {positions.map((position) => (
+        {filteredPositions.map((position) => (
           <Card
             key={position.id}
             title={position.name}
