@@ -3,10 +3,12 @@
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { RiArrowDropRightLine, RiDashboardLine, RiProductHuntLine, RiGroupLine, RiTeamLine, RiAdminLine } from 'react-icons/ri'
+import { RiArrowDropRightLine, RiDashboardLine, RiProductHuntLine, RiTeamLine, RiAdminLine } from 'react-icons/ri'
 import { MdOutlinePrecisionManufacturing, MdOutlinePlaylistAddCircle } from "react-icons/md";
-import { LiaUsersCogSolid, LiaHandshakeSolid, LiaUserTieSolid, LiaIndustrySolid, LiaFileInvoiceDollarSolid } from 'react-icons/lia'
-import { useTheme } from '@/contexts/ThemeContext'
+import { LiaUsersCogSolid, LiaHandshakeSolid, LiaUserTieSolid, LiaIndustrySolid, LiaFileInvoiceDollarSolid  } from 'react-icons/lia'
+import { TbPaperBag  } from "react-icons/tb";
+import { GiSellCard, GiMaterialsScience, GiChemicalTank  } from "react-icons/gi";
+import { PiShippingContainerDuotone } from "react-icons/pi";
 
 interface SidebarLink {
   href: string
@@ -31,8 +33,8 @@ const sidebarLinks: SidebarLink[] = [
     label: 'Producción',
     icon: <LiaIndustrySolid size={24} />,
     subMenu: [
-      { href: '/pot/production/touch', label: 'Touch', icon: <MdOutlinePlaylistAddCircle size={20} /> },
-      { href: '/pot/production/machines', label: 'Maquinaria', icon: <MdOutlinePrecisionManufacturing size={20} /> },
+      { href: '/pot/production/touch', label: 'Touch', icon: <MdOutlinePlaylistAddCircle size={22} /> },
+      { href: '/pot/production/machines', label: 'Maquinaria', icon: <MdOutlinePrecisionManufacturing size={22} /> },
     ]
   },
   {
@@ -40,7 +42,7 @@ const sidebarLinks: SidebarLink[] = [
     label: 'Clientes',
     icon: <LiaHandshakeSolid size={24} />,
     subMenu: [
-      { href: '/pot/customers/references', label: 'Referencias', icon: <RiProductHuntLine size={20} /> },
+      { href: '/pot/customers/references', label: 'Referencias', icon: <RiProductHuntLine size={22} /> },
     ]
   },
   {
@@ -48,7 +50,18 @@ const sidebarLinks: SidebarLink[] = [
     label: 'Personal',
     icon: <RiTeamLine size={24} />,
     subMenu: [
-      { href: '/pot/employees/positions', label: 'Cargos', icon: <LiaUserTieSolid size={20} /> },
+      { href: '/pot/employees/positions', label: 'Cargos', icon: <LiaUserTieSolid size={22} /> },
+    ]
+  },
+  {
+    href: '/pot/products',
+    label: 'Productos',
+    icon: <TbPaperBag size={24} />,
+    subMenu: [
+      { href: '/pot/products/product-types', label: 'Tipos de productos', icon: <GiSellCard size={22} /> },
+      { href: '/pot/products/materials', label: 'Materiales', icon: <GiChemicalTank size={22} /> },
+      { href: '/pot/products/raw-materials', label: 'Materias primas', icon: <GiMaterialsScience size={22} /> },
+      { href: '/pot/products/suppliers', label: 'Proveedores', icon: <PiShippingContainerDuotone  size={22} /> },
     ]
   },
   {
@@ -56,7 +69,7 @@ const sidebarLinks: SidebarLink[] = [
     label: 'Credenciales',
     icon: <RiAdminLine size={24} />,
     subMenu: [
-      { href: '/pot/users/roles', label: 'Roles', icon: <LiaUsersCogSolid size={20} /> },
+      { href: '/pot/users/roles', label: 'Roles', icon: <LiaUsersCogSolid size={22} /> },
     ]
   },
 ]
@@ -133,7 +146,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen, isMinimized, setIs
                           className={`py-2 px-4 border-l border-gray-500 block relative before:w-3 before:h-3 before:absolute ${pathname === subLink.href
                               ? "text-gray-900 dark:text-white before:bg-sky-500 font-semibold"
                               : "before:bg-black dark:before:bg-white"
-                            } before:rounded-full before:-left-[6.5px] before:top-1/2 before:-translate-y-1/2 before:border-3 before:border-white dark:before:border-gray-900 hover:text-black dark:hover:text-white text-sm flex items-center`}
+                            } before:rounded-full before:-left-[6.5px] before:top-1/2 before:-translate-y-1/2 before:border-3 before:border-white dark:before:border-gray-900 hover:text-black dark:hover:text-white text-base flex items-center`}
                         >
                           {subLink.icon}
                           <span className="ml-2">{subLink.label}</span>

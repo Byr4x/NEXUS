@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Customer, Position, Employee, ProductType, Material, Reference, PurchaseOrder, Payment, PODetail
+from .models import Customer, Position, Employee, ProductType, Material, Product, Reference, PurchaseOrder, Payment, PODetail 
 
 class PODetailSerializer(serializers.ModelSerializer):  
     class Meta:
@@ -24,6 +24,11 @@ class ReferenceSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Reference
+        fields = '__all__'
+
+class ProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Product
         fields = '__all__'
 
 class MaterialSerializer(serializers.ModelSerializer):

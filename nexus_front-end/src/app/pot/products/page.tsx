@@ -5,38 +5,38 @@ import { motion } from 'framer-motion'
 import axios from 'axios'
 import { Card } from '@/components/ui/Card'
 import FormModal from '@/components/modals/FormModal'
-import { TextInput, TextArea } from '@/components/ui/StyledInputs'
+import { TextInput, TextArea, ImageInput } from '@/components/ui/StyledInputs'
 import { showAlert, showToast } from '@/components/ui/Alerts'
 import TopTableElements from '@/components/ui/TopTableElements'
 
-interface Position {
+interface Product {
   id: number
   name: string
   description: string
+  image_url: string
   is_active: boolean
-  employees: any[]
 }
 
-export default function PositionsPage() {
-  const [positions, setPositions] = useState<Position[]>([])
+export default function ProductsPage() {
+  const [products, setProducts] = useState<Product[]>([])
   const [isFormModalOpen, setFormModalOpen] = useState(false)
-  const [currentPosition, setCurrentPosition] = useState<Position | null>(null)
-  const [formData, setFormData] = useState({ name: '', description: '', is_active: true })
+  const [currentProduct, setCurrentProduct] = useState<Product | null>(null)
+  const [formData, setFormData] = useState({ name: '', description: '', image_url: '', is_active: true })
   const [searchTerm, setSearchTerm] = useState('')
   const [formErrors, setFormErrors] = useState({ name: '' })
   const [touchedFields, setTouchedFields] = useState({ name: false })
 
   useEffect(() => {
-    fetchPositions()
+    fetchProducts()
   }, [])
 
-  const fetchPositions = async () => {
+  const fetchProducts = async () => {
     try {
-      const response = await axios.get('http://127.0.0.1:8000/beiplas/business/positions/')
-      setPositions(response.data)
+      const response = await axios.get('http://127.0.0.1:8000/beiplas/business/products/')
+      setProducts(response.data)
     } catch (error) {
-      console.error('Error fetching positions:', error)
-      showToast('Error fetching positions', 'error')
+      console.error('Error fetching products:', error)
+      showToast('Error fetching products', 'error')
     }
   }
 
@@ -44,8 +44,8 @@ export default function PositionsPage() {
     if (!name.trim()) {
       return 'El nombre es obligatorio'
     }
-    if (positions.some(position => position.name.trim().toLowerCase() === name.trim().toLowerCase() && position.id !== currentPosition?.id)) {
-      return 'Ya existe un cargo con este nombre'
+    if (products.some(product => product.name.trim().toLowerCase() === name.trim().toLowerCase() && product.id !== currentProduct?.id)) {
+      return 'Ya existe un producto con este nombre'
     }
     return ''
   }
@@ -70,6 +70,31 @@ export default function PositionsPage() {
     }
   }
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('upload_preset', 'ml_default')
+      formData.append('folder', 'products')
+
+      try {
+        const response = await axios.post(
+          `https://api.cloudinary.com/v1_1/db5lqptwu/image/upload`,
+          formData
+        )
+        setFormData(prev => ({ ...prev, image_url: response.data.secure_url }))
+      } catch (error) {
+        console.error('Error uploading image:', error)
+        showToast('Error al subir la imagen', 'error')
+      }
+    }
+  }
+
+  const handleImageDelete = () => {
+    setFormData(prev => ({ ...prev, image_url: '' }))
+  }
+
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const nameError = validateName(formData.name)
@@ -84,20 +109,20 @@ export default function PositionsPage() {
       let response;
       let message = '';
 
-      if (currentPosition) {
-        response = await axios.put(`http://127.0.0.1:8000/beiplas/business/positions/${currentPosition.id}/`, formData)
-        message = 'Posición actualizada correctamente';
+      if (currentProduct) {
+        response = await axios.put(`http://127.0.0.1:8000/beiplas/business/products/${currentProduct.id}/`, formData)
+        message = 'Producto actualizado correctamente';
       } else {
-        response = await axios.post('http://127.0.0.1:8000/beiplas/business/positions/', formData)
-        message = 'Posición creada correctamente';
+        response = await axios.post('http://127.0.0.1:8000/beiplas/business/products/', formData)
+        message = 'Producto creado correctamente';
       }
 
       if (response.data.status === 'success') {
         showToast(message, 'success')
-        fetchPositions()
+        fetchProducts()
         setFormModalOpen(false)
-        setCurrentPosition(null)
-        setFormData({ name: '', description: '', is_active: true })
+        setCurrentProduct(null)
+        setFormData({ name: '', description: '', image_url: '', is_active: true })
       } else {
         showToast(response.data.message, 'error')
       }
@@ -110,16 +135,16 @@ export default function PositionsPage() {
     }
   }
 
-  const handleEdit = (position: Position) => {
-    setCurrentPosition(position)
-    setFormData({ name: position.name, description: position.description, is_active: position.is_active })
+  const handleEdit = (product: Product) => {
+    setCurrentProduct(product)
+    setFormData({ name: product.name, description: product.description, image_url: product.image_url, is_active: product.is_active })
     setFormModalOpen(true)
   }
 
-  const handleDelete = async (position: Position) => {
+  const handleDelete = async (product: Product) => {
     showAlert(
       {
-        title: `¿Estás seguro de eliminar la posición "${position.name}"?`,
+        title: `¿Estás seguro de eliminar el producto "${product.name}"?`,
         text: 'No podrás revertir esta acción',
         icon: 'question',
         showCancelButton: true,
@@ -127,23 +152,17 @@ export default function PositionsPage() {
         cancelButtonText: 'Cancelar'
       },
       async () => {
-        if(position.employees.length > 0) {
-          showToast('No se puede eliminar la posición porque tiene empleados asignados', 'error');
-          return;
-        }
-
         try {
-          const response = await axios.delete(`http://127.0.0.1:8000/beiplas/business/positions/${position.id}/`)
-          console.log(response)
+          const response = await axios.delete(`http://127.0.0.1:8000/beiplas/business/products/${product.id}/`)
           if (response.status === 204) {
-            showToast('Posición eliminada correctamente', 'success')
-            fetchPositions()
+            showToast('Producto eliminado correctamente', 'success')
+            fetchProducts()
           } else {
             showToast(response.data.message, 'error')
           }
         } catch (error) {
           if (axios.isAxiosError(error) && error.response) {
-            showToast(error.response.data.message || 'Error al eliminar la posición', 'error')
+            showToast(error.response.data.message || 'Error al eliminar el producto', 'error')
           } else {
             showToast('An unexpected error occurred', 'error')
           }
@@ -159,7 +178,7 @@ export default function PositionsPage() {
     showAlert(
       {
         title: 'Confirmar cambio de estado',
-        text: `¿Quieres ${currentStatus ? 'desactivar' : 'activar'} esta posición?`,
+        text: `¿Quieres ${currentStatus ? 'desactivar' : 'activar'} este producto?`,
         icon: 'question',
         showCancelButton: true,
         confirmButtonText: currentStatus ? 'Desactivar' : 'Activar',
@@ -168,22 +187,23 @@ export default function PositionsPage() {
       async () => {
         try {
           const newStatus = !currentStatus;
-          const position = positions.find(p => p.id === id);
-          if (!position) {
-            showToast('Position not found', 'error')
+          const product = products.find(p => p.id === id);
+          if (!product) {
+            showToast('Product not found', 'error')
             return;
           }
 
           const updatedData = {
-            name: position.name,
-            description: position.description,
+            name: product.name,
+            description: product.description,
+            image_url: product.image_url,
             is_active: newStatus
           };
 
-          const response = await axios.patch(`http://127.0.0.1:8000/beiplas/business/positions/${id}/`, updatedData);
+          const response = await axios.patch(`http://127.0.0.1:8000/beiplas/business/products/${id}/`, updatedData);
           if (response.data.status === 'success') {
             showToast(response.data.message, 'success')
-            setPositions(positions.map(p =>
+            setProducts(products.map(p =>
               p.id === id ? { ...p, is_active: newStatus } : p
             ));
           } else {
@@ -191,7 +211,7 @@ export default function PositionsPage() {
           }
         } catch (error) {
           if (axios.isAxiosError(error) && error.response) {
-            showToast(error.response.data.message || 'Error updating position status', 'error')
+            showToast(error.response.data.message || 'Error updating product status', 'error')
           } else {
             showToast('An unexpected error occurred', 'error')
           }
@@ -209,7 +229,7 @@ export default function PositionsPage() {
         <TextInput
           label="Nombre"
           name="name"
-          placeholder='Cargo del empleado'
+          placeholder='Nombre del producto'
           value={formData.name}
           onChange={handleInputChange}
           onBlur={handleInputBlur}
@@ -225,17 +245,29 @@ export default function PositionsPage() {
         <TextArea
           label="Descripción"
           name="description"
-          placeholder='Descripción del cargo'
+          placeholder='Descripción del producto'
           value={formData.description}
           onChange={handleInputChange}
+        />
+      </div>
+    ),
+    image: (
+      <div>
+        <ImageInput
+          label="Imagen"
+          name="image"
+          value={formData.image_url}
+          accept="image/*"
+          onChange={handleImageUpload}
+          onDelete={handleImageDelete}
         />
       </div>
     ),
   }
 
   const handleCancel = () => {
-    setCurrentPosition(null)
-    setFormData({ name: '', description: '', is_active: true })
+    setCurrentProduct(null)
+    setFormData({ name: '', description: '', image_url: '', is_active: true })
     setFormErrors({ name: '' })
     setTouchedFields({ name: false })
     setFormModalOpen(false)
@@ -246,12 +278,12 @@ export default function PositionsPage() {
     setSearchTerm(searchTerm);
   };
 
-  const filteredPositions = useMemo(() => {
-    return positions.filter(position =>
-      position.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      position.description.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredProducts = useMemo(() => {
+    return products.filter(product =>
+      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.description.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [positions, searchTerm]);
+  }, [products, searchTerm]);
 
   const filterOptions = [
     { key: 'name', label: 'Nombre' },
@@ -263,14 +295,14 @@ export default function PositionsPage() {
   const handleFilter = (field: string | null, order: 'asc' | 'desc') => {
     if (field === null) {
       // Reset to original order
-      fetchPositions();
+      fetchProducts();
     } else {
-      const sortedPositions = [...positions].sort((a, b) => {
-        if (a[field as keyof Position] < b[field as keyof Position]) return order === 'asc' ? -1 : 1;
-        if (a[field as keyof Position] > b[field as keyof Position]) return order === 'asc' ? 1 : -1;
+      const sortedProducts = [...products].sort((a, b) => {
+        if (a[field as keyof Product] < b[field as keyof Product]) return order === 'asc' ? -1 : 1;
+        if (a[field as keyof Product] > b[field as keyof Product]) return order === 'asc' ? 1 : -1;
         return 0;
       });
-      setPositions(sortedPositions);
+      setProducts(sortedProducts);
     }
   };
 
@@ -286,30 +318,31 @@ export default function PositionsPage() {
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+        className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
       >
-        {filteredPositions.map((position) => (
+        {filteredProducts.map((product) => (
           <Card
-            key={position.id}
-            title={position.name}
-            description={position.description}
-            onEdit={() => handleEdit(position)}
-            onDelete={() => handleDelete(position)}
+            key={product.id}
+            title={product.name}
+            description={product.description}
+            imageUrl={product.image_url}
+            onEdit={() => handleEdit(product)}
+            onDelete={() => handleDelete(product)}
             showSwitch={true}
-            switchState={position.is_active}
-            onSwitchChange={() => handleSwitchChange(position.id, position.is_active)}
+            switchState={product.is_active}
+            onSwitchChange={() => handleSwitchChange(product.id, product.is_active)}
           />
         ))}
       </motion.div>
 
       {isFormModalOpen && (
         <FormModal
-          title={currentPosition ? 'Editar Cargo' : 'Agregar Cargo'}
-          layout={[['name'], ['description']]}
+          title={currentProduct ? 'Editar Producto' : 'Agregar Producto'}
+          layout={[['name'], ['description'], ['image']]}
           inputs={inputs}
           onSubmit={handleFormSubmit}
           onCancel={handleCancel}
-          submitLabel={currentPosition ? 'Actualizar' : 'Crear'}
+          submitLabel={currentProduct ? 'Actualizar' : 'Crear'}
         />
       )}
     </div>

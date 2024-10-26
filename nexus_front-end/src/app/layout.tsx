@@ -4,7 +4,6 @@ import { Inter } from 'next/font/google'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 import { Metadata } from 'next'
 import ClientWrapper from '@/components/ClientWrapper'
-import { NextUIProvider } from '@nextui-org/react'
 
 const inter = Inter({ subsets: ['latin'] })
 

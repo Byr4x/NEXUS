@@ -70,7 +70,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar, isSidebarOpen, isMinimiz
             >
               <a href='http://localhost:3000/pot' className='flex items-center'>
                 <img src='https://res.cloudinary.com/db5lqptwu/image/upload/v1729079758/logos/n0dak8ohwtbuxy6xwuvu.png' alt="Beiplas logo" className='mr-2 w-10 h-10' />
-                NEXTop 
+                NEXPOT
               </a>
             </motion.h1>
             {getPageName(pathname) && (
@@ -118,7 +118,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar, isSidebarOpen, isMinimiz
                     src="https://cdn.pixabay.com/photo/2020/07/01/12/58/icon-5359553_640.png"
                     alt="User avatar"
                   />
-                  <span className="hidden sm:inline">John Doe</span>
+                  <span className="hidden sm:inline">Beiplas</span>
                   <ChevronDown
                     size={20}
                     className={`transition-transform duration-300 ${isMenuOpen ? 'rotate-180' : ''}`}

@@ -31,7 +31,7 @@ class Employee(models.Model):
     last_name = models.CharField(max_length=100)
     phone_number = models.CharField(max_length=15)
     email = models.EmailField(unique=True, null=True, blank=True)
-    entity = models.CharField(max_length=200, default='Beiplas')
+    entity = models.CharField(max_length=200)
     position = models.ForeignKey(Position, on_delete=models.PROTECT, related_name='employees', related_query_name='employee')
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -54,6 +54,17 @@ class Material(models.Model):
     name = models.CharField(max_length=25)
     description = models.TextField()
     weight_constant = models.DecimalField(max_digits=8, decimal_places=6)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
+    
+class Product(models.Model):
+    name = models.CharField(max_length=200)
+    description = models.TextField(null=True, blank=True)
+    image_url = models.URLField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -129,7 +140,7 @@ class Reference(models.Model):
     dynas_treaty_faces = models.PositiveIntegerField(choices=dynas_treaty_faces_choices, default=0)
     pantones_quantity = models.PositiveBigIntegerField()
     pantones_codes = ArrayField(models.PositiveIntegerField(), null=True, blank=True)
-    sketch_ult = models.URLField(default='https://res.cloudinary.com/db5lqptwu/image/upload/v1728476524/sketches/hlmgblou2onqaf0efh6b.webp')
+    sketch_url = models.URLField(default='https://res.cloudinary.com/db5lqptwu/image/upload/v1728476524/sketches/hlmgblou2onqaf0efh6b.webp')
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -292,7 +303,7 @@ class PODetail(models.Model):
     delivery_location = models.CharField(max_length=150)
     observations = models.TextField(null=True, blank=True)
     is_new_sketch = models.BooleanField(default=False)
-    sketch_ult = models.URLField(default='https://res.cloudinary.com/db5lqptwu/image/upload/v1728476524/sketches/hlmgblou2onqaf0efh6b.webp')
+    sketch_url = models.URLField(default='https://res.cloudinary.com/db5lqptwu/image/upload/v1728476524/sketches/hlmgblou2onqaf0efh6b.webp')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     wo_number = models.PositiveIntegerField(null=True, blank=True, editable=False)

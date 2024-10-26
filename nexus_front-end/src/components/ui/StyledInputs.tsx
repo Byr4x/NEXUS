@@ -1,4 +1,3 @@
-// src/components/inputs/StyledInputs.tsx
 import React from 'react';
 import Select from 'react-select';
 import DatePicker from 'react-datepicker';
@@ -10,11 +9,13 @@ interface TextInputProps {
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   placeholder?: string;
+  onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
+  required?: boolean;
 }
 
-export const TextInput: React.FC<TextInputProps> = ({ label, name, value, onChange, placeholder }) => (
-  <div className="mb-4">
-    <label htmlFor={name} className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">{label}</label>
+export const TextInput: React.FC<TextInputProps> = ({ label, name, value, onChange, placeholder, onBlur, required }) => (
+  <div>
+    <label htmlFor={name} className="block mb-1 font-medium text-gray-700 dark:text-gray-300">{label} {required && <span className="text-red-500">*</span>}</label>
     <input
       type="text"
       id={name}
@@ -23,6 +24,7 @@ export const TextInput: React.FC<TextInputProps> = ({ label, name, value, onChan
       onChange={onChange}
       placeholder={placeholder}
       className="w-full p-2 rounded-md border border-gray-300 bg-white text-gray-900 shadow-sm focus:border-sky-500 focus:ring-sky-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-sky-400 dark:focus:ring-sky-400"
+      onBlur={onBlur}
     />
   </div>
 );
@@ -34,11 +36,13 @@ interface NumberInputProps {
   value: number;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   placeholder?: string;
+  onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
+  required?: boolean;
 }
 
-export const NumberInput: React.FC<NumberInputProps> = ({ label, name, value, onChange, placeholder }) => (
-  <div className="mb-4">
-    <label htmlFor={name} className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">{label}</label>
+export const NumberInput: React.FC<NumberInputProps> = ({ label, name, value, onChange, placeholder, onBlur, required }) => (
+  <div>
+    <label htmlFor={name} className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">{label} {required && <span className="text-red-500">*</span>}</label>
     <input
       type="number"
       id={name}
@@ -47,6 +51,7 @@ export const NumberInput: React.FC<NumberInputProps> = ({ label, name, value, on
       onChange={onChange}
       placeholder={placeholder}
       className="w-full p-2 rounded-md border border-gray-300 bg-white text-gray-900 shadow-sm focus:border-sky-500 focus:ring-sky-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-sky-400 dark:focus:ring-sky-400"
+      onBlur={onBlur}
     />
   </div>
 );
@@ -58,11 +63,12 @@ interface SelectInputProps {
   value: any;
   onChange: (selectedOption: any) => void;
   options: { value: any; label: string }[];
+  required?: boolean;
 }
 
-export const SelectInput: React.FC<SelectInputProps> = ({ label, name, value, onChange, options }) => (
-  <div className="mb-4">
-    <label htmlFor={name} className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">{label}</label>
+export const SelectInput: React.FC<SelectInputProps> = ({ label, name, value, onChange, options, required }) => (
+  <div>
+    <label htmlFor={name} className="block mb-1 font-medium text-gray-700 dark:text-gray-300">{label} {required && <span className="text-red-500">*</span>}</label>
     <Select
       id={name}
       name={name}
@@ -75,6 +81,7 @@ export const SelectInput: React.FC<SelectInputProps> = ({ label, name, value, on
       styles={{
         control: (provided) => ({
           ...provided,
+          padding: '2px',
           backgroundColor: 'var(--input-bg)',
           borderColor: 'var(--input-border)',
           '&:hover': {
@@ -94,6 +101,10 @@ export const SelectInput: React.FC<SelectInputProps> = ({ label, name, value, on
           },
         }),
         singleValue: (provided) => ({
+          ...provided,
+          color: 'var(--input-text)',
+        }),
+        input: (provided) => ({
           ...provided,
           color: 'var(--input-text)',
         }),
@@ -117,11 +128,12 @@ interface RadioInputProps {
   options: { value: any; label: string }[];
   selectedValue: any;
   onChange: (value: any) => void;
+  required?: boolean;
 }
 
-export const RadioInput: React.FC<RadioInputProps> = ({ label, name, options, selectedValue, onChange }) => (
-  <div className="mb-4">
-    <p className="block mb-2 text-gray-700 dark:text-gray-300">{label}</p>
+export const RadioInput: React.FC<RadioInputProps> = ({ label, name, options, selectedValue, onChange, required }) => (
+  <div>
+    <p className="block mb-1 text-gray-700 dark:text-gray-300">{label} {required && <span className="text-red-500">*</span>}</p>
     {options.map(option => (
       <label key={option.value} className="inline-flex items-center mr-4">
         <input
@@ -143,11 +155,12 @@ interface DateInputProps {
   label: string;
   selectedDate: Date | null;
   onChange: (date: Date | null) => void;
+  required?: boolean;
 }
 
-export const DateInput: React.FC<DateInputProps> = ({ label, selectedDate, onChange }) => (
-  <div className="mb-4">
-    <label className="block mb-2 text-gray-700 dark:text-gray-300">{label}</label>
+export const DateInput: React.FC<DateInputProps> = ({ label, selectedDate, onChange, required }) => (
+  <div>
+    <label className="block mb-1 text-gray-700 dark:text-gray-300">{label} {required && <span className="text-red-500">*</span>}</label>
     <DatePicker
       selected={selectedDate}
       onChange={onChange}
@@ -161,11 +174,12 @@ interface TimeInputProps {
   label: string;
   selectedTime: Date | null;
   onChange: (time: Date | null) => void;
+  required?: boolean;
 }
 
-export const TimeInput: React.FC<TimeInputProps> = ({ label, selectedTime, onChange }) => (
-  <div className="mb-4">
-    <label className="block mb-2 text-gray-700 dark:text-gray-300">{label}</label>
+export const TimeInput: React.FC<TimeInputProps> = ({ label, selectedTime, onChange, required }) => (
+  <div>
+    <label className="block mb-1 text-gray-700 dark:text-gray-300">{label} {required && <span className="text-red-500">*</span>}</label>
     <DatePicker
       selected={selectedTime}
       onChange={onChange}
@@ -186,11 +200,12 @@ interface TextAreaProps {
   value: string;
   onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
   placeholder?: string;
+  required?: boolean;
 }
 
-export const TextArea: React.FC<TextAreaProps> = ({ label, name, value, onChange, placeholder }) => (
-  <div className="mb-4">
-    <label htmlFor={name} className="block mb|1-2 text-gray-700 dark:text-gray-300">{label}</label>
+export const TextArea: React.FC<TextAreaProps> = ({ label, name, value, onChange, placeholder, required }) => (
+  <div>
+    <label htmlFor={name} className="block mb-1 text-gray-700 dark:text-gray-300">{label} {required && <span className="text-red-500">*</span>}</label>
     <textarea
       id={name}
       name={name}
@@ -200,6 +215,86 @@ export const TextArea: React.FC<TextAreaProps> = ({ label, name, value, onChange
       className="w-full p-2 border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
       rows={4}
     />
+  </div>
+);
+
+// ImageInput Component
+interface ImageInputProps {
+  label: string;
+  name: string;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onDelete: () => void;
+  accept?: string;
+  required?: boolean;
+}
+
+export const ImageInput: React.FC<ImageInputProps> = ({ label, name, value, onChange, onDelete, accept, required }) => (
+  <div>
+    <label htmlFor={name} className="block mb-1 font-medium text-gray-700 dark:text-gray-300">
+      {label} {required && <span className="text-red-500">*</span>}
+    </label>
+    {value ? (
+      <div className="relative mt-2 w-full h-48 bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden">
+        <img src={value} alt="Preview" className="w-full h-full object-contain" />
+        <div className="absolute top-2 right-2 flex space-x-2">
+          <button
+            type="button"
+            onClick={() => document.getElementById(name)?.click()}
+            className="bg-blue-500 text-white p-2 rounded-full hover:bg-blue-600 transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={onDelete}
+            className="bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    ) : (
+      <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+        <div className="space-y-1 text-center">
+          <svg
+            className="mx-auto h-12 w-12 text-gray-400"
+            stroke="currentColor"
+            fill="none"
+            viewBox="0 0 48 48"
+            aria-hidden="true"
+          >
+            <path
+              d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          <div className="flex text-sm justify-center text-gray-600">
+            <label
+              htmlFor={name}
+              className="relative cursor-pointer bg-white dark:bg-gray-800 rounded-md font-medium text-sky-600 hover:text-sky-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-sky-500"
+            >
+              <span className="text-center p-1">Subir un archivo</span>
+              <input
+                id={name}
+                name={name}
+                type="file"
+                className="sr-only"
+                onChange={onChange}
+                accept={accept}
+              />
+            </label>  
+          </div>
+          <p className="text-xs text-gray-500">PNG, JPG, GIF hasta 10MB</p>
+        </div>
+      </div>
+    )}
   </div>
 );
 
