@@ -64,7 +64,9 @@ class Material(models.Model):
 class Product(models.Model):
     name = models.CharField(max_length=200)
     description = models.TextField(null=True, blank=True)
-    image_url = models.URLField(null=True, blank=True)
+    product_type = models.ForeignKey(ProductType, on_delete=models.PROTECT, related_name='products', related_query_name='product')
+    material = models.ForeignKey(Material, on_delete=models.PROTECT, related_name='products', related_query_name='product')
+    image_url = models.URLField()
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -22,9 +22,12 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar, isSidebarOpen, isMinimiz
   const getPageName = (path: string) => {
     const routes: { [key: string]: string } = {
       '/pot': 'Dashboard',
+      '/pot/customers': 'Clientes',
       '/pot/employees': 'Empleados',
       '/pot/employees/positions': 'Cargos',
-      // Añade más rutas según sea necesario
+      '/pot/products': 'Productos',
+      '/pot/products/materials': 'Materiales',
+      '/pot/products/product-types': 'Tipos de productos',
     }
     return routes[path] || ''
   }
