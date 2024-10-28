@@ -37,7 +37,7 @@ export const Card: React.FC<CardProps> = ({
       className={`${cardClasses} flex flex-col h-full`}
     >
       {imageUrl && (
-        <div className="relative w-full h-48 bg-white dark:bg-gray-800">
+        <div className={`relative w-full h-48 ${switchState ? 'bg-white dark:bg-gray-800' : 'opacity-50'} rounded-md`}>
           <img 
             src={imageUrl} 
             alt={title} 

@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   description: 'Soluciones sostenibles en empaques',
   icons: {
     icon: 'https://res.cloudinary.com/db5lqptwu/image/upload/v1729079758/logos/n0dak8ohwtbuxy6xwuvu.png',
-  }, 
+  },
 }
 
 export default function RootLayout({
@@ -21,10 +21,10 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="es">
-      <body className={`${inter.className} antialiased`}>
+    <html lang="es" className="h-full overflow-hidden">
+      <body className={`${inter.className} antialiased h-full`}>
         <ThemeProvider>
-            <ClientWrapper>{children}</ClientWrapper>
+          <ClientWrapper>{children}</ClientWrapper>
         </ThemeProvider>
       </body>
     </html>

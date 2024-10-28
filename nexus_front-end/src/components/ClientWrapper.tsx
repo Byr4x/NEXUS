@@ -5,7 +5,7 @@ import Navbar from '@/components/landing/Navbar'
 import Footer from '@/components/landing/Footer'
 import { useTheme } from '@/contexts/ThemeContext'
 import { usePathname } from 'next/navigation'
-import { Tooltip } from "@nextui-org/tooltip";
+import { Tooltip } from "@nextui-org/tooltip"
 import { motion } from 'framer-motion'
 
 export default function ClientWrapper({
@@ -15,16 +15,13 @@ export default function ClientWrapper({
 }) {
   const { isDarkMode } = useTheme()
   const pathname = usePathname()
-
-  const isPotPath = pathname.startsWith('/pot')
+  const isPotPath = pathname?.startsWith('/pot')
 
   if (isPotPath) {
     return (
       <div className={isDarkMode ? 'dark' : ''}>
-        <div className="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
-          <main>
-              {children}
-          </main>
+        <div className="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300 h-full">
+          <main>{children}</main>
         </div>
       </div>
     )

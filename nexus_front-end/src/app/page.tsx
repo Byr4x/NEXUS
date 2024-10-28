@@ -7,7 +7,7 @@ import { ChevronRight, Leaf, Recycle } from 'lucide-react'
 export default function Home() {
   return (
     <>
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+      <section className="relative min-h-screen flex items-center justify-center overflow-y-scroll">
         <div className="absolute inset-0 bg-gradient-to-br from-cyan-200 to-blue-600 dark:from-cyan-300 dark:to-blue-700"></div>
         <div className="relative z-10 text-center text-black px-6">
           <motion.h2 
@@ -59,7 +59,7 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {[
               { title: 'Bolsas de Plástico', description: 'Nuestras bolsas de plástico son duraderas y reciclables, perfectas para múltiples usos.', icon: Recycle, color: 'from-blue-400 to-blue-600' },
-              { title: 'Bolsas de Maíz', description: 'Nuestras bolsas biodegradables de maíz son la opción ecológica para un futuro sostenible.', icon: Leaf, color: 'from-green-400 to-green-600' }
+              { title: 'Bolsas de Maíz', description: 'Nuestras bolsas biodegradables de maíz son la opción ecológica para un futuro sostenible.', icon: Leaf, color: 'from-amber-50 to-amber-100' }
             ].map((product, index) => (
               <motion.div 
                 key={product.title}
@@ -69,8 +69,8 @@ export default function Home() {
                 className="bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden shadow-lg"
               >
                 <div className={`bg-gradient-to-b ${product.color} p-6 flex items-center`}>
-                  <product.icon className="w-10 h-10 text-white" />
-                  <h5 className="text-xl font-bold text-white ml-4">{product.title}</h5>
+                  <product.icon className="w-10 h-10 text-black" />
+                  <h5 className="text-xl font-bold text-black ml-4">{product.title}</h5>
                 </div>
                 <div className="p-6">
                   <p className="text-gray-700 dark:text-gray-300">{product.description}</p>

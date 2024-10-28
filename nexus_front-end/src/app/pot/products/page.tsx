@@ -448,7 +448,7 @@ export default function ProductsPage() {
       {isFormModalOpen && (
         <FormModal
           title={currentProduct ? 'Editar Producto' : 'Agregar Producto'}
-          layout={[['name'], ['description'], ['product_type'], ['material'], ['image']]}
+          layout={[['name'], ['description'], ['product_type', 'material'], ['image']]}
           inputs={inputs}
           onSubmit={handleFormSubmit}
           onCancel={handleCancel}

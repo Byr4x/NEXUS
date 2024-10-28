@@ -17,7 +17,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar, isSidebarOpen, isMinimiz
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const { isDarkMode, toggleDarkMode } = useTheme()
   const [windowWidth, setWindowWidth] = useState(0)
-  const pathname = usePathname()
+  const pathname = usePathname() || ''
 
   const getPageName = (path: string) => {
     const routes: { [key: string]: string } = {

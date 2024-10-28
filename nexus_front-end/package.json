@@ -24,7 +24,7 @@
     "chart.js": "^4.4.4",
     "cloudinary": "^2.5.1",
     "fabric": "^6.4.3",
-    "framer-motion": "^11.11.9",
+    "framer-motion": "^11.11.10",
     "fs": "^0.0.1-security",
     "jspdf": "^2.5.2",
     "lucide-react": "^0.452.0",
@@ -42,7 +42,8 @@
     "react-responsive": "^10.0.0",
     "react-select": "^5.8.1",
     "sweetalert2": "^11.14.4",
-    "sweetalert2-react-content": "^5.0.7"
+    "sweetalert2-react-content": "^5.0.7",
+    "swiper": "^11.1.14"
   },
   "devDependencies": {
     "@types/node": "^20",
