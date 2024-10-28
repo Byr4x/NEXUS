@@ -65,7 +65,7 @@ export default function ProductsPage() {
 
   const fetchProductTypes = async () => {
     try {
-      const response = await axios.get('http://127.0.0.1:8000/beiplas/business/product-types/')
+      const response = await axios.get('http://127.0.0.1:8000/beiplas/business/productTypes/')
       setProductTypes(response.data)
     } catch (error) {
       console.error('Error fetching product types:', error)

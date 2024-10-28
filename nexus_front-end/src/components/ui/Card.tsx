@@ -47,7 +47,16 @@ export const Card: React.FC<CardProps> = ({
       )}
       <div className={`p-4 flex-grow ${!imageUrl && !description ? 'flex items-center justify-center' : ''}`}>
         <h2 className={`font-semibold ${textClasses} ${!imageUrl && !description ? 'text-center text-3xl' : 'text-xl'}`}>{title}</h2>
-        {description && <p className={`${descriptionClasses} mt-2`}>{description}</p>}
+        {description && (
+          <p className={`${descriptionClasses} mt-2`}>
+            {description.split('\n').map((line, i) => (
+              <React.Fragment key={i}>
+                {line}
+                {i < description.split('\n').length - 1 && <br />}
+              </React.Fragment>
+            ))}
+          </p>
+        )}
       </div>
       <div className="flex justify-between space-x-2 p-4 bg-gray-50 dark:bg-gray-700">
         {showSwitch && (
