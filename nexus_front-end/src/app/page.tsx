@@ -7,7 +7,7 @@ import { ChevronRight, Leaf, Recycle } from 'lucide-react'
 export default function Home() {
   return (
     <>
-      <section className="relative min-h-screen flex items-center justify-center overflow-y-scroll">
+      <section className="relative min-h-screen flex items-center justify-center">
         <div className="absolute inset-0 bg-gradient-to-br from-cyan-200 to-blue-600 dark:from-cyan-300 dark:to-blue-700"></div>
         <div className="relative z-10 text-center text-black px-6">
           <motion.h2 

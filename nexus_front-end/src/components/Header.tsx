@@ -48,7 +48,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar, isSidebarOpen, isMinimiz
   }
 
   return (
-    <header className="w-full fixed top-0 left-0 right-0 z-50 bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300 border-b border-gray-200 dark:border-sky-500">
+    <header className="w-full sticky top-0 z-50 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300 border-b border-gray-200 dark:border-sky-500">
       <div className="pr-[2%] pl-[1%]">
         <div className="flex justify-between items-center py-4">
           <div className="flex items-center">

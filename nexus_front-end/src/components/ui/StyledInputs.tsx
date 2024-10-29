@@ -11,9 +11,11 @@ interface TextInputProps {
   placeholder?: string;
   onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
   required?: boolean;
+  disabled?: boolean;
+  multiple?: boolean;
 }
 
-export const TextInput: React.FC<TextInputProps> = ({ label, name, value, onChange, placeholder, onBlur, required }) => (
+export const TextInput: React.FC<TextInputProps> = ({ label, name, value, onChange, placeholder, onBlur, required, disabled, multiple }) => (
   <div>
     <label htmlFor={name} className="block mb-1 font-medium text-gray-700 dark:text-gray-300">{label} {required && <span className="text-red-500">*</span>}</label>
     <input
@@ -25,6 +27,8 @@ export const TextInput: React.FC<TextInputProps> = ({ label, name, value, onChan
       placeholder={placeholder}
       className="w-full p-2 rounded-md border border-gray-300 bg-white text-gray-900 shadow-sm focus:border-sky-500 focus:ring-sky-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-sky-400 dark:focus:ring-sky-400"
       onBlur={onBlur}
+      disabled={disabled}
+      multiple={multiple}
     />
   </div>
 );
@@ -38,20 +42,26 @@ interface NumberInputProps {
   placeholder?: string;
   onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
   required?: boolean;
+  min?: number;
+  step?: number;
+  disabled?: boolean;
 }
 
-export const NumberInput: React.FC<NumberInputProps> = ({ label, name, value, onChange, placeholder, onBlur, required }) => (
+export const NumberInput: React.FC<NumberInputProps> = ({ label, name, value, onChange, placeholder, onBlur, required, min, step, disabled }) => (
   <div>
-    <label htmlFor={name} className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">{label} {required && <span className="text-red-500">*</span>}</label>
+    <label htmlFor={name} className="block mb-1 font-medium text-gray-700 dark:text-gray-300">{label} {required && <span className="text-red-500">*</span>}</label>
     <input
       type="number"
       id={name}
       name={name}
-      value={value}
+      value={value ? value : ''}
       onChange={onChange}
       placeholder={placeholder}
       className="w-full p-2 rounded-md border border-gray-300 bg-white text-gray-900 shadow-sm focus:border-sky-500 focus:ring-sky-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-sky-400 dark:focus:ring-sky-400"
       onBlur={onBlur}
+      min={min}
+      step={step}
+      disabled={disabled}
     />
   </div>
 );
@@ -64,9 +74,10 @@ interface SelectInputProps {
   onChange: (selectedOption: any) => void;
   options: { value: any; label: string }[];
   required?: boolean;
+  disabled?: boolean;
 }
 
-export const SelectInput: React.FC<SelectInputProps> = ({ label, name, value, onChange, options, required }) => (
+export const SelectInput: React.FC<SelectInputProps> = ({ label, name, value, onChange, options, required, disabled }) => (
   <div>
     <label htmlFor={name} className="block mb-1 font-medium text-gray-700 dark:text-gray-300">{label} {required && <span className="text-red-500">*</span>}</label>
     <Select
@@ -78,6 +89,7 @@ export const SelectInput: React.FC<SelectInputProps> = ({ label, name, value, on
       className="react-select-container"
       classNamePrefix="react-select"
       isClearable
+      isDisabled={disabled}
       styles={{
         control: (provided) => ({
           ...provided,

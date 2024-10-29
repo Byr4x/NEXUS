@@ -1,4 +1,3 @@
-// src/components/modals/FormModal.tsx
 import React from 'react';
 import { RiCloseLine } from 'react-icons/ri';
 
@@ -9,12 +8,13 @@ interface FormModalProps {
   onSubmit: (e: React.FormEvent) => void;
   onCancel: () => void;
   submitLabel: string;
+  width?: string;
 }
 
-const FormModal: React.FC<FormModalProps> = ({ title, layout, inputs, onSubmit, onCancel, submitLabel }) => {
+const FormModal: React.FC<FormModalProps> = ({ title, layout, inputs, onSubmit, onCancel, submitLabel, width }) => {
   return (
-    <div className="fixed inset-0 flex bg-black bg-opacity-40 items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg w-full max-w-[40%] shadow-xl">
+    <div className="fixed inset-0 flex bg-black bg-opacity-40 items-center justify-center z-50 overflow-y-auto py-10">
+      <div className={`bg-white dark:bg-gray-800 p-6 rounded-lg w-full ${width ? width : 'max-w-[40%]'} shadow-xl my-auto`}>
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white text-center">{title}</h2>
           <button onClick={onCancel} className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100 transition-colors">
@@ -46,4 +46,3 @@ const FormModal: React.FC<FormModalProps> = ({ title, layout, inputs, onSubmit, 
 };
 
 export default FormModal;
-

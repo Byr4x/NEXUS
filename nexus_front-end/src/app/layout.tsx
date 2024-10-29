@@ -1,3 +1,4 @@
+// app/layout.tsx
 import React from 'react'
 import './globals.css'
 import { Inter } from 'next/font/google'
@@ -22,7 +23,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es" className="h-full overflow-hidden">
-      <body className={`${inter.className} antialiased h-full`}>
+      <body className={`${inter.className} antialiased h-full overflow-y-auto`}>
         <ThemeProvider>
           <ClientWrapper>{children}</ClientWrapper>
         </ThemeProvider>

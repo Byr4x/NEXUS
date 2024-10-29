@@ -13,7 +13,7 @@ export default function Navbar() {
   const pathname = usePathname()
 
   return (
-    <header className="fixed w-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-md z-50">
+    <header className="sticky top-0 w-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-md z-50">
       <div className="container mx-auto flex justify-between items-center py-3 px-6">
         <motion.h1 
           initial={{ opacity: 0, x: -20 }}
