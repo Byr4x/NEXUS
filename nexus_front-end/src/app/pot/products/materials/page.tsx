@@ -59,11 +59,11 @@ export default function MaterialsPage() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
-    
+
     let sanitizedValue = value.trimStart().replace(/\s{2,}/g, ' ')
-    
+
     setFormData(prev => ({ ...prev, [name]: name === 'weight_constant' ? parseFloat(sanitizedValue) : sanitizedValue }))
-    
+
     if (name === 'name' && touchedFields.name) {
       setFormErrors(prev => ({ ...prev, name: validateName(sanitizedValue) }))
     }
@@ -312,18 +312,24 @@ export default function MaterialsPage() {
         animate={{ opacity: 1 }}
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
       >
-        {filteredMaterials.map((material) => (
-          <Card
-            key={material.id}
-            title={material.name}
-            description={`${material.description}\nConstante de peso: ${material.weight_constant}`}
-            onEdit={() => handleEdit(material)}
-            onDelete={() => handleDelete(material)}
-            showSwitch={true}
-            switchState={material.is_active}
-            onSwitchChange={() => handleSwitchChange(material.id, material.is_active)}
-          />
-        ))}
+        {filteredMaterials.length === 0 ? (
+          <div className="flex justify-center items-center h-full pt-20">
+            <p className="text-gray-600 dark:text-gray-400">No hay materiales disponibles</p>
+          </div>
+        ) : (
+          filteredMaterials.map((material) => (
+            <Card
+              key={material.id}
+              title={material.name}
+              description={`${material.description}\nConstante de peso: ${material.weight_constant}`}
+              onEdit={() => handleEdit(material)}
+              onDelete={() => handleDelete(material)}
+              showSwitch={true}
+              switchState={material.is_active}
+              onSwitchChange={() => handleSwitchChange(material.id, material.is_active)}
+            />
+          ))
+        )}
       </motion.div>
 
       {isFormModalOpen && (
@@ -339,4 +345,3 @@ export default function MaterialsPage() {
     </div>
   )
 }
-

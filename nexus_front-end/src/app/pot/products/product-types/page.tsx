@@ -51,11 +51,11 @@ export default function ProductTypesPage() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
-    
+
     let sanitizedValue = value.trimStart().replace(/\s{2,}/g, ' ')
-    
+
     setFormData(prev => ({ ...prev, [name]: sanitizedValue }))
-    
+
     if (name === 'name' && touchedFields.name) {
       setFormErrors(prev => ({ ...prev, name: validateName(sanitizedValue) }))
     }
@@ -280,18 +280,24 @@ export default function ProductTypesPage() {
         animate={{ opacity: 1 }}
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
       >
-        {filteredProductTypes.map((productType) => (
-          <Card
-            key={productType.id}
-            title={productType.name}
-            description={productType.description}
-            onEdit={() => handleEdit(productType)}
-            onDelete={() => handleDelete(productType)}
-            showSwitch={true}
-            switchState={productType.is_active}
-            onSwitchChange={() => handleSwitchChange(productType.id, productType.is_active)}
-          />
-        ))}
+        {filteredProductTypes.length === 0 ? (
+          <div className="flex justify-center items-center h-full pt-20">
+            <p className="text-gray-600 dark:text-gray-400">No hay tipos de productos disponibles</p>
+          </div>
+        ) : (
+          filteredProductTypes.map((productType) => (
+            <Card
+              key={productType.id}
+              title={productType.name}
+              description={productType.description}
+              onEdit={() => handleEdit(productType)}
+              onDelete={() => handleDelete(productType)}
+              showSwitch={true}
+              switchState={productType.is_active}
+              onSwitchChange={() => handleSwitchChange(productType.id, productType.is_active)}
+            />
+          ))
+        )}
       </motion.div>
 
       {isFormModalOpen && (
@@ -307,4 +313,3 @@ export default function ProductTypesPage() {
     </div>
   )
 }
-

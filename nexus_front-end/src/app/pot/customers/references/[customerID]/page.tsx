@@ -1,43 +1,33 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, Reference } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import axios from 'axios';
-import { LuView, LuClipboardEdit, LuTrash2, LuPenLine } from 'react-icons/lu';
+import { LuView, LuClipboardEdit, LuTrash2, LuPenLine, LuArrowLeft } from 'react-icons/lu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table';
 import { Switch } from '@/components/ui/Switch';
-import { TextInput, NumberInput, SelectInput, DateInput } from '@/components/ui/StyledInputs';
+import { TextInput, NumberInput, SelectInput } from '@/components/ui/StyledInputs';
 import FormModal from '@/components/modals/FormModal';
 import ViewModal from '@/components/modals/ViewModal';
 import TopTableElements from '@/components/ui/TopTableElements';
 import { showAlert, showToast } from '@/components/ui/Alerts';
+import { useRouter } from 'next/navigation';
 
-interface PurchaseOrder {
+interface Customer {
     id: number;
-    order_date: Date;
+    nit: number;
+    company_name: string;
+    contact: string;
+    contact_email: string;
+    contact_phone_number: string;
+    location: string;
+    is_active: boolean;
+}
+
+interface Reference {
+    id: number;
     customer: number;
-    employee: number;
-    observations: string;
-    delivery_date: Date;
-    subtotal: number;
-    iva: number;
-    total: number;
-}
-
-interface Payment {
-    id: number;
-    purchase_order: number;
-    payment_method: number;
-    time_unit: number;
-    quantity: number | null;
-    advance: number | null;
-}
-
-interface PODetail {
-    id: number;
-    purchase_order: number;
-    reference: number;
-    reference_internal: string;
+    reference: string;
     product_type: number;
     material: number;
     width: number;
@@ -45,10 +35,6 @@ interface PODetail {
     measure_unit: number;
     caliber: number;
     film_color: string;
-    kilograms: number;
-    units: number;
-    kilogram_price: number;
-    unit_price: number;
     additive: string[];
     sealing_type: number;
     flap_type: number;
@@ -62,12 +48,12 @@ interface PODetail {
     dynas_treaty_faces: number;
     pantones_quantity: number;
     pantones_codes: string[];
-    production_observations: string;
-    delivery_location: string;
-    is_new_sketch: boolean;
     sketch_url: string;
-    is_updated: boolean;
-    wo_number: number;
+    is_active: boolean;
+}
+
+interface FormData extends Omit<Reference, 'id'> {
+    has_print?: boolean;
 }
 
 // Choice Objects
@@ -123,33 +109,18 @@ const dynasTreatyFacesChoices = {
     2: '2 caras'
 };
 
-export default function ReferencesPage() {
-    const defaultPurchaseOrder: PurchaseOrder = {
-        id: 0,
-        order_date: new Date(),
-        customer: 0,
-        employee: 0,
-        observations: '',
-        delivery_date: new Date(),
-        subtotal: 0,
-        iva: 0,
-        total: 0,
-    };
-    
-    const defaultPayment: Payment = {
-        id: 0,
-        purchase_order: 0,
-        payment_method: 0,
-        time_unit: 0,
-        quantity: null,
-        advance: null,
-    };
-    
-    const defaultPODetail: PODetail = {
-        id: 0,
-        purchase_order: 0,
-        reference: 0,
-        reference_internal: '',
+export default function CustomerReferencesPage({ params }: { params: { customerID: string } }) {
+    const [references, setReferences] = useState<Reference[]>([]);
+    const [productTypes, setProductTypes] = useState<any[]>([]);
+    const [materials, setMaterials] = useState<any[]>([]);
+    const [isFormModalOpen, setFormModalOpen] = useState(false);
+    const [isViewModalOpen, setViewModalOpen] = useState(false);
+    const [currentReference, setCurrentReference] = useState<Reference | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const [formData, setFormData] = useState<FormData>({
+        customer: parseInt(params.customerID),
+        reference: '',
         product_type: 0,
         material: 0,
         width: 0,
@@ -157,10 +128,6 @@ export default function ReferencesPage() {
         measure_unit: 0,
         caliber: 0,
         film_color: '',
-        kilograms: 0,
-        units: 0,
-        kilogram_price: 0,
-        unit_price: 0,
         additive: [],
         sealing_type: 0,
         flap_type: 0,
@@ -174,68 +141,44 @@ export default function ReferencesPage() {
         dynas_treaty_faces: 0,
         pantones_quantity: 0,
         pantones_codes: [],
-        production_observations: '',
-        delivery_location: '',
-        is_new_sketch: false,
         sketch_url: 'https://res.cloudinary.com/db5lqptwu/image/upload/v1728476524/sketches/hlmgblou2onqaf0efh6b.webp',
-        is_updated: false,
-        wo_number: 0,
-    };
+        is_active: true,
+        has_print: false,
+    });
 
-    const [POs, setPOs] = useState<PurchaseOrder[]>([]);
-    const [employees, setEmployees] = useState<any[]>([]);
-    const [customers, setCustomers] = useState<any[]>([]);
-    const [references, setReferences] = useState<any[]>([]);
-    const [productTypes, setProductTypes] = useState<any[]>([]);
-    const [materials, setMaterials] = useState<any[]>([]);
-    const [isFormModalOpen, setFormModalOpen] = useState(false);
-    const [isViewModalOpen, setViewModalOpen] = useState(false);
-    const [currentPO, setCurrentPO] = useState<PurchaseOrder | null>(null);
-    const [currentPayment, setCurrentPayment] = useState<Payment | null>(null);
-    const [currentPOD, setCurrentPOD] = useState<PODetail | null>(null);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [formDataPO, setFormDataPO] = useState(defaultPurchaseOrder);
-    const [formDataPayment, setFormDataPayment] = useState(defaultPayment);
-    const [formDataPOD, setFormDataPOD] = useState(defaultPODetail);
     const [isReferenceEditable, setIsReferenceEditable] = useState(false);
+
     const [additiveCount, setAdditiveCount] = useState(0);
 
+    const [currentCustomer, setCurrentCustomer] = useState<Customer | null>(null);
+    const router = useRouter();
+
     useEffect(() => {
-        fetchPOs();
-        fetchEmployees();
-        fetchCustomers();
+        fetchCustomerData();
+        fetchReferences();
         fetchProductTypes();
         fetchMaterials();
-    }, []);
+    }, [params.customerID]);
 
-    const fetchPOs = async () => {
+    const fetchReferences = async () => {
         try {
-            const response = await axios.get('http://127.0.0.1:8000/beiplas/business/purchaseOrders/');
-            setPOs(response.data);
-        } catch (error) {
-            console.error('Error fetching POs:', error);
-            showToast('Error fetching POs', 'error');
-        }
-    };
-
-    const fetchEmployees = async () => {
-        try {
-            const response = await axios.get('http://127.0.0.1:8000/beiplas/business/employees/');
-            setEmployees(response.data);
-        } catch (error) {
-            console.error('Error fetching employees:', error);
-            showToast('Error fetching employees', 'error');
-        }
-    };
-
-    const fetchCustomers = async () => {
-        try {
-            const response = await axios.get('http://127.0.0.1:8000/beiplas/business/customers/');
-            setCustomers(response.data);
+            const response = await axios.get(`http://127.0.0.1:8000/beiplas/business/customers/${params.customerID}/`);
+            console.log(response.data);
             setReferences(response.data.references);
         } catch (error) {
-            console.error('Error fetching customers:', error);
-            showToast('Error fetching customers', 'error');
+            console.error('Error fetching references:', error);
+            showToast('Error fetching references', 'error');
+        }
+    };
+
+    const fetchCustomerData = async () => {
+        try {
+            const response = await axios.get(`http://127.0.0.1:8000/beiplas/business/customers/${params.customerID}/`);
+            setCurrentCustomer(response.data);
+        } catch (error) {
+            console.error('Error fetching customer:', error);
+            showToast('Error fetching customer data', 'error');
+            router.push('/pot/customers'); // Redirige si hay error
         }
     };
 
@@ -259,7 +202,7 @@ export default function ReferencesPage() {
         }
     };
 
-    const generateReference = (data: typeof formDataPOD): string => {
+    const generateReference = (data: FormData): string => {
         let reference = '';
         const productType = productTypes.find(pt => pt.id === data.product_type);
         const material = materials.find(m => m.id === data.material);
@@ -307,72 +250,88 @@ export default function ReferencesPage() {
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
-        
-        // Identifica a qué FormData corresponde cada cambio
-        if (name.startsWith('po_')) {
-            // Si es para PurchaseOrder
-            const fieldName = name.replace('po_', ''); // Elimina el prefijo
-            setFormDataPO((prev) => ({ ...prev, [fieldName]: value }));
-        } else if (name.startsWith('payment_')) {
-            // Si es para Payment
-            const fieldName = name.replace('payment_', '');
-            setFormDataPayment((prev) => ({ ...prev, [fieldName]: value }));
-        } else if (name.startsWith('pod_')) {
-            // Si es para PODetail
-            const fieldName = name.replace('pod_', '');
-            setFormDataPOD((prev) => ({ ...prev, [fieldName]: value }));
-    
-            // Ejemplo: lógica condicional específica para PODetail
-            if (fieldName === 'gussets_type') {
-                const die_cut_type = Number(value) === 1 ? 2 : 0;
-                setFormDataPOD((prev) => ({ ...prev, die_cut_type }));
-            }
-    
-            if (['product_type', 'material', 'width', 'length', 'measure_unit', 'caliber', 'gussets_type', 'first_gusset', 'second_gusset', 'flap_type', 'flap_size', 'tape', 'die_cut_type'].includes(fieldName)) {
-                const reference = generateReference({ ...formDataPOD, [fieldName]: value });
-                setFormDataPOD((prev) => ({ ...prev, reference_internal: reference }));
+        const newFormData = { ...formData, [name]: value };
+
+        if (name === 'gussets_type') {
+            if (Number(value) === 1) {
+                newFormData.die_cut_type = 2;
+            } else {
+                newFormData.die_cut_type = 0;
             }
         }
+
+        if (['product_type', 'material', 'width', 'length', 'measure_unit', 'caliber',
+            'gussets_type', 'first_gusset', 'second_gusset', 'flap_type', 'flap_size',
+            'tape', 'die_cut_type'].includes(name)) {
+            const reference = generateReference(newFormData);
+            newFormData.reference = reference;
+        }
+
+        setFormData(newFormData);
     };
-    
 
     const handleFormSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
+        const dataToSubmit = {
+            ...formData,
+            film_color: materials.find(m => m.id === formData.material)?.name === 'Maíz'
+                ? 'SIN COLOR'
+                : (formData.film_color ? formData.film_color : 'SIN COLOR'),
+            dynas_treaty_faces: formData.has_print ? formData.dynas_treaty_faces : 0,
+            pantones_quantity: formData.has_print ? formData.pantones_quantity : 0,
+            pantones_codes: formData.has_print ? formData.pantones_codes.slice(0, formData.pantones_quantity) : []
+        };
+
+        delete dataToSubmit.has_print;
+
         try {
             let response;
             let message = '';
-            let successCount = 0;
 
-            if (currentPO && currentPayment && currentPOD) {
-                response = await axios.put(`http://127.0.0.1:8000/beiplas/business/purchaseOrders/${currentPO.id}/`, formDataPO);
-                successCount += response.data.status === 'success' ? 1 : 0;
-                response = await axios.put(`http://127.0.0.1:8000/beiplas/business/payments/${currentPayment.id}/`, formDataPayment);
-                successCount += response.data.status === 'success' ? 1 : 0;
-                response = await axios.put(`http://127.0.0.1:8000/beiplas/business/poDetails/${currentPOD.id}/`, formDataPOD);
-                successCount += response.data.status === 'success' ? 1 : 0;
-                message = successCount === 3 ? 'Orden de Compra actualizada correctamente' : 'Error al actualizar la Orden de Compra';
+            if (currentReference) {
+                response = await axios.put(`http://127.0.0.1:8000/beiplas/business/references/${currentReference.id}/`, dataToSubmit);
+                message = 'Referencia actualizada correctamente';
             } else {
-                response = await axios.post('http://127.0.0.1:8000/beiplas/business/purchaseOrders/', formDataPO);
-                successCount += response.data.status === 'success' ? 1 : 0;
-                response = await axios.post('http://127.0.0.1:8000/beiplas/business/payments/', formDataPayment);
-                successCount += response.data.status === 'success' ? 1 : 0;
-                response = await axios.post('http://127.0.0.1:8000/beiplas/business/poDetails/', formDataPOD);
-                message = successCount === 3 ? 'Orden de Compra creada correctamente' : 'Error al crear la Orden de Compra';
+                response = await axios.post('http://127.0.0.1:8000/beiplas/business/references/', dataToSubmit);
+                message = 'Referencia creada correctamente';
             }
 
-            if (successCount === 3) {
+            if (response.data.status === 'success') {
                 showToast(message, 'success');
+                fetchReferences();
                 setIsReferenceEditable(false);
                 setFormModalOpen(false);
-                setCurrentPO(null);
-                setCurrentPayment(null);
-                setCurrentPOD(null);
-                setFormDataPO(defaultPurchaseOrder);
-                setFormDataPayment(defaultPayment);
-                setFormDataPOD(defaultPODetail);
+                setCurrentReference(null);
+                setFormData({
+                    customer: parseInt(params.customerID),
+                    reference: '',
+                    product_type: 0,
+                    material: 0,
+                    width: 0,
+                    length: 0,
+                    measure_unit: 0,
+                    caliber: 0,
+                    film_color: '',
+                    additive: [],
+                    sealing_type: 0,
+                    flap_type: 0,
+                    flap_size: null,
+                    gussets_type: 0,
+                    first_gusset: null,
+                    second_gusset: null,
+                    tape: 0,
+                    die_cut_type: 0,
+                    roller_size: 0,
+                    dynas_treaty_faces: 0,
+                    pantones_quantity: 0,
+                    pantones_codes: [],
+                    sketch_url: 'https://res.cloudinary.com/db5lqptwu/image/upload/v1728476524/sketches/hlmgblou2onqaf0efh6b.webp',
+                    is_active: true,
+                    has_print: false,
+                });
             } else {
-                showToast(message, 'error');
+                showToast(response.data.message, 'error');
             }
         } catch (error) {
             if (axios.isAxiosError(error) && error.response) {
@@ -383,21 +342,41 @@ export default function ReferencesPage() {
         }
     };
 
-    const handleEdit = (PurchaseOrder: PurchaseOrder, payment: Payment, PODetail: PODetail) => {
-        setCurrentPO(PurchaseOrder);
-        setCurrentPayment(payment);
-        setCurrentPOD(PODetail);
-        setAdditiveCount(PODetail.additive.length);
-        setFormDataPO(PurchaseOrder);
-        setFormDataPayment(payment);
-        setFormDataPOD(PODetail);
+    const handleEdit = (reference: Reference) => {
+        setCurrentReference(reference);
+        setAdditiveCount(reference.additive.length);
+        setFormData({
+            customer: reference.customer,
+            reference: reference.reference,
+            product_type: reference.product_type,
+            material: reference.material,
+            width: reference.width,
+            length: reference.length,
+            measure_unit: reference.measure_unit,
+            caliber: reference.caliber,
+            film_color: reference.film_color,
+            additive: reference.additive,
+            sealing_type: reference.sealing_type,
+            flap_type: reference.flap_type,
+            flap_size: reference.flap_size,
+            gussets_type: reference.gussets_type,
+            first_gusset: reference.first_gusset,
+            second_gusset: reference.second_gusset,
+            tape: reference.tape,
+            die_cut_type: reference.die_cut_type,
+            roller_size: reference.roller_size,
+            dynas_treaty_faces: reference.dynas_treaty_faces,
+            pantones_quantity: reference.pantones_quantity,
+            pantones_codes: reference.pantones_codes,
+            sketch_url: reference.sketch_url,
+            is_active: reference.is_active,
+            has_print: false,
+        });
         setFormModalOpen(true);
     };
 
-    const handleView = (PurchaseOrder: PurchaseOrder, payment: Payment, PODetail: PODetail) => {
-        setCurrentPO(PurchaseOrder);
-        setCurrentPayment(payment);
-        setCurrentPOD(PODetail);
+    const handleView = (reference: Reference) => {
+        setCurrentReference(reference);
         setViewModalOpen(true);
     };
 
@@ -413,12 +392,12 @@ export default function ReferencesPage() {
             },
             async () => {
                 try {
-                    const response = await axios.delete(`http://127.0.0.1:8000/beiplas/business/purchaseOrders/${id}/`);
+                    const response = await axios.delete(`http://127.0.0.1:8000/beiplas/business/references/${id}/`);
                     if (response.status === 204) {
-                        showToast('Orden de Compra eliminada correctamente', 'success');
-                        fetchPOs();
+                        showToast('Referencia eliminada correctamente', 'success');
+                        fetchReferences();
                     } else {
-                        showToast('Error al eliminar la Orden de Compra', 'error');
+                        showToast(response.data.message, 'error');
                     }
                 } catch (error) {
                     if (axios.isAxiosError(error) && error.response) {
@@ -434,50 +413,98 @@ export default function ReferencesPage() {
         );
     };
 
+    const handleSwitchChange = async (id: number, currentStatus: boolean) => {
+        showAlert(
+            {
+                title: 'Confirmar cambio de estado',
+                text: `¿Quieres ${currentStatus ? 'desactivar' : 'activar'} esta referencia?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: currentStatus ? 'Desactivar' : 'Activar',
+                cancelButtonText: 'Cancelar'
+            },
+            async () => {
+                try {
+                    const newStatus = !currentStatus;
+                    const reference = references.find(r => r.id === id);
+                    if (!reference) {
+                        showToast('Reference not found', 'error');
+                        return;
+                    }
+
+                    const updatedData = {
+                        ...reference,
+                        is_active: newStatus
+                    };
+
+                    const response = await axios.patch(`http://127.0.0.1:8000/beiplas/business/references/${id}/`, updatedData);
+                    if (response.data.status === 'success') {
+                        showToast(response.data.message, 'success');
+                        setReferences(references.map(r =>
+                            r.id === id ? { ...r, is_active: newStatus } : r
+                        ));
+                    } else {
+                        showToast(response.data.message, 'error');
+                    }
+                } catch (error) {
+                    if (axios.isAxiosError(error) && error.response) {
+                        showToast(error.response.data.message || 'Error updating reference status', 'error');
+                    } else {
+                        showToast('An unexpected error occurred', 'error');
+                    }
+                }
+            },
+            () => {
+                showToast('Cambio de estado cancelado', 'info');
+            }
+        );
+    };
+
     const handleCancel = () => {
         setIsReferenceEditable(false);
-        setCurrentPO(null);
-        setCurrentPayment(null);
-        setCurrentPOD(null);
+        setCurrentReference(null);
         setAdditiveCount(0);
-        setFormDataPOD(defaultPODetail);
+        setFormData({
+            customer: parseInt(params.customerID),
+            reference: '',
+            product_type: 0,
+            material: 0,
+            width: 0,
+            length: 0,
+            measure_unit: 0,
+            caliber: 0,
+            film_color: '',
+            additive: [],
+            sealing_type: 0,
+            flap_type: 0,
+            flap_size: null,
+            gussets_type: 0,
+            first_gusset: null,
+            second_gusset: null,
+            tape: 0,
+            die_cut_type: 0,
+            roller_size: 0,
+            dynas_treaty_faces: 0,
+            pantones_quantity: 0,
+            pantones_codes: [],
+            sketch_url: 'https://res.cloudinary.com/db5lqptwu/image/upload/v1728476524/sketches/hlmgblou2onqaf0efh6b.webp',
+            is_active: true,
+            has_print: false,
+        });
         setFormModalOpen(false);
         showToast('Acción cancelada', 'info');
     };
 
     const inputs = {
-        order_date: (
-            <DateInput
-                label="Fecha de Orden"
-                selectedDate={formDataPO.order_date}
-                onChange={(date) => handleInputChange({ target: { name: 'po_order_date', value: date } } as any)}
-                required
-            />
-        ),
-        employee: (
-            <SelectInput
-                label="Empleado"
-                name="po_employee"
-                value={{ value: formDataPO.employee, label: employees.find(e => e.id === formDataPO.employee)?.name }}
-                onChange={(option) => handleInputChange({ target: { name: 'po_employee', value: option?.value || 0 } } as any)}
-                options={employees.map(employee => ({
-                    value: employee.id,
-                    label: employee.name
-                }))}
-                required
-            />
-        ),
         customer: (
             <SelectInput
                 label="Cliente"
-                name="po_customer"
-                value={{ value: formDataPO.customer, label: customers.find(c => c.id === formDataPO.customer)?.company_name }}
-                onChange={(option) => handleInputChange({ target: { name: 'po_customer', value: option?.value || 0 } } as any)}
-                options={customers.map(customer => ({
-                    value: customer.id,
-                    label: customer.company_name
-                }))}
+                name="customer"
+                value={{ value: currentCustomer?.id, label: currentCustomer?.company_name }}
+                onChange={(option) => handleInputChange({ target: { name: 'customer', value: option?.value || 0 } } as any)}
+                options={[]}
                 required
+                disabled
             />
         ),
         product_type: (
@@ -911,7 +938,7 @@ export default function ReferencesPage() {
             <div>
                 <strong className="block mb-1">Cliente</strong>
                 <p className="dark:text-gray-300">
-                    {customers.find(c => c.id === currentReference?.customer)?.company_name || 'N/A'}
+                    {currentCustomer?.company_name || 'N/A'}
                 </p>
             </div>
         ),
@@ -1035,25 +1062,34 @@ export default function ReferencesPage() {
 
     return (
         <div className="container">
+            {currentCustomer && (
+                <div className="mb-2 pl-2">
+                    <p className="text-gray-600 dark:text-gray-400">
+                        NIT: {currentCustomer.nit}
+                    </p>
+                </div>
+            )}
+
             <TopTableElements
                 onAdd={() => setFormModalOpen(true)}
                 onSearch={(term) => setSearchTerm(term)}
-                onFilter={() => { }} // Implementar si es necesario
-                filterOptions={[]} // Implementar si es necesario
+                onFilter={() => { }}
+                filterOptions={[]}
+                showBackButton={true}
+                onBack={() => router.push('/pot/customers')}
             />
 
-            <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-            >
-                {references.length === 0 ? (
-                    <div className="flex justify-center items-center h-full pt-20">
-                        <p className="text-gray-600 dark:text-gray-400">No hay referencias disponibles</p>
-                    </div>
-                ) : (
+            {references.length === 0 ? (
+                <div className="flex justify-center items-center h-full pt-20">
+                    <p className="text-gray-600 dark:text-gray-400">No hay referencias para este cliente</p>
+                </div>
+            ) : (
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                >
                     <Table>
                         <TableHeader>
-                            <TableHead>Cliente</TableHead>
                             <TableHead>Referencia</TableHead>
                             <TableHead>Estado</TableHead>
                             <TableHead>Acciones</TableHead>
@@ -1061,14 +1097,10 @@ export default function ReferencesPage() {
                         <TableBody>
                             {references
                                 .filter(ref =>
-                                    ref.reference.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                    customers.find(c => c.id === ref.customer)?.company_name.toLowerCase().includes(searchTerm.toLowerCase())
+                                    ref.reference.toLowerCase().includes(searchTerm.toLowerCase())
                                 )
                                 .map((reference) => (
                                     <TableRow key={reference.id}>
-                                        <TableCell className={reference.is_active ? '' : 'opacity-40'}>
-                                            {customers.find(c => c.id === reference.customer)?.company_name}
-                                        </TableCell>
                                         <TableCell className={reference.is_active ? '' : 'opacity-40'}>
                                             {reference.reference}
                                         </TableCell>
@@ -1107,12 +1139,12 @@ export default function ReferencesPage() {
                                 ))}
                         </TableBody>
                     </Table>
-                )}
-            </motion.div>
+                </motion.div>
+            )}
 
             {isFormModalOpen && (
                 <FormModal
-                    title={currentReference ? 'Editar Referencia' : 'Agregar Referencia'}
+                    title={currentReference ? `Editar Referencia de ${currentCustomer?.company_name}` : `Agregar Referencia para ${currentCustomer?.company_name}`}
                     layout={getFormLayout()}
                     inputs={inputs}
                     onSubmit={handleFormSubmit}

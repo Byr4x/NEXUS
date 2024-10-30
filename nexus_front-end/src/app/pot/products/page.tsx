@@ -35,13 +35,13 @@ export default function ProductsPage() {
   const [materials, setMaterials] = useState<Material[]>([])
   const [isFormModalOpen, setFormModalOpen] = useState(false)
   const [currentProduct, setCurrentProduct] = useState<Product | null>(null)
-  const [formData, setFormData] = useState({ 
-    name: '', 
-    description: '', 
-    product_type: null as number | null, 
-    material: null as number | null, 
-    image_url: '', 
-    is_active: true 
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    product_type: null as number | null,
+    material: null as number | null,
+    image_url: '',
+    is_active: true
   })
   const [searchTerm, setSearchTerm] = useState('')
   const [formErrors, setFormErrors] = useState({ name: '', product_type: '', material: '' })
@@ -109,11 +109,11 @@ export default function ProductsPage() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { name: string; value: any } }) => {
     const { name, value } = e.target
-    
+
     let sanitizedValue = typeof value === 'string' ? value.trimStart().replace(/\s{2,}/g, ' ') : value
-    
+
     setFormData(prev => ({ ...prev, [name]: sanitizedValue }))
-    
+
     if (name === 'name' && touchedFields.name) {
       setFormErrors(prev => ({ ...prev, name: validateName(sanitizedValue) }))
     }
@@ -208,13 +208,13 @@ export default function ProductsPage() {
 
   const handleEdit = (product: Product) => {
     setCurrentProduct(product)
-    setFormData({ 
-      name: product.name, 
-      description: product.description, 
+    setFormData({
+      name: product.name,
+      description: product.description,
       product_type: product.product_type,
       material: product.material,
-      image_url: product.image_url, 
-      is_active: product.is_active 
+      image_url: product.image_url,
+      is_active: product.is_active
     })
     setFormModalOpen(true)
   }
@@ -430,19 +430,25 @@ export default function ProductsPage() {
         animate={{ opacity: 1 }}
         className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
       >
-        {filteredProducts.map((product) => (
-          <Card
-            key={product.id}
-            title={product.name}
-            description={`${product.description}\nTipo: ${productTypes.find(pt => pt.id === product.product_type)?.name}\nMaterial: ${materials.find(m => m.id === product.material)?.name}`}
-            imageUrl={product.image_url}
-            onEdit={() => handleEdit(product)}
-            onDelete={() => handleDelete(product)}
-            showSwitch={true}
-            switchState={product.is_active}
-            onSwitchChange={() => handleSwitchChange(product.id, product.is_active)}
-          />
-        ))}
+        {filteredProducts.length === 0 ? (
+          <div className="flex justify-center items-center h-full pt-20">
+            <p className="text-gray-600 dark:text-gray-400">No hay productos disponibles</p>
+          </div>
+        ) : (
+          filteredProducts.map((product) => (
+            <Card
+              key={product.id}
+              title={product.name}
+              description={`${product.description}\nTipo: ${productTypes.find(pt => pt.id === product.product_type)?.name}\nMaterial: ${materials.find(m => m.id === product.material)?.name}`}
+              imageUrl={product.image_url}
+              onEdit={() => handleEdit(product)}
+              onDelete={() => handleDelete(product)}
+              showSwitch={true}
+              switchState={product.is_active}
+              onSwitchChange={() => handleSwitchChange(product.id, product.is_active)}
+            />
+          ))
+        )}
       </motion.div>
 
       {isFormModalOpen && (

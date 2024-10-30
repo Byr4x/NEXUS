@@ -5,6 +5,7 @@ import { ChevronDown, User, Settings, LogOut, Moon, Sun, Menu, PanelLeftOpen, Pa
 import { motion } from 'framer-motion'
 import { useTheme } from '@/contexts/ThemeContext'
 import { usePathname } from 'next/navigation'
+import axios from 'axios'
 
 interface HeaderProps {
   toggleSidebar: () => void
@@ -18,19 +19,45 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar, isSidebarOpen, isMinimiz
   const { isDarkMode, toggleDarkMode } = useTheme()
   const [windowWidth, setWindowWidth] = useState(0)
   const pathname = usePathname() || ''
+  const [currentCustomer, setCurrentCustomer] = useState<string | null>(null)
 
   const getPageName = (path: string) => {
     const routes: { [key: string]: string } = {
       '/pot': 'Dashboard',
       '/pot/customers': 'Clientes',
+      '/pot/customers/references': 'Referencias',
       '/pot/employees': 'Empleados',
       '/pot/employees/positions': 'Cargos',
       '/pot/products': 'Productos',
       '/pot/products/materials': 'Materiales',
       '/pot/products/product-types': 'Tipos de productos',
     }
+
+    if (path.startsWith('/pot/customers/references/')) {
+      return currentCustomer ? `Referencias - ${currentCustomer}` : 'Referencias'
+    }
+
     return routes[path] || ''
   }
+
+  useEffect(() => {
+    const fetchCustomerName = async () => {
+      if (pathname.startsWith('/pot/customers/references/')) {
+        const customerID = pathname.split('/').pop()
+        try {
+          const response = await axios.get(`http://127.0.0.1:8000/beiplas/business/customers/${customerID}/`)
+          setCurrentCustomer(response.data.company_name)
+        } catch (error) {
+          console.error('Error fetching customer:', error)
+          setCurrentCustomer(null)
+        }
+      } else {
+        setCurrentCustomer(null)
+      }
+    }
+
+    fetchCustomerName()
+  }, [pathname])
 
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth)

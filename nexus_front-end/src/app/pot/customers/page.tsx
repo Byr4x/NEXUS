@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import axios from 'axios';
-import { LuView, LuClipboardEdit, LuTrash2 } from 'react-icons/lu';
+import { LuView, LuClipboardEdit, LuTrash2, LuClipboardList } from 'react-icons/lu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table';
 import { Switch } from '@/components/ui/Switch';
 import { TextInput, NumberInput } from '@/components/ui/StyledInputs';
@@ -11,6 +11,7 @@ import FormModal from '@/components/modals/FormModal';
 import ViewModal from '@/components/modals/ViewModal';
 import TopTableElements from '@/components/ui/TopTableElements';
 import { showAlert, showToast } from '@/components/ui/Alerts';
+import { useRouter } from 'next/navigation';
 
 interface Customer {
   id: number;
@@ -60,6 +61,7 @@ export default function CustomersPage() {
     contact_phone_number: false,
     location: false
   });
+  const router = useRouter();
 
   useEffect(() => {
     fetchCustomers();
@@ -83,11 +85,11 @@ export default function CustomersPage() {
         if (customers.some(c => c.nit.toString() === value && c.id !== currentCustomer?.id)) return 'Este NIT ya está en uso';
         return '';
       case 'company_name':
-        return !value.trim() ? 'El nombre de la empresa es obligatorio' : 
-               value.trim().length < 3 ? 'El nombre debe tener al menos 3 letras' : '';
+        return !value.trim() ? 'El nombre de la empresa es obligatorio' :
+          value.trim().length < 3 ? 'El nombre debe tener al menos 3 letras' : '';
       case 'contact_email':
-        return value && !/\S+@\S+\.\S+/.test(value) ? 'Formato de email inválido' : 
-               customers.some(c => c.contact_email === value && c.id !== currentCustomer?.id) ? 'Este email ya está en uso' : '';
+        return value && !/\S+@\S+\.\S+/.test(value) ? 'Formato de email inválido' :
+          customers.some(c => c.contact_email === value && c.id !== currentCustomer?.id) ? 'Este email ya está en uso' : '';
       case 'contact_phone_number':
         return value && !/^\d{7,15}$/.test(value) ? 'El número de teléfono debe tener entre 7 y 15 dígitos' : '';
       case 'location':
@@ -99,16 +101,16 @@ export default function CustomersPage() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    
+
     let sanitizedValue = value;
     if (name === 'nit') {
       sanitizedValue = value.replace(/\s/g, '');
     } else {
       sanitizedValue = value.trimStart().replace(/\s{2,}/g, ' ');
     }
-    
+
     setFormData(prev => ({ ...prev, [name]: sanitizedValue }));
-    
+
     if (touchedFields[name as keyof typeof touchedFields]) {
       setFormErrors(prev => ({ ...prev, [name]: validateField(name, sanitizedValue) }));
     }
@@ -321,7 +323,8 @@ export default function CustomersPage() {
     { key: 'company_name', label: 'Nombre de la Empresa' },
     { key: 'nit', label: 'NIT' },
     { key: 'location', label: 'Ubicación' },
-    { key: 'is_active', label: 'Estado' }
+    { key: 'is_active', label: 'Estado' },
+    { key: 'created_at', label: 'Fecha de creación' },
   ];
 
   const handleFilter = (field: string | null, order: 'asc' | 'desc') => {
@@ -431,6 +434,10 @@ export default function CustomersPage() {
     is_active: <div><strong className="block mb-1">Estado</strong> <p className={`inline-block py-1 px-2 rounded-lg font-semibold w-36 text-center ${currentCustomer?.is_active ? 'text-green-500 bg-green-500/10' : 'text-red-500 bg-red-500/10'}`}>{currentCustomer?.is_active ? 'Activo' : 'Inactivo'}</p></div>
   };
 
+  const handleViewReferences = (customerId: number) => {
+    router.push(`/pot/customers/references/${customerId}`);
+  };
+
   return (
     <div className="container">
       <TopTableElements
@@ -444,57 +451,75 @@ export default function CustomersPage() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
       >
-        <Table>
-          <TableHeader>
-            <TableHead>NIT</TableHead>
-            <TableHead>Razón Social</TableHead>
-            <TableHead>Contacto</TableHead>
-            <TableHead>Email de Contacto</TableHead>
-            <TableHead>Ubicación</TableHead>
-            <TableHead>Estado</TableHead>
-            <TableHead>Acciones</TableHead>
-          </TableHeader>
-          <TableBody>
-            {filteredCustomers.map((customer) => (
-              <TableRow key={customer.id}>
-                <TableCell className={customer.is_active ? '' : 'opacity-40'}>{customer.nit}</TableCell>
-                <TableCell className={customer.is_active ? '' : 'opacity-40'}>{customer.company_name}</TableCell>
-                <TableCell className={customer.is_active ? '' : 'opacity-40'}>{customer.contact || 'N/A'}</TableCell>
-                <TableCell className={customer.is_active ? '' : 'opacity-40'}>{customer.contact_email || 'N/A'}</TableCell>
-                <TableCell className={customer.is_active ? '' : 'opacity-40'}>{customer.location}</TableCell>
-                <TableCell className={customer.is_active ? '' : 'bg-white/30 dark:bg-gray-800/30'}>
-                  <Switch
-                    checked={customer.is_active}
-                    onCheckedChange={() => handleSwitchChange(customer.id, customer.is_active)}
-                    size='sm'
-                  />
-                </TableCell>
-                <TableCell className={customer.is_active ? '' : 'bg-white/30 dark:bg-gray-800/30'}>
-                  <button
-                    className={`text-sky-500 hover:text-sky-700 mr-3 transition-colors`}
-                    onClick={() => handleView(customer)}
-                  >
-                    <LuView size={20} />
-                  </button>
-                  <button
-                    className={`${customer.is_active ? 'text-orange-500 hover:text-orange-700' : 'text-gray-400 opacity-40'} mr-3 transition-colors`}
-                    onClick={() => handleEdit(customer)}
-                    disabled={!customer.is_active}
-                  >
-                    <LuClipboardEdit size={20} />
-                  </button>
-                  <button
-                    className={`${customer.is_active ? 'text-red-500 hover:text-red-700' : 'text-gray-400 opacity-40'} transition-colors`}
-                    onClick={() => handleDelete(customer.id)}
-                    disabled={!customer.is_active}
-                  >
-                    <LuTrash2 size={20} />
-                  </button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        {customers.length === 0 ? (
+          <div className="flex justify-center items-center h-full pt-20">
+            <p className="text-gray-600 dark:text-gray-400">No hay clientes disponibles</p>
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableHead>NIT</TableHead>
+              <TableHead>Razón Social</TableHead>
+              <TableHead>Contacto</TableHead>
+              <TableHead>Email de Contacto</TableHead>
+              <TableHead>Referencias</TableHead>
+              <TableHead>Estado</TableHead>
+              <TableHead>Acciones</TableHead>
+            </TableHeader>
+            <TableBody>
+              {filteredCustomers.map((customer) => (
+                <TableRow key={customer.id}>
+                  <TableCell className={customer.is_active ? '' : 'opacity-40'}>{customer.nit}</TableCell>
+                  <TableCell className={customer.is_active ? '' : 'opacity-40'}>{customer.company_name}</TableCell>
+                  <TableCell className={customer.is_active ? '' : 'opacity-40'}>{customer.contact || 'N/A'}</TableCell>
+                  <TableCell className={customer.is_active ? '' : 'opacity-40'}>{customer.contact_email || 'N/A'}</TableCell>
+                  <TableCell className={customer.is_active ? '' : 'opacity-40'}>
+                    <button
+                      className={`${customer.is_active
+                          ? 'text-blue-500 hover:text-blue-700'
+                          : 'text-gray-400'
+                        } flex items-center gap-2 transition-colors`}
+                      onClick={() => handleViewReferences(customer.id)}
+                      disabled={!customer.is_active}
+                    >
+                      <LuClipboardList size={20} />
+                      <span>Referencias</span>
+                    </button>
+                  </TableCell>
+                  <TableCell className={customer.is_active ? '' : 'bg-white/30 dark:bg-gray-800/30'}>
+                    <Switch
+                      checked={customer.is_active}
+                      onCheckedChange={() => handleSwitchChange(customer.id, customer.is_active)}
+                      size='sm'
+                    />
+                  </TableCell>
+                  <TableCell className={customer.is_active ? '' : 'bg-white/30 dark:bg-gray-800/30'}>
+                    <button
+                      className={`text-cyan-500 hover:text-cyan-700 mr-3 transition-colors`}
+                      onClick={() => handleView(customer)}
+                    >
+                      <LuView size={20} />
+                    </button>
+                    <button
+                      className={`${customer.is_active ? 'text-orange-500 hover:text-orange-700' : 'text-gray-400 opacity-40'} mr-3 transition-colors`}
+                      onClick={() => handleEdit(customer)}
+                      disabled={!customer.is_active}
+                    >
+                      <LuClipboardEdit size={20} />
+                    </button>
+                    <button
+                      className={`${customer.is_active ? 'text-red-500 hover:text-red-700' : 'text-gray-400 opacity-40'} transition-colors`}
+                      onClick={() => handleDelete(customer.id)}
+                      disabled={!customer.is_active}
+                    >
+                      <LuTrash2 size={20} />
+                    </button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </motion.div>
 
       {isFormModalOpen && (
@@ -519,4 +544,3 @@ export default function CustomersPage() {
     </div>
   );
 }
-

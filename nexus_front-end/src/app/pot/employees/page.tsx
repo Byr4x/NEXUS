@@ -97,16 +97,16 @@ export default function EmployeesPage() {
       case 'first_name':
         return !value.toString().trim() ? 'El nombre es obligatorio' : '';
       case 'last_name':
-        return !value.toString().trim() ? 'Los apellidos son obligatorios' : 
-               value.toString().trim().split(/\s+/).length < 2 ? 'Debe contener al menos dos palabras' : '';
+        return !value.toString().trim() ? 'Los apellidos son obligatorios' :
+          value.toString().trim().split(/\s+/).length < 2 ? 'Debe contener al menos dos palabras' : '';
       case 'phone_number':
         return !value ? 'El número de teléfono es obligatorio' :
-               !/^\d+$/.test(value.toString()) ? 'Solo se permiten números' :
-               value.toString().length < 7 ? 'Mínimo 7 números' :
-               value.toString().length > 15 ? 'Máximo 15 números' : '';
+          !/^\d+$/.test(value.toString()) ? 'Solo se permiten números' :
+            value.toString().length < 7 ? 'Mínimo 7 números' :
+              value.toString().length > 15 ? 'Máximo 15 números' : '';
       case 'email':
-        return value && !/\S+@\S+\.\S+/.test(value.toString()) ? 'Formato de email inválido' : 
-               employees.some(e => e.email === value && e.id !== currentEmployee?.id) ? 'El email ya está en uso' : '';
+        return value && !/\S+@\S+\.\S+/.test(value.toString()) ? 'Formato de email inválido' :
+          employees.some(e => e.email === value && e.id !== currentEmployee?.id) ? 'El email ya está en uso' : '';
       case 'position':
         return value === 0 ? 'El cargo es obligatorio' : '';
       default:
@@ -116,11 +116,11 @@ export default function EmployeesPage() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    
+
     let sanitizedValue = value.trimStart().replace(/\s{2,}/g, ' ');
-    
+
     setFormData(prev => ({ ...prev, [name]: sanitizedValue }));
-    
+
     if (touchedFields[name as keyof typeof touchedFields]) {
       setFormErrors(prev => ({ ...prev, [name]: validateField(name, sanitizedValue) }));
     }
@@ -168,7 +168,6 @@ export default function EmployeesPage() {
       let response;
       let message = '';
 
-      // Set default value for entity if it's empty
       const dataToSubmit = {
         ...formData,
         entity: formData.entity.trim() || 'Beiplas'
@@ -348,7 +347,8 @@ export default function EmployeesPage() {
     { key: 'last_name', label: 'Apellidos' },
     { key: 'email', label: 'Email' },
     { key: 'entity', label: 'Entidad' },
-    { key: 'is_active', label: 'Estado' }
+    { key: 'is_active', label: 'Estado' },
+    { key: 'created_at', label: 'Fecha de creación' },
   ];
 
   const handleFilter = (field: string | null, order: 'asc' | 'desc') => {
@@ -475,59 +475,65 @@ export default function EmployeesPage() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
       >
-        <Table>
-          <TableHeader>
-            <TableHead>Nombre</TableHead>
-            <TableHead>Teléfono</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Entidad</TableHead>
-            <TableHead>Cargo</TableHead>
-            <TableHead>Estado</TableHead>
-            <TableHead>Acciones</TableHead>
-          </TableHeader>
-          <TableBody>
-            {filteredEmployees.map((employee) => (
-              <TableRow key={employee.id}>
-                <TableCell className={employee.is_active ? '' : 'opacity-40'}>{employee.first_name} {employee.last_name}</TableCell>
-                <TableCell className={employee.is_active ? '' : 'opacity-40'}>{employee.phone_number}</TableCell>
-                <TableCell className={employee.is_active ? '' : 'opacity-40'}>{employee.email || 'N/A'}</TableCell>
-                <TableCell className={employee.is_active ? '' : 'opacity-40'}>{employee.entity}</TableCell>
-                <TableCell className={employee.is_active ? '' : 'opacity-40'}>
-                  {positions.find(p => p.id === employee.position)?.name || 'N/A'}
-                </TableCell>
-                <TableCell className={employee.is_active ? '' : 'bg-white/30 dark:bg-gray-800/30'}>
-                  <Switch
-                    checked={employee.is_active}
-                    onCheckedChange={() => handleSwitchChange(employee.id, employee.is_active)}
-                    size='sm'
-                  />
-                </TableCell>
-                <TableCell className={employee.is_active ? '' : 'bg-white/30 dark:bg-gray-800/30'}>
-                  <button
-                    className={`text-sky-500 hover:text-sky-700 mr-3 transition-colors`}
-                    onClick={() => handleView(employee)}
-                  >
-                    <LuView size={20} />
-                  </button>
-                  <button
-                    className={`${employee.is_active ? 'text-orange-500 hover:text-orange-700' : 'text-gray-400 opacity-40'} mr-3 transition-colors`}
-                    onClick={() => handleEdit(employee)}
-                    disabled={!employee.is_active}
-                  >
-                    <LuClipboardEdit size={20} />
-                  </button>
-                  <button
-                    className={`${employee.is_active ? 'text-red-500 hover:text-red-700' : 'text-gray-400 opacity-40'} transition-colors`}
-                    onClick={() => handleDelete(employee.id)}
-                    disabled={!employee.is_active}
-                  >
-                    <LuTrash2 size={20} />
-                  </button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        {filteredEmployees.length === 0 ? (
+          <div className="flex justify-center items-center h-full pt-20">
+            <p className="text-gray-600 dark:text-gray-400">No hay empleados disponibles</p>
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableHead>Nombre</TableHead>
+              <TableHead>Teléfono</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Entidad</TableHead>
+              <TableHead>Cargo</TableHead>
+              <TableHead>Estado</TableHead>
+              <TableHead>Acciones</TableHead>
+            </TableHeader>
+            <TableBody>
+              {filteredEmployees.map((employee) => (
+                <TableRow key={employee.id}>
+                  <TableCell className={employee.is_active ? '' : 'opacity-40'}>{employee.first_name} {employee.last_name}</TableCell>
+                  <TableCell className={employee.is_active ? '' : 'opacity-40'}>{employee.phone_number}</TableCell>
+                  <TableCell className={employee.is_active ? '' : 'opacity-40'}>{employee.email || 'N/A'}</TableCell>
+                  <TableCell className={employee.is_active ? '' : 'opacity-40'}>{employee.entity}</TableCell>
+                  <TableCell className={employee.is_active ? '' : 'opacity-40'}>
+                    {positions.find(p => p.id === employee.position)?.name || 'N/A'}
+                  </TableCell>
+                  <TableCell className={employee.is_active ? '' : 'bg-white/30 dark:bg-gray-800/30'}>
+                    <Switch
+                      checked={employee.is_active}
+                      onCheckedChange={() => handleSwitchChange(employee.id, employee.is_active)}
+                      size='sm'
+                    />
+                  </TableCell>
+                  <TableCell className={employee.is_active ? '' : 'bg-white/30 dark:bg-gray-800/30'}>
+                    <button
+                      className={`text-sky-500 hover:text-sky-700 mr-3 transition-colors`}
+                      onClick={() => handleView(employee)}
+                    >
+                      <LuView size={20} />
+                    </button>
+                    <button
+                      className={`${employee.is_active ? 'text-orange-500 hover:text-orange-700' : 'text-gray-400 opacity-40'} mr-3 transition-colors`}
+                      onClick={() => handleEdit(employee)}
+                      disabled={!employee.is_active}
+                    >
+                      <LuClipboardEdit size={20} />
+                    </button>
+                    <button
+                      className={`${employee.is_active ? 'text-red-500 hover:text-red-700' : 'text-gray-400 opacity-40'} transition-colors`}
+                      onClick={() => handleDelete(employee.id)}
+                      disabled={!employee.is_active}
+                    >
+                      <LuTrash2 size={20} />
+                    </button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </motion.div>
 
       {isFormModalOpen && (

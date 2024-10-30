@@ -12,7 +12,6 @@ import ViewModal from '@/components/modals/ViewModal';
 import TopTableElements from '@/components/ui/TopTableElements';
 import { showAlert, showToast } from '@/components/ui/Alerts';
 
-// Interfaces
 interface Reference {
   id: number;
   customer: number;
@@ -108,7 +107,7 @@ export default function ReferencesPage() {
   const [isViewModalOpen, setViewModalOpen] = useState(false);
   const [currentReference, setCurrentReference] = useState<Reference | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   const [formData, setFormData] = useState<FormData>({
     customer: 0,
     reference: '',
@@ -192,7 +191,7 @@ export default function ReferencesPage() {
     let reference = '';
     const productType = productTypes.find(pt => pt.id === data.product_type);
     const material = materials.find(m => m.id === data.material);
-    
+
     if (!productType || !material) return reference;
 
     let afterWidth = '';
@@ -226,7 +225,7 @@ export default function ReferencesPage() {
     }
 
     reference = `${productType.name.toUpperCase()} ${material.name.toUpperCase()} ${data.width}${afterWidth}${dataLenght}${afterLength}`;
-    
+
     if (data.caliber > 0) {
       reference += ` CAL ${data.caliber} ${afterAll}`;
     }
@@ -237,15 +236,22 @@ export default function ReferencesPage() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     const newFormData = { ...formData, [name]: value };
-    
-    // Generar referencia automáticamente
-    if (['product_type', 'material', 'width', 'length', 'measure_unit', 'caliber', 
-         'gussets_type', 'first_gusset', 'second_gusset', 'flap_type', 'flap_size',
-         'tape', 'die_cut_type'].includes(name)) {
+
+    if (name === 'gussets_type') {
+      if (Number(value) === 1) {
+        newFormData.die_cut_type = 2;
+      } else {
+        newFormData.die_cut_type = 0;
+      }
+    }
+
+    if (['product_type', 'material', 'width', 'length', 'measure_unit', 'caliber',
+      'gussets_type', 'first_gusset', 'second_gusset', 'flap_type', 'flap_size',
+      'tape', 'die_cut_type'].includes(name)) {
       const reference = generateReference(newFormData);
       newFormData.reference = reference;
     }
-    
+
     setFormData(newFormData);
   };
 
@@ -254,8 +260,8 @@ export default function ReferencesPage() {
 
     const dataToSubmit = {
       ...formData,
-      film_color: materials.find(m => m.id === formData.material)?.name === 'Maíz' 
-        ? 'SIN COLOR' 
+      film_color: materials.find(m => m.id === formData.material)?.name === 'Maíz'
+        ? 'SIN COLOR'
         : (formData.film_color ? formData.film_color : 'SIN COLOR'),
       dynas_treaty_faces: formData.has_print ? formData.dynas_treaty_faces : 0,
       pantones_quantity: formData.has_print ? formData.pantones_quantity : 0,
@@ -479,7 +485,7 @@ export default function ReferencesPage() {
       <SelectInput
         label="Cliente"
         name="customer"
-        value={{value: formData.customer, label: customers.find(c => c.id === formData.customer)?.company_name}}
+        value={{ value: formData.customer, label: customers.find(c => c.id === formData.customer)?.company_name }}
         onChange={(option) => handleInputChange({ target: { name: 'customer', value: option?.value || 0 } } as any)}
         options={customers.map(customer => ({
           value: customer.id,
@@ -492,7 +498,7 @@ export default function ReferencesPage() {
       <SelectInput
         label="Tipo de Producto"
         name="product_type"
-        value={{value: formData.product_type, label: productTypes.find(pt => pt.id === formData.product_type)?.name}}
+        value={{ value: formData.product_type, label: productTypes.find(pt => pt.id === formData.product_type)?.name }}
         onChange={(option) => handleInputChange({ target: { name: 'product_type', value: option?.value || 0 } } as any)}
         options={productTypes.map(type => ({
           value: type.id,
@@ -505,7 +511,7 @@ export default function ReferencesPage() {
       <SelectInput
         label="Material"
         name="material"
-        value={{value: formData.material, label: materials.find(m => m.id === formData.material)?.name}}
+        value={{ value: formData.material, label: materials.find(m => m.id === formData.material)?.name }}
         onChange={(option) => handleInputChange({ target: { name: 'material', value: option?.value || 0 } } as any)}
         options={materials.map(material => ({
           value: material.id,
@@ -613,31 +619,53 @@ export default function ReferencesPage() {
         }))}
       />
     ),
-    flap_size: ['Bolsa'].includes(productTypes.find(pt => pt.id === formData.product_type)?.name) && 
-      formData.gussets_type !== 1 && 
+    flap_size: ['Bolsa'].includes(productTypes.find(pt => pt.id === formData.product_type)?.name) &&
+      formData.gussets_type !== 1 &&
       formData.flap_type !== 0 && (
-      <NumberInput
-        label="Tamaño de Solapa"
-        name="flap_size"
-        value={formData.flap_size || 0}
-        onChange={handleInputChange}
-        min={0}
-        step={0.01}
-        required
-      />
-    ),
-    die_cut_type: ['Bolsa'].includes(productTypes.find(pt => pt.id === formData.product_type)?.name) && formData.gussets_type !== 1 && formData.flap_type !== 4 && (
-      <SelectInput
-        label="Tipo de Troquel"
-        name="die_cut_type"
-        value={{ value: formData.die_cut_type, label: dieCutTypeChoices[formData.die_cut_type as keyof typeof dieCutTypeChoices] }}
-        onChange={(option) => handleInputChange({ target: { name: 'die_cut_type', value: option?.value || 0 } } as any)}
-        options={Object.entries(dieCutTypeChoices).map(([key, value]) => ({
-          value: Number(key),
-          label: value
-        }))}
-      />
-    ),
+        <NumberInput
+          label="Tamaño de Solapa"
+          name="flap_size"
+          value={formData.flap_size || 0}
+          onChange={handleInputChange}
+          min={0}
+          step={0.01}
+          required
+        />
+      ),
+    die_cut_type: ['Bolsa'].includes(productTypes.find(pt => pt.id === formData.product_type)?.name) &&
+      formData.flap_type !== 4 && (
+        <div>
+          <SelectInput
+            label="Tipo de Troquel"
+            name="die_cut_type"
+            value={{
+              value: formData.die_cut_type,
+              label: dieCutTypeChoices[formData.die_cut_type as keyof typeof dieCutTypeChoices]
+            }}
+            onChange={(option) => handleInputChange({
+              target: { name: 'die_cut_type', value: option?.value || 0 }
+            } as any)}
+            options={Object.entries(dieCutTypeChoices)
+              .filter(([key, _]) => {
+                if (formData.gussets_type === 1) {
+                  return Number(key) === 2;
+                }
+                return Number(key) !== 2;
+              })
+              .map(([key, value]) => ({
+                value: Number(key),
+                label: value
+              }))}
+            required
+            disabled={formData.gussets_type === 1}
+          />
+          {formData.gussets_type === 1 && (
+            <p className="text-sm text-gray-500 mt-1 italic">
+              El troquel se establece automáticamente como camiseta para bolsas con fuelle lateral
+            </p>
+          )}
+        </div>
+      ),
     sealing_type: ['Bolsa'].includes(productTypes.find(pt => pt.id === formData.product_type)?.name) && (
       <SelectInput
         label="Tipo de Sellado"
@@ -672,19 +700,19 @@ export default function ReferencesPage() {
         step={0.01}
       />
     ),
-    tape: ['Bolsa'].includes(productTypes.find(pt => pt.id === formData.product_type)?.name) && 
+    tape: ['Bolsa'].includes(productTypes.find(pt => pt.id === formData.product_type)?.name) &&
       formData.flap_type === 4 && (
-      <SelectInput
-        label="Tipo de Cinta"
-        name="tape"
-        value={{ value: formData.tape, label: tapeChoices[formData.tape as keyof typeof tapeChoices] }}
-        onChange={(option) => handleInputChange({ target: { name: 'tape', value: option?.value || 0 } } as any)}
-        options={Object.entries(tapeChoices).map(([key, value]) => ({
-          value: Number(key),
-          label: value
-        }))}
-      />
-    ),
+        <SelectInput
+          label="Tipo de Cinta"
+          name="tape"
+          value={{ value: formData.tape, label: tapeChoices[formData.tape as keyof typeof tapeChoices] }}
+          onChange={(option) => handleInputChange({ target: { name: 'tape', value: option?.value || 0 } } as any)}
+          options={Object.entries(tapeChoices).map(([key, value]) => ({
+            value: Number(key),
+            label: value
+          }))}
+        />
+      ),
     has_print: (
       <div className="flex items-center space-x-2">
         <label htmlFor="has_print" className="text-sm font-medium">
@@ -709,12 +737,12 @@ export default function ReferencesPage() {
       <SelectInput
         label="Caras Tratadas"
         name="dynas_treaty_faces"
-        value={{ 
-          value: formData.dynas_treaty_faces, 
-          label: dynasTreatyFacesChoices[formData.dynas_treaty_faces as keyof typeof dynasTreatyFacesChoices] 
+        value={{
+          value: formData.dynas_treaty_faces,
+          label: dynasTreatyFacesChoices[formData.dynas_treaty_faces as keyof typeof dynasTreatyFacesChoices]
         }}
-        onChange={(option) => handleInputChange({ 
-          target: { name: 'dynas_treaty_faces', value: option?.value || 0 } 
+        onChange={(option) => handleInputChange({
+          target: { name: 'dynas_treaty_faces', value: option?.value || 0 }
         } as any)}
         options={Object.entries(dynasTreatyFacesChoices).map(([key, value]) => ({
           value: Number(key),
@@ -727,9 +755,9 @@ export default function ReferencesPage() {
       <SelectInput
         label="Cantidad de Pantones"
         name="pantones_quantity"
-        value={{ 
-          value: formData.pantones_quantity, 
-          label: formData.pantones_quantity.toString() 
+        value={{
+          value: formData.pantones_quantity,
+          label: formData.pantones_quantity.toString()
         }}
         onChange={(option) => {
           const value = option?.value || 0;
@@ -773,9 +801,9 @@ export default function ReferencesPage() {
       <SelectInput
         label="Cantidad de Aditivos"
         name="additive_count"
-        value={{ 
-          value: additiveCount, 
-          label: additiveCount.toString() 
+        value={{
+          value: additiveCount,
+          label: additiveCount.toString()
         }}
         onChange={(option) => {
           const value = option?.value || 0;
@@ -815,15 +843,15 @@ export default function ReferencesPage() {
       </div>
     ),
     line:
-        <div>
-          <hr className="my-5 border-small border-gray-500 border-dashed" />
-        </div>
+      <div>
+        <hr className="my-5 border-small border-gray-500 border-dashed" />
+      </div>
   };
 
   const getFormLayout = () => {
     const commonFields = ['customer', 'product_type', 'material'];
     const dimensionFields = ['measure_unit'];
-    const printFields = formData.has_print 
+    const printFields = formData.has_print
       ? ['dynas_treaty_faces', 'pantones_quantity', 'pantones_codes']
       : [];
 
@@ -904,7 +932,7 @@ export default function ReferencesPage() {
     reference: (
       <div>
         <strong className="block mb-1">Referencia</strong>
-        <p className="dark:text-gray-300">{currentReference?.reference}</p> 
+        <p className="dark:text-gray-300">{currentReference?.reference}</p>
       </div>
     ),
     product_type: (
@@ -927,9 +955,8 @@ export default function ReferencesPage() {
       <div>
         <strong className="block mb-1">Dimensiones</strong>
         <p className="dark:text-gray-300">
-          {`${currentReference?.width} x ${currentReference?.length} ${
-            measureUnitChoices[currentReference?.measure_unit as keyof typeof measureUnitChoices]
-          }`}
+          {`${currentReference?.width} x ${currentReference?.length} ${measureUnitChoices[currentReference?.measure_unit as keyof typeof measureUnitChoices]
+            }`}
         </p>
       </div>
     ),
@@ -957,9 +984,8 @@ export default function ReferencesPage() {
       <div>
         <strong className="block mb-1">Detalles de Solapa</strong>
         <p className="dark:text-gray-300">
-          {`${flapTypeChoices[currentReference?.flap_type as keyof typeof flapTypeChoices]}${
-            currentReference?.flap_size ? ` - ${currentReference.flap_size}` : ''
-          }`}
+          {`${flapTypeChoices[currentReference?.flap_type as keyof typeof flapTypeChoices]}${currentReference?.flap_size ? ` - ${currentReference.flap_size}` : ''
+            }`}
         </p>
       </div>
     ),
@@ -967,11 +993,9 @@ export default function ReferencesPage() {
       <div>
         <strong className="block mb-1">Detalles de Fuelles</strong>
         <p className="dark:text-gray-300">
-          {`${gussetsTypeChoices[currentReference?.gussets_type as keyof typeof gussetsTypeChoices]}${
-            currentReference?.first_gusset ? ` - Primero: ${currentReference.first_gusset}` : ''
-          }${
-            currentReference?.second_gusset ? ` - Segundo: ${currentReference.second_gusset}` : ''
-          }`}
+          {`${gussetsTypeChoices[currentReference?.gussets_type as keyof typeof gussetsTypeChoices]}${currentReference?.first_gusset ? ` - Primero: ${currentReference.first_gusset}` : ''
+            }${currentReference?.second_gusset ? ` - Segundo: ${currentReference.second_gusset}` : ''
+            }`}
         </p>
       </div>
     ),
@@ -1006,9 +1030,8 @@ export default function ReferencesPage() {
     is_active: (
       <div>
         <strong className="block mb-1">Estado</strong>
-        <p className={`inline-block py-1 px-2 rounded-lg font-semibold w-36 text-center ${
-          currentReference?.is_active ? 'text-green-500 bg-green-500/10' : 'text-red-500 bg-red-500/10'
-        }`}>
+        <p className={`inline-block py-1 px-2 rounded-lg font-semibold w-36 text-center ${currentReference?.is_active ? 'text-green-500 bg-green-500/10' : 'text-red-500 bg-red-500/10'
+          }`}>
           {currentReference?.is_active ? 'Activo' : 'Inactivo'}
         </p>
       </div>
@@ -1029,7 +1052,7 @@ export default function ReferencesPage() {
       <TopTableElements
         onAdd={() => setFormModalOpen(true)}
         onSearch={(term) => setSearchTerm(term)}
-        onFilter={() => {}} // Implementar si es necesario
+        onFilter={() => { }} // Implementar si es necesario
         filterOptions={[]} // Implementar si es necesario
       />
 
@@ -1037,64 +1060,68 @@ export default function ReferencesPage() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
       >
-        <Table>
-          <TableHeader>
-            <TableHead>Cliente</TableHead>
-            <TableHead>Referencia</TableHead>
-            <TableHead>Estado</TableHead>
-            <TableHead>Acciones</TableHead>
-          </TableHeader>
-          <TableBody>
-            {references
-              .filter(ref => 
-                ref.reference.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                customers.find(c => c.id === ref.customer)?.company_name.toLowerCase().includes(searchTerm.toLowerCase())
-              )
-              .map((reference) => (
-                <TableRow key={reference.id}>
-                  <TableCell className={reference.is_active ? '' : 'opacity-40'}>
-                    {customers.find(c => c.id === reference.customer)?.company_name}
-                  </TableCell>
-                  <TableCell className={reference.is_active ? '' : 'opacity-40'}>
-                    {reference.reference}
-                  </TableCell>
-                  <TableCell className={reference.is_active ? '' : 'bg-white/30 dark:bg-gray-800/30'}>
-                    <Switch
-                      checked={reference.is_active}
-                      onCheckedChange={() => handleSwitchChange(reference.id, reference.is_active)}
-                      size='sm'
-                    />
-                  </TableCell>
-                  <TableCell className={reference.is_active ? '' : 'bg-white/30 dark:bg-gray-800/30'}>
-                    <button
-                      className="text-sky-500 hover:text-sky-700 mr-3 transition-colors"
-                      onClick={() => handleView(reference)}
-                    >
-                      <LuView size={20} />
-                    </button>
-                    <button
-                      className={`${
-                        reference.is_active ? 'text-orange-500 hover:text-orange-700' : 'text-gray-400 opacity-40'
-                      } mr-3 transition-colors`}
-                      onClick={() => handleEdit(reference)}
-                      disabled={!reference.is_active}
-                    >
-                      <LuClipboardEdit size={20} />
-                    </button>
-                    <button
-                      className={`${
-                        reference.is_active ? 'text-red-500 hover:text-red-700' : 'text-gray-400 opacity-40'
-                      } transition-colors`}
-                      onClick={() => handleDelete(reference.id)}
-                      disabled={!reference.is_active}
-                    >
-                      <LuTrash2 size={20} />
-                    </button>
-                  </TableCell>
-                </TableRow>
-              ))}
-          </TableBody>
-        </Table>
+        {references.length === 0 ? (
+          <div className="flex justify-center items-center h-full pt-20">
+            <p className="text-gray-600 dark:text-gray-400">No hay referencias disponibles</p>
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableHead>Cliente</TableHead>
+              <TableHead>Referencia</TableHead>
+              <TableHead>Estado</TableHead>
+              <TableHead>Acciones</TableHead>
+            </TableHeader>
+            <TableBody>
+              {references
+                .filter(ref =>
+                  ref.reference.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  customers.find(c => c.id === ref.customer)?.company_name.toLowerCase().includes(searchTerm.toLowerCase())
+                )
+                .map((reference) => (
+                  <TableRow key={reference.id}>
+                    <TableCell className={reference.is_active ? '' : 'opacity-40'}>
+                      {customers.find(c => c.id === reference.customer)?.company_name}
+                    </TableCell>
+                    <TableCell className={reference.is_active ? '' : 'opacity-40'}>
+                      {reference.reference}
+                    </TableCell>
+                    <TableCell className={reference.is_active ? '' : 'bg-white/30 dark:bg-gray-800/30'}>
+                      <Switch
+                        checked={reference.is_active}
+                        onCheckedChange={() => handleSwitchChange(reference.id, reference.is_active)}
+                        size='sm'
+                      />
+                    </TableCell>
+                    <TableCell className={reference.is_active ? '' : 'bg-white/30 dark:bg-gray-800/30'}>
+                      <button
+                        className="text-sky-500 hover:text-sky-700 mr-3 transition-colors"
+                        onClick={() => handleView(reference)}
+                      >
+                        <LuView size={20} />
+                      </button>
+                      <button
+                        className={`${reference.is_active ? 'text-orange-500 hover:text-orange-700' : 'text-gray-400 opacity-40'
+                          } mr-3 transition-colors`}
+                        onClick={() => handleEdit(reference)}
+                        disabled={!reference.is_active}
+                      >
+                        <LuClipboardEdit size={20} />
+                      </button>
+                      <button
+                        className={`${reference.is_active ? 'text-red-500 hover:text-red-700' : 'text-gray-400 opacity-40'
+                          } transition-colors`}
+                        onClick={() => handleDelete(reference.id)}
+                        disabled={!reference.is_active}
+                      >
+                        <LuTrash2 size={20} />
+                      </button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+            </TableBody>
+          </Table>
+        )}
       </motion.div>
 
       {isFormModalOpen && (

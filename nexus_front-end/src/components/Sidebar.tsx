@@ -123,7 +123,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen, isMinimized, setIs
               <div className={isMinimized ? "justify-items-center" : ""}>
                 <Link
                   href={link.href}
-                  className={`flex justify-between px-2 py-2 rounded-lg  ${(pathname === link.href || (link.subMenu && link.subMenu.some(subLink => pathname === subLink.href)))
+                  className={`flex justify-between px-2 py-2 rounded-lg  ${(pathname === link.href || (pathname && pathname.startsWith(`${link.href}/`) && link.href !== '/pot'))
                       ? 'bg-sky-500/10 dark:bg-sky-500/10 text-sky-500'
                       : 'hover:bg-gray-500/20 dark:hover:bg-gray-600/20 hover:text-black dark:hover:text-white'
                     }`}
