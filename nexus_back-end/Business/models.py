@@ -38,7 +38,7 @@ class Employee(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f'{self.first_name} {self.second_name} - {self.entity}'
+        return f'{self.first_name} {self.last_name} - {self.entity}'
     
 class ProductType(models.Model):
     name = models.CharField(max_length=25)
@@ -196,10 +196,16 @@ class Payment(models.Model):
 class PODetail(models.Model):
     purchase_order = models.ForeignKey(PurchaseOrder, on_delete=models.CASCADE, related_name='details', related_query_name='detail')
     reference = models.ForeignKey(Reference, on_delete=models.PROTECT, related_name='order_details', related_query_name='order_detail')
+    reference_internal = models.CharField(max_length=200)
     product_type = models.ForeignKey(ProductType, on_delete=models.PROTECT, related_name='order_details',  related_query_name='order_detail')
     material = models.ForeignKey(Material, on_delete=models.PROTECT, related_name='order_details', related_query_name='order_detail')
     width = models.DecimalField(max_digits=10, decimal_places=2)
     length = models.DecimalField(max_digits=10, decimal_places=2)
+    measure_unit_choices = {
+        0: 'cm',
+        1: 'pulg'
+    }
+    measure_unit = models.PositiveIntegerField(choices=measure_unit_choices, default=0)
     caliber = models.DecimalField(max_digits=10, decimal_places=2)
     film_color = models.CharField(max_length=25)
     kilograms = models.DecimalField(max_digits=10, decimal_places=2)
@@ -262,11 +268,10 @@ class PODetail(models.Model):
     pantones_codes = ArrayField(models.PositiveIntegerField(), null=True, blank=True)
     production_observations = models.TextField(null=True, blank=True)
     delivery_location = models.CharField(max_length=150)
-    observations = models.TextField(null=True, blank=True)
     is_new_sketch = models.BooleanField(default=False)
     sketch_url = models.URLField(default='https://res.cloudinary.com/db5lqptwu/image/upload/v1728476524/sketches/hlmgblou2onqaf0efh6b.webp')
-    created_at = models.DateTimeField(auto_now_add=True)
     is_updated = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     wo_number = models.PositiveIntegerField(null=True, blank=True, editable=False)
 
@@ -287,7 +292,7 @@ class PODetail(models.Model):
         if self.kilograms > 0:
             after_return += f' | Peso: {self.kilograms}Kg'
 
-        return f'{self.reference.reference}{after_return}'
+        return f'{self.reference_internal}{after_return}'
 
 class PODetailChangeLog(models.Model):
     po_detail = models.ForeignKey(PODetail, on_delete=models.CASCADE, related_name='change_logs', related_query_name='change_log')
