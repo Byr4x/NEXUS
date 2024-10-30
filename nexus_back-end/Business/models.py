@@ -76,7 +76,7 @@ class Product(models.Model):
 
 class Reference(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='references', related_query_name='reference')
-    reference = models.TextField(blank=True, editable=False)
+    reference = models.TextField(blank=True)
     product_type = models.ForeignKey(ProductType, on_delete=models.PROTECT, related_name='references',  related_query_name='reference')
     material = models.ForeignKey(Material, on_delete=models.PROTECT, related_name='references', related_query_name='reference')
     width = models.DecimalField(max_digits=10, decimal_places=2)
@@ -141,52 +141,11 @@ class Reference(models.Model):
     }
     dynas_treaty_faces = models.PositiveIntegerField(choices=dynas_treaty_faces_choices, default=0)
     pantones_quantity = models.PositiveBigIntegerField()
-    pantones_codes = ArrayField(models.PositiveIntegerField(), null=True, blank=True)
+    pantones_codes = ArrayField(models.CharField(max_length=30), null=True, blank=True)
     sketch_url = models.URLField(default='https://res.cloudinary.com/db5lqptwu/image/upload/v1728476524/sketches/hlmgblou2onqaf0efh6b.webp')
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
-    def save(self, *args, **kwargs):
-        after_width = ''
-        after_length = ''
-
-        if self.gussets_type == 1:
-            if self.first_gusset > 0:
-                after_width += f' + F{self.first_gusset}'
-            if self.second_gusset > 0:
-                after_width += f' + F{self.second_gusset}'
-        elif self.gussets_type == 2:
-            if self.first_gusset > 0:
-                after_length += f' + FF{self.first_gusset}'
-
-        if self.flap_type != 0:
-            after_length += f' + S{self.flap_size}'
-
-        if self.measure_unit == 0:
-            after_length += f' CM'
-        elif self.measure_unit == 1:
-            after_length += f' PULG'
-
-        after_all = ''
-
-        if self.tape == 1:
-            after_all += f'CINTA RES'
-        elif self.tape == 2:
-            after_all += f'CINTA SEG'
-        elif self.die_cut_type == 1:
-            after_all += f'RIÑON'
-        elif self.die_cut_type == 2:
-            after_all += f'CAMISETA'
-        elif self.die_cut_type == 3:
-            after_all += f'PERFORACIONES'
-
-        self.reference = f'{self.product_type.name.upper()} {self.material.name.upper()} {self.width}{after_width} x {self.length}{after_length}'
-
-        if self.caliber > 0:
-            self.reference += f' CAL {self.caliber} {after_all}'
-
-        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.reference
@@ -307,6 +266,7 @@ class PODetail(models.Model):
     is_new_sketch = models.BooleanField(default=False)
     sketch_url = models.URLField(default='https://res.cloudinary.com/db5lqptwu/image/upload/v1728476524/sketches/hlmgblou2onqaf0efh6b.webp')
     created_at = models.DateTimeField(auto_now_add=True)
+    is_updated = models.BooleanField(default=False)
     updated_at = models.DateTimeField(auto_now=True)
     wo_number = models.PositiveIntegerField(null=True, blank=True, editable=False)
 
@@ -328,3 +288,15 @@ class PODetail(models.Model):
             after_return += f' | Peso: {self.kilograms}Kg'
 
         return f'{self.reference.reference}{after_return}'
+
+class PODetailChangeLog(models.Model):
+    po_detail = models.ForeignKey(PODetail, on_delete=models.CASCADE, related_name='change_logs', related_query_name='change_log')
+    previous_data = models.JSONField()
+    changed_fields = models.JSONField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f'Change log for PODetail #{self.po_detail.id} at {self.created_at}'
+
+    class Meta:
+        ordering = ['-created_at']

@@ -1,7 +1,7 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
-from .models import Customer, Position, Employee, ProductType, Material, Product, Reference, PurchaseOrder, Payment, PODetail
-from .serializers import CustomerSerializer, PositionSerializer, EmployeeSerializer, ProductTypeSerializer, MaterialSerializer, ProductSerializer, ReferenceSerializer, PurchaseOrderSerializer, PaymentSerializer, PODetailSerializer
+from .models import Customer, Position, Employee, ProductType, Material, Product, Reference, PurchaseOrder, Payment, PODetail, PODetailChangeLog
+from .serializers import CustomerSerializer, PositionSerializer, EmployeeSerializer, ProductTypeSerializer, MaterialSerializer, ProductSerializer, ReferenceSerializer, PurchaseOrderSerializer, PaymentSerializer, PODetailSerializer, PODetailChangeLogSerializer
 import re
 
 class BaseViewSet(viewsets.ModelViewSet):
@@ -90,3 +90,7 @@ class PaymentViewSet(BaseViewSet):
 class PODetailViewSet(BaseViewSet):
     queryset = PODetail.objects.all()
     serializer_class = PODetailSerializer
+
+class PODetailChangeLogViewSet(BaseViewSet):
+    queryset = PODetailChangeLog.objects.all()
+    serializer_class = PODetailChangeLogSerializer

@@ -1,7 +1,14 @@
 from rest_framework import serializers
-from .models import Customer, Position, Employee, ProductType, Material, Product, Reference, PurchaseOrder, Payment, PODetail 
+from .models import Customer, Position, Employee, ProductType, Material, Product, Reference, PurchaseOrder, Payment, PODetail, PODetailChangeLog 
+
+class PODetailChangeLogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PODetailChangeLog
+        fields = '__all__'
 
 class PODetailSerializer(serializers.ModelSerializer):  
+    change_logs = PODetailChangeLogSerializer(many=True, read_only=True)
+
     class Meta:
         model = PODetail
         fields = '__all__'
