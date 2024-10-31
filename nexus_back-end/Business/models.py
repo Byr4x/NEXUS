@@ -177,15 +177,7 @@ class Payment(models.Model):
         1: 'CRÉDITO'
     }
     method = models.CharField(max_length=20, choices=method_choices, default=0)
-    time_unit_choices = {
-        0: 'N/A',
-        1: 'Días',
-        2: 'Semana',
-        3: 'Meses',
-        4: 'Años'
-    }
-    time_unit = models.PositiveIntegerField(choices=time_unit_choices, default=0)
-    quantity = models.PositiveIntegerField(null=True, blank=True)
+    payment_term = models.PositiveIntegerField(null=True, blank=True)
     advance = models.DecimalField(null=True, blank=True, max_digits=10, decimal_places=2)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -194,6 +186,7 @@ class Payment(models.Model):
         return self.method
     
 class PODetail(models.Model):
+    id = models.AutoField(primary_key=True)
     purchase_order = models.ForeignKey(PurchaseOrder, on_delete=models.CASCADE, related_name='details', related_query_name='detail')
     reference = models.ForeignKey(Reference, on_delete=models.PROTECT, related_name='order_details', related_query_name='order_detail')
     reference_internal = models.CharField(max_length=200)
@@ -273,15 +266,12 @@ class PODetail(models.Model):
     is_updated = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    wo_number = models.PositiveIntegerField(null=True, blank=True, editable=False)
+    wo_number = models.PositiveBigIntegerField(unique=True, editable=False, null=True)
 
     def save(self, *args, **kwargs):
-        from Production.models import WorkOrder
-        work_order = WorkOrder.objects.create(
-            po_detail = self.id,
-            production_observations=self.production_observations
-        )
-        self.wo_number = work_order.id
+        if not self.wo_number:
+            last_wo = PODetail.objects.filter(wo_number__isnull=False).order_by('-wo_number').first()
+            self.wo_number = (last_wo.wo_number + 1) if last_wo else 1
         super().save(*args, **kwargs)
 
     def __str__(self):

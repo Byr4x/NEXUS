@@ -6,7 +6,7 @@ import axios from 'axios';
 import { LuView, LuClipboardEdit, LuTrash2, LuPenLine } from 'react-icons/lu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table';
 import { Switch } from '@/components/ui/Switch';
-import { TextInput, NumberInput, SelectInput, DateInput } from '@/components/ui/StyledInputs';
+import { TextInput, TextArea, NumberInput, SelectInput, DateInput } from '@/components/ui/StyledInputs';
 import FormModal from '@/components/modals/FormModal';
 import ViewModal from '@/components/modals/ViewModal';
 import TopTableElements from '@/components/ui/TopTableElements';
@@ -14,9 +14,11 @@ import { showAlert, showToast } from '@/components/ui/Alerts';
 
 interface PurchaseOrder {
     id: number;
+    details: PODetail[];
+    payments: Payment[];
+    employee: number;
     order_date: Date;
     customer: number;
-    employee: number;
     observations: string;
     delivery_date: Date;
     subtotal: number;
@@ -28,8 +30,7 @@ interface Payment {
     id: number;
     purchase_order: number;
     payment_method: number;
-    time_unit: number;
-    quantity: number | null;
+    payment_term: number | null;
     advance: number | null;
 }
 
@@ -37,37 +38,45 @@ interface PODetail {
     id: number;
     purchase_order: number;
     reference: number;
-    reference_internal: string;
     product_type: number;
     material: number;
+    reference_internal: string;
+    film_color: string;
+    measure_unit: number;
     width: number;
     length: number;
-    measure_unit: number;
+    gussets_type: number;
+    first_gusset: number | null;
+    second_gusset: number | null;
+    flap_type: number;
+    flap_size: number | null;
+    tape: number;
+    die_cut_type: number;
+    sealing_type: number;
     caliber: number;
-    film_color: string;
+    roller_size: number;
+    additive: string[];
+    dynas_treaty_faces: number;
+    is_new_sketch: boolean;
+    sketch_url: string;
+    pantones_quantity: number;
+    pantones_codes: string[];
     kilograms: number;
     units: number;
     kilogram_price: number;
     unit_price: number;
-    additive: string[];
-    sealing_type: number;
-    flap_type: number;
-    flap_size: number | null;
-    gussets_type: number;
-    first_gusset: number | null;
-    second_gusset: number | null;
-    tape: number;
-    die_cut_type: number;
-    roller_size: number;
-    dynas_treaty_faces: number;
-    pantones_quantity: number;
-    pantones_codes: string[];
     production_observations: string;
     delivery_location: string;
-    is_new_sketch: boolean;
-    sketch_url: string;
     is_updated: boolean;
     wo_number: number;
+}
+
+interface PurchaseOrderForm extends PurchaseOrder {
+    ordered_quantity?: number;
+}
+
+interface PODetailForm extends PODetail {
+    has_print?: boolean;
 }
 
 // Choice Objects
@@ -123,9 +132,16 @@ const dynasTreatyFacesChoices = {
     2: '2 caras'
 };
 
+const paymentMethodChoices = {
+    0: 'Contado',
+    1: 'Crédito'
+};
+
 export default function ReferencesPage() {
-    const defaultPurchaseOrder: PurchaseOrder = {
+    const defaultPurchaseOrder: PurchaseOrderForm = {
         id: 0,
+        details: [],
+        payments: [],
         order_date: new Date(),
         customer: 0,
         employee: 0,
@@ -134,50 +150,51 @@ export default function ReferencesPage() {
         subtotal: 0,
         iva: 0,
         total: 0,
+        ordered_quantity: 1,
     };
-    
+
     const defaultPayment: Payment = {
         id: 0,
         purchase_order: 0,
         payment_method: 0,
-        time_unit: 0,
-        quantity: null,
+        payment_term: null,
         advance: null,
     };
-    
-    const defaultPODetail: PODetail = {
+
+    const defaultPODetail: PODetailForm = {
         id: 0,
         purchase_order: 0,
         reference: 0,
-        reference_internal: '',
         product_type: 0,
         material: 0,
+        reference_internal: '',
+        film_color: '',
+        measure_unit: 0,
         width: 0,
         length: 0,
-        measure_unit: 0,
+        gussets_type: 0,
+        first_gusset: null,
+        second_gusset: null,
+        flap_type: 0,
+        flap_size: null,
+        tape: 0,
+        die_cut_type: 0,
+        sealing_type: 0,
         caliber: 0,
-        film_color: '',
+        roller_size: 0,
+        additive: [],
+        has_print: false,
+        dynas_treaty_faces: 0,
+        is_new_sketch: false,
+        sketch_url: '',
+        pantones_quantity: 0,
+        pantones_codes: [],
         kilograms: 0,
         units: 0,
         kilogram_price: 0,
         unit_price: 0,
-        additive: [],
-        sealing_type: 0,
-        flap_type: 0,
-        flap_size: null,
-        gussets_type: 0,
-        first_gusset: null,
-        second_gusset: null,
-        tape: 0,
-        die_cut_type: 0,
-        roller_size: 0,
-        dynas_treaty_faces: 0,
-        pantones_quantity: 0,
-        pantones_codes: [],
         production_observations: '',
         delivery_location: '',
-        is_new_sketch: false,
-        sketch_url: 'https://res.cloudinary.com/db5lqptwu/image/upload/v1728476524/sketches/hlmgblou2onqaf0efh6b.webp',
         is_updated: false,
         wo_number: 0,
     };
@@ -194,9 +211,9 @@ export default function ReferencesPage() {
     const [currentPayment, setCurrentPayment] = useState<Payment | null>(null);
     const [currentPOD, setCurrentPOD] = useState<PODetail | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
-    const [formDataPO, setFormDataPO] = useState(defaultPurchaseOrder);
-    const [formDataPayment, setFormDataPayment] = useState(defaultPayment);
-    const [formDataPOD, setFormDataPOD] = useState(defaultPODetail);
+    const [formDataPO, setFormDataPO] = useState<PurchaseOrderForm>(defaultPurchaseOrder);
+    const [formDataPayment, setFormDataPayment] = useState<Payment>(defaultPayment);
+    const [formDataPOD, setFormDataPOD] = useState<PODetailForm>(defaultPODetail);
     const [isReferenceEditable, setIsReferenceEditable] = useState(false);
     const [additiveCount, setAdditiveCount] = useState(0);
 
@@ -207,6 +224,15 @@ export default function ReferencesPage() {
         fetchProductTypes();
         fetchMaterials();
     }, []);
+
+    useEffect(() => {
+        if (materials.find(m => m.id === formDataPOD.material)?.name === 'Maíz') {
+            setFormDataPOD(prev => ({
+                ...prev,
+                film_color: 'SIN COLOR'
+            }));
+        }
+    }, [formDataPOD.material]);
 
     const fetchPOs = async () => {
         try {
@@ -305,36 +331,33 @@ export default function ReferencesPage() {
         return reference;
     };
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const handleInputChange = (
+        e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+    ) => {
         const { name, value } = e.target;
-        
-        // Identifica a qué FormData corresponde cada cambio
-        if (name.startsWith('po_')) {
-            // Si es para PurchaseOrder
-            const fieldName = name.replace('po_', ''); // Elimina el prefijo
-            setFormDataPO((prev) => ({ ...prev, [fieldName]: value }));
-        } else if (name.startsWith('payment_')) {
-            // Si es para Payment
-            const fieldName = name.replace('payment_', '');
-            setFormDataPayment((prev) => ({ ...prev, [fieldName]: value }));
-        } else if (name.startsWith('pod_')) {
-            // Si es para PODetail
-            const fieldName = name.replace('pod_', '');
-            setFormDataPOD((prev) => ({ ...prev, [fieldName]: value }));
-    
-            // Ejemplo: lógica condicional específica para PODetail
-            if (fieldName === 'gussets_type') {
-                const die_cut_type = Number(value) === 1 ? 2 : 0;
-                setFormDataPOD((prev) => ({ ...prev, die_cut_type }));
-            }
-    
-            if (['product_type', 'material', 'width', 'length', 'measure_unit', 'caliber', 'gussets_type', 'first_gusset', 'second_gusset', 'flap_type', 'flap_size', 'tape', 'die_cut_type'].includes(fieldName)) {
-                const reference = generateReference({ ...formDataPOD, [fieldName]: value });
-                setFormDataPOD((prev) => ({ ...prev, reference_internal: reference }));
-            }
+        const [formType, fieldName] = name.split('_');
+
+        switch (formType) {
+            case 'po':
+                setFormDataPO(prev => ({ ...prev, [fieldName]: value }));
+                break;
+            case 'pod':
+                setFormDataPOD(prev => {
+                    const newState = { ...prev, [fieldName]: value };
+                    if (fieldName === 'gussets_type') {
+                        newState.die_cut_type = Number(value) === 1 ? 2 : 0;
+                    }
+                    if (['product_type', 'material', 'width', 'length', 'measure_unit', 'caliber', 'gussets_type', 'first_gusset', 'second_gusset', 'flap_type', 'flap_size', 'tape', 'die_cut_type'].includes(fieldName)) {
+                        newState.reference_internal = generateReference(newState);
+                    }
+                    return newState;
+                });
+                break;
+            case 'payment':
+                setFormDataPayment(prev => ({ ...prev, [fieldName]: value }));
+                break;
         }
     };
-    
 
     const handleFormSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -383,6 +406,14 @@ export default function ReferencesPage() {
         }
     };
 
+    const handleView = (PurchaseOrder: PurchaseOrder, payment: Payment, PODetail: PODetail) => {
+        setCurrentPO(PurchaseOrder);
+        setCurrentPayment(payment);
+        setCurrentPOD(PODetail);
+        setViewModalOpen(true);
+    };
+
+
     const handleEdit = (PurchaseOrder: PurchaseOrder, payment: Payment, PODetail: PODetail) => {
         setCurrentPO(PurchaseOrder);
         setCurrentPayment(payment);
@@ -392,13 +423,6 @@ export default function ReferencesPage() {
         setFormDataPayment(payment);
         setFormDataPOD(PODetail);
         setFormModalOpen(true);
-    };
-
-    const handleView = (PurchaseOrder: PurchaseOrder, payment: Payment, PODetail: PODetail) => {
-        setCurrentPO(PurchaseOrder);
-        setCurrentPayment(payment);
-        setCurrentPOD(PODetail);
-        setViewModalOpen(true);
     };
 
     const handleDelete = async (id: number) => {
@@ -446,14 +470,7 @@ export default function ReferencesPage() {
     };
 
     const inputs = {
-        order_date: (
-            <DateInput
-                label="Fecha de Orden"
-                selectedDate={formDataPO.order_date}
-                onChange={(date) => handleInputChange({ target: { name: 'po_order_date', value: date } } as any)}
-                required
-            />
-        ),
+        //STEP 1
         employee: (
             <SelectInput
                 label="Empleado"
@@ -465,6 +482,16 @@ export default function ReferencesPage() {
                     label: employee.name
                 }))}
                 required
+            />
+        ),
+        order_date: (
+            <DateInput
+                name="po_order_date"
+                label="Fecha de Orden"
+                selectedDate={new Date()}
+                onChange={() => { }}
+                required
+                disabled={true}
             />
         ),
         customer: (
@@ -480,24 +507,25 @@ export default function ReferencesPage() {
                 required
             />
         ),
-        /*ordered_quantity: (
+        ordered_quantity: (
             <NumberInput
                 label="Cantidad Ordenada"
-                name="ordered_quantity"
-                value={formDataPO.ordered_quantity}
+                name="po_ordered_quantity"
+                value={formDataPO.ordered_quantity || 1}
                 onChange={handleInputChange}
                 required
                 min={0}
-                step={0.01}
+                step={1}
             />
-        ),*/
+        ),
+        //STEP 2 OF ordered_quantity (THIS SECTION IS REPEATED ordered_quantity times)
         reference: (
             <SelectInput
                 label="Referencia"
                 name="pod_reference"
                 value={formDataPOD.reference}
                 onChange={(option) => {
-                    const selectedReference = references.find(reference => reference.id === option?.value);
+                    const selectedReference = references?.find(reference => reference.id === option?.value);
                     if (selectedReference) {
                         setFormDataPOD(prevState => ({
                             ...prevState,
@@ -514,6 +542,7 @@ export default function ReferencesPage() {
                             flap_type: selectedReference.flap_type,
                             flap_size: selectedReference.flap_size,
                             tape: selectedReference.tape,
+                            die_cut_type: selectedReference.die_cut_type,
                             sealing_type: selectedReference.sealing_type,
                             caliber: selectedReference.caliber,
                             roller_size: selectedReference.roller_size,
@@ -527,10 +556,10 @@ export default function ReferencesPage() {
                     }
                     handleInputChange({ target: { name: 'pod_reference', value: option?.value || 0 } } as any);
                 }}
-                options={references.map(reference => ({
+                options={references?.map(reference => ({
                     value: reference.id,
                     label: reference.reference
-                }))}
+                })) || []}
             />
         ),
         product_type: (
@@ -541,7 +570,7 @@ export default function ReferencesPage() {
                 onChange={(option) => handleInputChange({ target: { name: 'pod_product_type', value: option?.value || 0 } } as any)}
                 options={productTypes.map(type => ({
                     value: type.id,
-                    label: type.name    
+                    label: type.name
                 }))}
                 required
             />
@@ -581,19 +610,19 @@ export default function ReferencesPage() {
         film_color: (
             <TextInput
                 label="Color de Película"
-                name="film_color"
-                value={materials.find(m => m.id === formData.material)?.name === 'Maíz' ? 'Beige' : formData.film_color}
+                name="pod_film_color"
+                value={materials.find(m => m.id === formDataPOD.material)?.name === 'Maíz' ? 'Beige' : formDataPOD.film_color}
                 onChange={handleInputChange}
-                disabled={materials.find(m => m.id === formData.material)?.name === 'Maíz'}
+                disabled={materials.find(m => m.id === formDataPOD.material)?.name === 'Maíz'}
                 required
             />
         ),
         measure_unit: (
             <SelectInput
                 label="Unidad de Medida"
-                name="measure_unit"
-                value={{ value: formData.measure_unit, label: measureUnitChoices[formData.measure_unit as keyof typeof measureUnitChoices] }}
-                onChange={(option) => handleInputChange({ target: { name: 'measure_unit', value: option?.value || 0 } } as any)}
+                name="pod_measure_unit"
+                value={{ value: formDataPOD.measure_unit, label: measureUnitChoices[formDataPOD.measure_unit as keyof typeof measureUnitChoices] }}
+                onChange={(option) => handleInputChange({ target: { name: 'pod_measure_unit', value: option?.value || 0 } } as any)}
                 options={Object.entries(measureUnitChoices).map(([key, value]) => ({
                     value: Number(key),
                     label: value
@@ -604,89 +633,102 @@ export default function ReferencesPage() {
         width: (
             <NumberInput
                 label="Ancho"
-                name="width"
-                value={formData.width}
+                name="pod_width"
+                value={formDataPOD.width}
                 onChange={handleInputChange}
                 required
                 min={0}
                 step={0.01}
             />
         ),
-        length: ['Lamina', 'Bolsa'].includes(productTypes.find(pt => pt.id === formData.product_type)?.name) && (
+        length: ['Lamina', 'Bolsa'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name) && (
             <NumberInput
                 label="Largo"
-                name="length"
-                value={formData.length}
+                name="pod_length"
+                value={formDataPOD.length}
                 onChange={handleInputChange}
                 required
                 min={0}
                 step={0.01}
             />
         ),
-        gussets_type: ['Bolsa'].includes(productTypes.find(pt => pt.id === formData.product_type)?.name) && (
+        gussets_type: ['Bolsa'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name) && (
             <SelectInput
                 label="Tipo de Fuelle"
-                name="gussets_type"
-                value={{ value: formData.gussets_type, label: gussetsTypeChoices[formData.gussets_type as keyof typeof gussetsTypeChoices] }}
-                onChange={(option) => handleInputChange({ target: { name: 'gussets_type', value: option?.value || 0 } } as any)}
+                name="pod_gussets_type"
+                value={{ value: formDataPOD.gussets_type, label: gussetsTypeChoices[formDataPOD.gussets_type as keyof typeof gussetsTypeChoices] }}
+                onChange={(option) => handleInputChange({ target: { name: 'pod_gussets_type', value: option?.value || 0 } } as any)}
                 options={Object.entries(gussetsTypeChoices).map(([key, value]) => ({
                     value: Number(key),
                     label: value
                 }))}
             />
         ),
-        first_gusset: ['Bolsa'].includes(productTypes.find(pt => pt.id === formData.product_type)?.name) && formData.gussets_type !== 0 && (
+        first_gusset: ['Bolsa'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name) && formDataPOD.gussets_type !== 0 && (
             <NumberInput
                 label="Tamaño de Fuelle"
-                name="first_gusset"
-                value={formData.first_gusset || 0}
+                name="pod_first_gusset"
+                value={formDataPOD.first_gusset || 0}
                 onChange={handleInputChange}
                 min={0}
                 step={0.01}
                 required
             />
         ),
-        flap_type: ['Bolsa'].includes(productTypes.find(pt => pt.id === formData.product_type)?.name) && formData.gussets_type !== 1 && (
+        flap_type: ['Bolsa'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name) && formDataPOD.gussets_type !== 1 && (
             <SelectInput
                 label="Tipo de Solapa"
-                name="flap_type"
-                value={{ value: formData.flap_type, label: flapTypeChoices[formData.flap_type as keyof typeof flapTypeChoices] }}
-                onChange={(option) => handleInputChange({ target: { name: 'flap_type', value: option?.value || 0 } } as any)}
+                name="pod_flap_type"
+                value={{ value: formDataPOD.flap_type, label: flapTypeChoices[formDataPOD.flap_type as keyof typeof flapTypeChoices] }}
+                onChange={(option) => handleInputChange({ target: { name: 'pod_flap_type', value: option?.value || 0 } } as any)}
                 options={Object.entries(flapTypeChoices).map(([key, value]) => ({
                     value: Number(key),
                     label: value
                 }))}
             />
         ),
-        flap_size: ['Bolsa'].includes(productTypes.find(pt => pt.id === formData.product_type)?.name) &&
-            formData.gussets_type !== 1 &&
-            formData.flap_type !== 0 && (
+        flap_size: ['Bolsa'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name) &&
+            formDataPOD.gussets_type !== 1 &&
+            formDataPOD.flap_type !== 0 && (
                 <NumberInput
                     label="Tamaño de Solapa"
-                    name="flap_size"
-                    value={formData.flap_size || 0}
+                    name="pod_flap_size"
+                    value={formDataPOD.flap_size || 0}
                     onChange={handleInputChange}
                     min={0}
                     step={0.01}
                     required
                 />
             ),
-        die_cut_type: ['Bolsa'].includes(productTypes.find(pt => pt.id === formData.product_type)?.name) &&
-            formData.flap_type !== 4 && (
+        tape: ['Bolsa'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name) &&
+            formDataPOD.flap_type === 4 && (
+                <SelectInput
+                    label="Tipo de Cinta"
+                    name="pod_tape"
+                    value={{ value: formDataPOD.tape, label: tapeChoices[formDataPOD.tape as keyof typeof tapeChoices] }}
+                    onChange={(option) => handleInputChange({ target: { name: 'pod_tape', value: option?.value || 0 } } as any)}
+                    options={Object.entries(tapeChoices).map(([key, value]) => ({
+                        value: Number(key),
+                        label: value
+                    }))}
+                />
+            ),
+        die_cut_type: ['Bolsa'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name) &&
+            formDataPOD.flap_type !== 4 && (
                 <div>
                     <SelectInput
                         label="Tipo de Troquel"
-                        name="die_cut_type"
+                        name="pod_die_cut_type"
                         value={{
-                            value: formData.die_cut_type,
-                            label: dieCutTypeChoices[formData.die_cut_type as keyof typeof dieCutTypeChoices]
+                            value: formDataPOD.die_cut_type,
+                            label: dieCutTypeChoices[formDataPOD.die_cut_type as keyof typeof dieCutTypeChoices]
                         }}
                         onChange={(option) => handleInputChange({
-                            target: { name: 'die_cut_type', value: option?.value || 0 }
+                            target: { name: 'pod_die_cut_type', value: option?.value || 0 }
                         } as any)}
                         options={Object.entries(dieCutTypeChoices)
                             .filter(([key, _]) => {
-                                if (formData.gussets_type === 1) {
+                                if (formDataPOD.gussets_type === 1) {
                                     return Number(key) === 2;
                                 }
                                 return Number(key) !== 2;
@@ -696,21 +738,21 @@ export default function ReferencesPage() {
                                 label: value
                             }))}
                         required
-                        disabled={formData.gussets_type === 1}
+                        disabled={formDataPOD.gussets_type === 1}
                     />
-                    {formData.gussets_type === 1 && (
+                    {formDataPOD.gussets_type === 1 && (
                         <p className="text-sm text-gray-500 mt-1 italic">
                             El troquel se establece automáticamente como camiseta para bolsas con fuelle lateral
                         </p>
                     )}
                 </div>
             ),
-        sealing_type: ['Bolsa'].includes(productTypes.find(pt => pt.id === formData.product_type)?.name) && (
+        sealing_type: ['Bolsa'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name) && (
             <SelectInput
                 label="Tipo de Sellado"
-                name="sealing_type"
-                value={{ value: formData.sealing_type, label: sealingTypeChoices[formData.sealing_type as keyof typeof sealingTypeChoices] }}
-                onChange={(option) => handleInputChange({ target: { name: 'sealing_type', value: option?.value || 0 } } as any)}
+                name="pod_sealing_type"
+                value={{ value: formDataPOD.sealing_type, label: sealingTypeChoices[formDataPOD.sealing_type as keyof typeof sealingTypeChoices] }}
+                onChange={(option) => handleInputChange({ target: { name: 'pod_sealing_type', value: option?.value || 0 } } as any)}
                 options={Object.entries(sealingTypeChoices).map(([key, value]) => ({
                     value: Number(key),
                     label: value
@@ -720,8 +762,8 @@ export default function ReferencesPage() {
         caliber: (
             <NumberInput
                 label="Calibre"
-                name="caliber"
-                value={formData.caliber}
+                name="pod_caliber"
+                value={formDataPOD.caliber}
                 onChange={handleInputChange}
                 required
                 min={0}
@@ -731,115 +773,18 @@ export default function ReferencesPage() {
         roller_size: (
             <NumberInput
                 label="Tamaño del Rodillo"
-                name="roller_size"
-                value={formData.roller_size}
+                name="pod_roller_size"
+                value={formDataPOD.roller_size}
                 onChange={handleInputChange}
                 required
                 min={0}
                 step={0.01}
             />
         ),
-        tape: ['Bolsa'].includes(productTypes.find(pt => pt.id === formData.product_type)?.name) &&
-            formData.flap_type === 4 && (
-                <SelectInput
-                    label="Tipo de Cinta"
-                    name="tape"
-                    value={{ value: formData.tape, label: tapeChoices[formData.tape as keyof typeof tapeChoices] }}
-                    onChange={(option) => handleInputChange({ target: { name: 'tape', value: option?.value || 0 } } as any)}
-                    options={Object.entries(tapeChoices).map(([key, value]) => ({
-                        value: Number(key),
-                        label: value
-                    }))}
-                />
-            ),
-        has_print: (
-            <div className="flex items-center space-x-2">
-                <label htmlFor="has_print" className="text-sm font-medium">
-                    ¿Lleva impresión?
-                </label>
-                <Switch
-                    id="has_print"
-                    checked={formData.has_print || false}
-                    onCheckedChange={(checked) => {
-                        setFormData(prev => ({
-                            ...prev,
-                            has_print: checked,
-                            dynas_treaty_faces: checked ? prev.dynas_treaty_faces : 0,
-                            pantones_quantity: checked ? prev.pantones_quantity : 0,
-                            pantones_codes: checked ? prev.pantones_codes : []
-                        }));
-                    }}
-                />
-            </div>
-        ),
-        dynas_treaty_faces: formData.has_print && (
-            <SelectInput
-                label="Caras Tratadas"
-                name="dynas_treaty_faces"
-                value={{
-                    value: formData.dynas_treaty_faces,
-                    label: dynasTreatyFacesChoices[formData.dynas_treaty_faces as keyof typeof dynasTreatyFacesChoices]
-                }}
-                onChange={(option) => handleInputChange({
-                    target: { name: 'dynas_treaty_faces', value: option?.value || 0 }
-                } as any)}
-                options={Object.entries(dynasTreatyFacesChoices).map(([key, value]) => ({
-                    value: Number(key),
-                    label: value
-                }))}
-                required
-            />
-        ),
-        pantones_quantity: formData.has_print && (
-            <SelectInput
-                label="Cantidad de Pantones"
-                name="pantones_quantity"
-                value={{
-                    value: formData.pantones_quantity,
-                    label: formData.pantones_quantity.toString()
-                }}
-                onChange={(option) => {
-                    const value = option?.value || 0;
-                    setFormData(prev => ({
-                        ...prev,
-                        pantones_quantity: value,
-                        pantones_codes: Array(value).fill('').slice(0, 4) // Reset pantone codes array with new length
-                    }));
-                }}
-                options={[1, 2, 3, 4].map(num => ({
-                    value: num,
-                    label: num.toString()
-                }))}
-                required
-            />
-        ),
-        pantones_codes: formData.has_print && formData.pantones_quantity > 0 && (
-            <div className="space-y-2">
-                <div className="space-y-2">
-                    {Array.from({ length: Math.min(formData.pantones_quantity, 4) }).map((_, index) => (
-                        <TextInput
-                            key={index}
-                            label={`Pantone ${index + 1}`}
-                            name={`pantone_${index}`}
-                            value={formData.pantones_codes[index] || ''}
-                            onChange={(e) => {
-                                const newPantoneCodes = [...formData.pantones_codes];
-                                newPantoneCodes[index] = e.target.value;
-                                setFormData(prev => ({
-                                    ...prev,
-                                    pantones_codes: newPantoneCodes
-                                }));
-                            }}
-                            required
-                        />
-                    ))}
-                </div>
-            </div>
-        ),
         additive_count: (
             <SelectInput
                 label="Cantidad de Aditivos"
-                name="additive_count"
+                name="pod_additive_count"
                 value={{
                     value: additiveCount,
                     label: additiveCount.toString()
@@ -847,9 +792,9 @@ export default function ReferencesPage() {
                 onChange={(option) => {
                     const value = option?.value || 0;
                     setAdditiveCount(value);
-                    setFormData(prev => ({
+                    setFormDataPOD(prev => ({
                         ...prev,
-                        additive: Array(value).fill('') // Reset additive array with new length
+                        additive: Array(value).fill('')
                     }));
                 }}
                 options={[1, 2, 3, 4].map(num => ({
@@ -860,44 +805,238 @@ export default function ReferencesPage() {
         ),
         additive: additiveCount > 0 && (
             <div className="space-y-2">
-                <div className="space-y-2">
-                    {Array.from({ length: Math.min(additiveCount, 4) }).map((_, index) => (
-                        <TextInput
-                            key={index}
-                            label={`Aditivo ${index + 1}`}
-                            name={`additive_${index}`}
-                            value={formData.additive[index] || ''}
-                            onChange={(e) => {
-                                const newAdditives = [...formData.additive];
-                                newAdditives[index] = e.target.value;
-                                setFormData(prev => ({
-                                    ...prev,
-                                    additive: newAdditives
-                                }));
-                            }}
-                            required
-                        />
-                    ))}
-                </div>
+                {Array.from({ length: Math.min(additiveCount, 4) }).map((_, index) => (
+                    <TextInput
+                        key={index}
+                        label={`Aditivo ${index + 1}`}
+                        name={`pod_additive_${index}`}
+                        value={formDataPOD.additive[index] || ''}
+                        onChange={(e) => {
+                            const newAdditives = [...formDataPOD.additive];
+                            newAdditives[index] = e.target.value;
+                            setFormDataPOD(prev => ({
+                                ...prev,
+                                additive: newAdditives
+                            }));
+                        }}
+                        required
+                    />
+                ))}
             </div>
         ),
-        line:
+        has_print: (
+            <div className="flex items-center space-x-2">
+                <label htmlFor="has_print" className="text-sm font-medium">
+                    ¿Lleva impresión?
+                </label>
+                <Switch
+                    id="has_print"
+                    checked={formDataPOD.has_print || false}
+                    onCheckedChange={(checked) => {
+                        setFormDataPOD(prev => ({
+                            ...prev,
+                            has_print: checked,
+                            dynas_treaty_faces: checked ? prev.dynas_treaty_faces : 0,
+                            pantones_quantity: checked ? prev.pantones_quantity : 0,
+                            pantones_codes: checked ? prev.pantones_codes : []
+                        }));
+                    }}
+                />
+            </div>
+        ),
+        dynas_treaty_faces: formDataPOD.has_print && (
+            <SelectInput
+                label="Caras Tratadas"
+                name="pod_dynas_treaty_faces"
+                value={{
+                    value: formDataPOD.dynas_treaty_faces,
+                    label: dynasTreatyFacesChoices[formDataPOD.dynas_treaty_faces as keyof typeof dynasTreatyFacesChoices]
+                }}
+                onChange={(option) => handleInputChange({
+                    target: { name: 'pod_dynas_treaty_faces', value: option?.value || 0 }
+                } as any)}
+                options={Object.entries(dynasTreatyFacesChoices).map(([key, value]) => ({
+                    value: Number(key),
+                    label: value
+                }))}
+                required
+            />
+        ),
+        is_new_sketch: (
+            <div className="flex items-center space-x-2">
+                <label htmlFor="has_print" className="text-sm font-medium">
+                    ¿El arte es nuevo?
+                </label>
+                <Switch
+                    id="is_new_sketch"
+                    checked={formDataPOD.is_new_sketch || false}
+                    onCheckedChange={(checked) => {
+                        setFormDataPOD(prev => ({
+                            ...prev,
+                            is_new_sketch: checked
+                        }));
+                    }}
+                />
+            </div>
+        ),
+        pantones_quantity: formDataPOD.has_print && (
+            <SelectInput
+                label="Cantidad de Pantones"
+                name="pod_pantones_quantity"
+                value={{
+                    value: formDataPOD.pantones_quantity,
+                    label: formDataPOD.pantones_quantity.toString()
+                }}
+                onChange={(option) => {
+                    const value = option?.value || 0;
+                    setFormDataPOD(prev => ({
+                        ...prev,
+                        pantones_quantity: value,
+                        pantones_codes: Array(value).fill('').slice(0, 4)
+                    }));
+                }}
+                options={[1, 2, 3, 4].map(num => ({
+                    value: num,
+                    label: num.toString()
+                }))}
+                required
+            />
+        ),
+        pantones_codes: formDataPOD.has_print && formDataPOD.pantones_quantity > 0 && (
+            <div className="space-y-2">
+                {Array.from({ length: Math.min(formDataPOD.pantones_quantity, 4) }).map((_, index) => (
+                    <TextInput
+                        key={index}
+                        label={`Pantone ${index + 1}`}
+                        name={`pod_pantone_${index}`}
+                        value={formDataPOD.pantones_codes[index] || ''}
+                        onChange={(e) => {
+                            const newPantoneCodes = [...formDataPOD.pantones_codes];
+                            newPantoneCodes[index] = e.target.value;
+                            setFormDataPOD(prev => ({
+                                ...prev,
+                                pantones_codes: newPantoneCodes
+                            }));
+                        }}
+                        required
+                    />
+                ))}
+            </div>
+        ),
+        kilograms: (
+            <NumberInput
+                label="Kilogramos"
+                name="pod_kilograms"
+                value={formDataPOD.kilograms}
+                onChange={handleInputChange}
+                required
+                min={0}
+                step={0.01}
+            />
+        ),
+        units: (
+            <NumberInput
+                label="Unidades"
+                name="pod_units"
+                value={formDataPOD.units}
+                onChange={handleInputChange}
+                required
+                min={0}
+                step={1}
+            />
+        ),
+        kilogram_price: (
+            <NumberInput
+                label="Precio por Kilogramo"
+                name="pod_kilogram_price"
+                value={formDataPOD.kilogram_price}
+                onChange={handleInputChange}
+                required
+                min={0}
+                step={0.01}
+            />
+        ),
+        unit_price: (
+            <NumberInput
+                label="Precio por Unidad"
+                name="pod_unit_price"
+                value={formDataPOD.unit_price}
+                onChange={handleInputChange}
+                required
+                min={0}
+                step={0.01}
+            />
+        ),
+        production_observations: (
+            <TextArea
+                label="Observaciones de Producción"
+                name="pod_production_observations"
+                value={formDataPOD.production_observations}
+                onChange={handleInputChange}
+            />
+        ),
+        delivery_location: (
+            <TextInput
+                label="Lugar de Entrega"
+                name="pod_delivery_location"
+                value={formDataPOD.delivery_location}
+                onChange={handleInputChange}
+            />
+        ),
+        //STEP 3 AFTER DETAILS
+        payment_method: (
+            <SelectInput
+                label="Método de Pago"
+                name="payment_payment_method"
+                value={formDataPayment.payment_method}
+                onChange={handleInputChange}
+                options={Object.entries(paymentMethodChoices).map(([key, value]) => ({
+                    value: Number(key),
+                    label: value
+                }))}
+            />
+        ),
+        payment_term: (
+            <NumberInput
+                label="Término de pago"
+                name="payment_payment_term"
+                value={formDataPayment.payment_term || 0}
+                onChange={handleInputChange}
+            />
+        ),
+        advance: (
+            <NumberInput
+                label="Anticipo"
+                name="payment_advance"
+                value={formDataPayment.advance || 0}
+                onChange={handleInputChange}
+            />
+        ),
+        observations: (
+            <TextArea
+                label="Observaciones"
+                name="po_observations"
+                value={formDataPO.observations}
+                onChange={handleInputChange}
+            />
+        ),
+        line: (
             <div>
                 <hr className="my-5 border-small border-gray-500 border-dashed" />
             </div>
+        )
     };
 
-    const getFormLayout = () => {
+    const getDetailsLayout = () => {
         const commonFields = ['customer', 'product_type', 'material'];
         const dimensionFields = ['measure_unit'];
-        const printFields = formData.has_print
+        const printFields = formDataPOD.has_print
             ? ['dynas_treaty_faces', 'pantones_quantity', 'pantones_codes']
             : [];
 
-        // Añade un campo de línea divisoria
         const line = ['line'];
 
-        if (['Tubular', 'Semi-tubular'].includes(productTypes.find(pt => pt.id === formData.product_type)?.name)) {
+        if (['Tubular', 'Semi-tubular'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name)) {
             return [
                 commonFields,
                 ['reference'],
@@ -910,7 +1049,7 @@ export default function ReferencesPage() {
                 ['has_print'],
                 printFields
             ].filter(row => row.length > 0);
-        } else if (['Lamina'].includes(productTypes.find(pt => pt.id === formData.product_type)?.name)) {
+        } else if (['Lamina'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name)) {
             return [
                 commonFields,
                 ['reference'],
@@ -923,20 +1062,20 @@ export default function ReferencesPage() {
                 ['has_print'],
                 printFields
             ].filter(row => row.length > 0);
-        } else if (['Bolsa'].includes(productTypes.find(pt => pt.id === formData.product_type)?.name)) {
+        } else if (['Bolsa'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name)) {
             const bagFields1 = ['gussets_type'];
-            if (formData.gussets_type !== 0) {
+            if (formDataPOD.gussets_type !== 0) {
                 bagFields1.push('first_gusset');
             }
-            if (formData.gussets_type !== 1) {
+            if (formDataPOD.gussets_type !== 1) {
                 bagFields1.push('flap_type');
-                if (formData.flap_type !== 0) {
+                if (formDataPOD.flap_type !== 0) {
                     bagFields1.push('flap_size');
                 }
             }
 
             const bagFields2 = [];
-            if (formData.gussets_type !== 1 && formData.flap_type !== 4) {
+            if (formDataPOD.gussets_type !== 1 && formDataPOD.flap_type !== 4) {
                 bagFields2.push('die_cut_type');
             }
             bagFields2.push('sealing_type', 'caliber', 'roller_size');
@@ -959,7 +1098,7 @@ export default function ReferencesPage() {
         return [commonFields];
     };
 
-    const viewContent = {
+    /*const viewContent = {
         customer: (
             <div>
                 <strong className="block mb-1">Cliente</strong>
@@ -994,8 +1133,8 @@ export default function ReferencesPage() {
             <div>
                 <strong className="block mb-1">Dimensiones</strong>
                 <p className="dark:text-gray-300">
-                    {`${currentReference?.width} x ${currentReference?.length} ${measureUnitChoices[currentReference?.measure_unit as keyof typeof measureUnitChoices]
-                        }`}
+                    {`${currentReference?.width} x ${currentReference?.length} ${measureUnitChoices[currentReference?.measure_unit as keyof typeof measureUnitChoices
+                        ]}`}
                 </p>
             </div>
         ),
@@ -1075,16 +1214,7 @@ export default function ReferencesPage() {
                 </p>
             </div>
         )
-    };
-
-    useEffect(() => {
-        if (materials.find(m => m.id === formData.material)?.name === 'Maíz') {
-            setFormData(prev => ({
-                ...prev,
-                film_color: 'SIN COLOR'
-            }));
-        }
-    }, [formData.material]);
+    }; */
 
     return (
         <div className="container">
@@ -1099,7 +1229,7 @@ export default function ReferencesPage() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
             >
-                {references.length === 0 ? (
+                {POs.length === 0 ? (
                     <div className="flex justify-center items-center h-full pt-20">
                         <p className="text-gray-600 dark:text-gray-400">No hay referencias disponibles</p>
                     </div>
@@ -1107,51 +1237,59 @@ export default function ReferencesPage() {
                     <Table>
                         <TableHeader>
                             <TableHead>Cliente</TableHead>
-                            <TableHead>Referencia</TableHead>
-                            <TableHead>Estado</TableHead>
+                            <TableHead>Ficha - O.T.</TableHead>
+                            <TableHead>Fecha de Solicitud</TableHead>
+                            <TableHead>Fecha de Remisión</TableHead>
+                            <TableHead>Total</TableHead>
                             <TableHead>Acciones</TableHead>
                         </TableHeader>
                         <TableBody>
-                            {references
-                                .filter(ref =>
-                                    ref.reference.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                    customers.find(c => c.id === ref.customer)?.company_name.toLowerCase().includes(searchTerm.toLowerCase())
+                            {POs
+                                .filter(po =>
+                                    customers.find(c => c.id === po.customer)?.company_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                    po.details.find(detail => detail.reference.toString().toLowerCase().includes(searchTerm.toLowerCase())) ||
+                                    po.details.find(detail => detail.wo_number.toString().toLowerCase().includes(searchTerm.toLowerCase())) ||
+                                    po.order_date.toString().toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                    po.delivery_date.toString().toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                    po.total.toString().toLowerCase().includes(searchTerm.toLowerCase())
                                 )
-                                .map((reference) => (
-                                    <TableRow key={reference.id}>
-                                        <TableCell className={reference.is_active ? '' : 'opacity-40'}>
-                                            {customers.find(c => c.id === reference.customer)?.company_name}
+                                .map((po) => (
+                                    <TableRow key={po.id}>
+                                        <TableCell>
+                                            {customers.find(c => c.id === po.customer)?.company_name}
                                         </TableCell>
-                                        <TableCell className={reference.is_active ? '' : 'opacity-40'}>
-                                            {reference.reference}
+                                        <TableCell>
+                                            {po.details.map((detail, index) => (
+                                                <div key={detail.id}>
+                                                    O.T. {detail.wo_number} - Ficha {detail.reference}
+                                                </div>
+                                            ))}
                                         </TableCell>
-                                        <TableCell className={reference.is_active ? '' : 'bg-white/30 dark:bg-gray-800/30'}>
-                                            <Switch
-                                                checked={reference.is_active}
-                                                onCheckedChange={() => handleSwitchChange(reference.id, reference.is_active)}
-                                                size='sm'
-                                            />
+                                        <TableCell>
+                                            {new Date(po.order_date).toLocaleDateString()}
                                         </TableCell>
-                                        <TableCell className={reference.is_active ? '' : 'bg-white/30 dark:bg-gray-800/30'}>
-                                            <button
+                                        <TableCell>
+                                            {new Date(po.delivery_date).toLocaleDateString()}
+                                        </TableCell>
+                                        <TableCell>
+                                            {po.total}
+                                        </TableCell>
+                                        <TableCell>
+                                            {/*<button
                                                 className="text-sky-500 hover:text-sky-700 mr-3 transition-colors"
-                                                onClick={() => handleView(reference)}
+                                                onClick={() => handleView(po, po.payments[0], po.details[0])}
                                             >
                                                 <LuView size={20} />
                                             </button>
                                             <button
-                                                className={`${reference.is_active ? 'text-orange-500 hover:text-orange-700' : 'text-gray-400 opacity-40'
-                                                    } mr-3 transition-colors`}
-                                                onClick={() => handleEdit(reference)}
-                                                disabled={!reference.is_active}
+                                                className={`text-orange-500 hover:text-orange-700 mr-3 transition-colors`}
+                                                onClick={() => handleEdit(po, po.payments[0], po.details[0])}
                                             >
                                                 <LuClipboardEdit size={20} />
-                                            </button>
+                                            </button>*/}    
                                             <button
-                                                className={`${reference.is_active ? 'text-red-500 hover:text-red-700' : 'text-gray-400 opacity-40'
-                                                    } transition-colors`}
-                                                onClick={() => handleDelete(reference.id)}
-                                                disabled={!reference.is_active}
+                                                className="text-red-500 hover:text-red-700 mr-3 transition-colors"
+                                                onClick={() => handleDelete(po.id)}
                                             >
                                                 <LuTrash2 size={20} />
                                             </button>
@@ -1165,19 +1303,19 @@ export default function ReferencesPage() {
 
             {isFormModalOpen && (
                 <FormModal
-                    title={currentReference ? 'Editar Referencia' : 'Agregar Referencia'}
-                    layout={getFormLayout()}
+                    title={currentPO ? 'Editar Orden de Compra' : 'Agregar Orden de Compra'}
+                    layout={getDetailsLayout()}
                     inputs={inputs}
                     onSubmit={handleFormSubmit}
                     onCancel={handleCancel}
-                    submitLabel={currentReference ? 'Actualizar' : 'Crear'}
+                    submitLabel={currentPO ? 'Actualizar' : 'Crear'}
                     width='max-w-[70%]'
                 />
             )}
 
-            {isViewModalOpen && currentReference && (
+            {/*{isViewModalOpen && currentPO && (
                 <ViewModal
-                    title="Detalles de la Referencia"
+                    title="Detalles de la Orden de Compra"
                     layout={[
                         ['customer', 'reference'],
                         ['product_type', 'material'],
@@ -1191,7 +1329,7 @@ export default function ReferencesPage() {
                     content={viewContent}
                     onClose={() => setViewModalOpen(false)}
                 />
-            )}
+            )}*/}
         </div>
     );
 }

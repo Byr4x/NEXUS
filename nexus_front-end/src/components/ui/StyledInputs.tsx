@@ -168,15 +168,19 @@ interface DateInputProps {
   selectedDate: Date | null;
   onChange: (date: Date | null) => void;
   required?: boolean;
+  name?: string;
+  disabled?: boolean;
 }
 
-export const DateInput: React.FC<DateInputProps> = ({ label, selectedDate, onChange, required }) => (
+export const DateInput: React.FC<DateInputProps> = ({ label, selectedDate, onChange, required, name, disabled }) => (
   <div>
     <label className="block mb-1 text-gray-700 dark:text-gray-300">{label} {required && <span className="text-red-500">*</span>}</label>
     <DatePicker
+      name={name}
       selected={selectedDate}
       onChange={onChange}
       className="w-full p-2 border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
+      disabled={disabled}
     />
   </div>
 );
@@ -187,12 +191,14 @@ interface TimeInputProps {
   selectedTime: Date | null;
   onChange: (time: Date | null) => void;
   required?: boolean;
+  name?: string;
 }
 
-export const TimeInput: React.FC<TimeInputProps> = ({ label, selectedTime, onChange, required }) => (
+export const TimeInput: React.FC<TimeInputProps> = ({ label, selectedTime, onChange, required, name }) => (
   <div>
     <label className="block mb-1 text-gray-700 dark:text-gray-300">{label} {required && <span className="text-red-500">*</span>}</label>
     <DatePicker
+      name={name}
       selected={selectedTime}
       onChange={onChange}
       showTimeSelect

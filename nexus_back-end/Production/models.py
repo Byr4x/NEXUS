@@ -43,7 +43,13 @@ class Machine(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
 class WorkOrder(models.Model):
-    po_detail = models.ForeignKey(PODetail, on_delete=models.PROTECT, related_name='work_order', related_query_name='work_order_query')
+    po_detail = models.OneToOneField(
+        PODetail,
+        on_delete=models.PROTECT,
+        to_field='wo_number',
+        primary_key=True,
+        related_name='work_order'
+    )
     production_observations = models.TextField(null=True, blank=True)
     surplus_percentage = models.DecimalField(max_digits=10, decimal_places=2)
     unit_weight = models.DecimalField(editable=False, max_digits=10, decimal_places=2)
@@ -64,29 +70,29 @@ class WorkOrder(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def save(self, *args, **kwargs):
+        if not self.pk:  # Only calculate on creation
+            if self.po_detail:
+                width = self.po_detail.width
+                length = self.po_detail.length
 
-        if self.po_detail:
-            width = self.po_detail.width
-            length = self.po_detail.length
+                if self.po_detail.gussets_type == 1:
+                    width += self.po_detail.first_gusset + self.po_detail.second_gusset
+                elif self.po_detail.gussets_type == 2:
+                    length += self.po_detail.first_gusset    
 
-            if self.po_detail.gussets_type == 1:
-                width += self.po_detail.first_gusset + self.po_detail.second_gusset
-            elif self.po_detail.gussets_type == 2:
-                length += self.po_detail.first_gusset    
+                if self.po_detail.flap_type != 0:
+                    length += (self.po_detail.flap_size / 2)
 
-            if self.po_detail.flap_type != 0:
-                length += (self.po_detail.flap_size / 2)
+                self.unit_weight = width * length * self.po_detail.caliber * self.po_detail.material.weight_constant
 
-            self.unit_weight = width * length * self.po_detail.caliber * self.po_detail.material.weight_constant
-
-            if self.po_detail.kilograms > 0:
-                self.surplus_weight = self.po_detail.kilograms * (self.surplus_percentage / 100)
-                self.wo_weight = self.po_detail.kilograms + self.surplus_weight
-            else:    
-                temp_weight = (self.unit_weight * self.po_detail.units) / 1000
-                temp_weight = math.ceil(temp_weight) if temp_weight % 1 >= 0.01 else int(temp_weight)
-                self.surplus_weight = temp_weight * (self.surplus_percentage / 100)
-                self.wo_weight = temp_weight + self.surplus_weight
+                if self.po_detail.kilograms > 0:
+                    self.surplus_weight = self.po_detail.kilograms * (self.surplus_percentage / 100)
+                    self.wo_weight = self.po_detail.kilograms + self.surplus_weight
+                else:    
+                    temp_weight = (self.unit_weight * self.po_detail.units) / 1000
+                    temp_weight = math.ceil(temp_weight) if temp_weight % 1 >= 0.01 else int(temp_weight)
+                    self.surplus_weight = temp_weight * (self.surplus_percentage / 100)
+                    self.wo_weight = temp_weight + self.surplus_weight
 
         super().save(*args, **kwargs)
 
