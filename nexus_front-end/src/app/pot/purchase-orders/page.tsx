@@ -218,6 +218,7 @@ export default function ReferencesPage() {
     const [additiveCount, setAdditiveCount] = useState(0);
     const [currentStep, setCurrentStep] = useState(1);
     const [totalSteps, setTotalSteps] = useState(1);
+    const [allPODetails, setAllPODetails] = useState<PODetailForm[]>([]);
 
     useEffect(() => {
         fetchPOs();
@@ -363,7 +364,7 @@ export default function ReferencesPage() {
                     if (fieldName === 'gussets_type') {
                         newState.die_cut_type = Number(value) === 1 ? 2 : 0;
                     }
-                    if (['reference', 'product_type', 'material', 'width', 'length', 'measure_unit', 'caliber', 'gussets_type', 'first_gusset', 'second_gusset', 'flap_type', 'flap_size', 'tape', 'die_cut_type'].includes(fieldName)) {
+                    if (['referencel', 'product_type', 'material', 'width', 'length', 'measure_unit', 'caliber', 'gussets_type', 'first_gusset', 'second_gusset', 'flap_type', 'flap_size', 'tape', 'die_cut_type'].includes(fieldName)) {
                         newState.reference_internal = generateReference(newState);
                     }
                     return newState;
@@ -390,9 +391,9 @@ export default function ReferencesPage() {
                 const paymentData = { ...formDataPayment, purchase_order: poId };
                 response = await axios.put(`http://127.0.0.1:8000/beiplas/business/payments/${currentPayment?.id}/`, paymentData);
 
-                const detailsPromises = Array(formDataPO.ordered_quantity).map((_, index) => {
-                    const detailData = { ...formDataPOD, purchase_order: poId };
-                    return axios.put(`http://127.0.0.1:8000/beiplas/business/poDetails/${detailData.id}/`, detailData);
+                const detailsPromises = allPODetails.map(detailData => {
+                    const detail = { ...detailData, purchase_order: poId };
+                    return axios.put(`http://127.0.0.1:8000/beiplas/business/poDetails/${detail.id}/`, detail);
                 });
 
                 await Promise.all(detailsPromises);
@@ -404,9 +405,9 @@ export default function ReferencesPage() {
                 const paymentData = { ...formDataPayment, purchase_order: poId };
                 response = await axios.post('http://127.0.0.1:8000/beiplas/business/payments/', paymentData);
 
-                const detailsPromises = Array(formDataPO.ordered_quantity).map((_, index) => {
-                    const detailData = { ...formDataPOD, purchase_order: poId };
-                    return axios.post('http://127.0.0.1:8000/beiplas/business/poDetails/', detailData);
+                const detailsPromises = allPODetails.map(detailData => {
+                    const detail = { ...detailData, purchase_order: poId };
+                    return axios.post('http://127.0.0.1:8000/beiplas/business/poDetails/', detail);
                 });
 
                 await Promise.all(detailsPromises);
@@ -422,6 +423,7 @@ export default function ReferencesPage() {
             setFormDataPO(defaultPurchaseOrder);
             setFormDataPayment(defaultPayment);
             setFormDataPOD(defaultPODetail);
+            setAllPODetails([]);
             setCurrentStep(1);
             setTotalSteps(1);
             fetchPOs();
@@ -500,11 +502,33 @@ export default function ReferencesPage() {
     };
 
     const handleNext = () => {
+        if (currentStep > 1 && currentStep < totalSteps) {
+            setAllPODetails(prev => {
+                const newDetails = [...prev];
+                newDetails[currentStep - 2] = formDataPOD;
+                return newDetails;
+            });
+        }
+
         setCurrentStep(prev => Math.min(prev + 1, totalSteps));
+        
+        if (currentStep > 1 && currentStep < totalSteps - 1) {
+            setFormDataPOD(defaultPODetail);
+            setAdditiveCount(0);
+        }
     };
 
     const handlePrevious = () => {
-        setCurrentStep(prev => Math.max(prev - 1, 1));
+        const prevStep = currentStep - 1;
+        setCurrentStep(prevStep);
+        
+        if (prevStep > 1 && prevStep < totalSteps) {
+            const detailIndex = prevStep - 2;
+            if (allPODetails[detailIndex]) {
+                setFormDataPOD(allPODetails[detailIndex]);
+                setAdditiveCount(allPODetails[detailIndex].additive.length);
+            }
+        }
     };
 
     const inputs = {
