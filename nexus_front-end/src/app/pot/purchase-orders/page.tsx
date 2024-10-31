@@ -480,15 +480,68 @@ export default function ReferencesPage() {
                 required
             />
         ),
+        /*ordered_quantity: (
+            <NumberInput
+                label="Cantidad Ordenada"
+                name="ordered_quantity"
+                value={formDataPO.ordered_quantity}
+                onChange={handleInputChange}
+                required
+                min={0}
+                step={0.01}
+            />
+        ),*/
+        reference: (
+            <SelectInput
+                label="Referencia"
+                name="pod_reference"
+                value={formDataPOD.reference}
+                onChange={(option) => {
+                    const selectedReference = references.find(reference => reference.id === option?.value);
+                    if (selectedReference) {
+                        setFormDataPOD(prevState => ({
+                            ...prevState,
+                            reference: option?.value,
+                            product_type: selectedReference.product_type,
+                            material: selectedReference.material,
+                            film_color: selectedReference.film_color,
+                            measure_unit: selectedReference.measure_unit,
+                            width: selectedReference.width,
+                            length: selectedReference.length,
+                            gussets_type: selectedReference.gussets_type,
+                            first_gusset: selectedReference.first_gusset,
+                            second_gusset: selectedReference.second_gusset,
+                            flap_type: selectedReference.flap_type,
+                            flap_size: selectedReference.flap_size,
+                            tape: selectedReference.tape,
+                            sealing_type: selectedReference.sealing_type,
+                            caliber: selectedReference.caliber,
+                            roller_size: selectedReference.roller_size,
+                            additive: selectedReference.additive,
+                            dynas_treaty_faces: selectedReference.dynas_treaty_faces,
+                            pantones_quantity: selectedReference.pantones_quantity,
+                            pantones_codes: selectedReference.pantones_codes,
+                            sketch_url: selectedReference.sketch_url,
+                        }));
+                        setAdditiveCount(selectedReference.additive.length)
+                    }
+                    handleInputChange({ target: { name: 'pod_reference', value: option?.value || 0 } } as any);
+                }}
+                options={references.map(reference => ({
+                    value: reference.id,
+                    label: reference.reference
+                }))}
+            />
+        ),
         product_type: (
             <SelectInput
                 label="Tipo de Producto"
-                name="product_type"
-                value={{ value: formData.product_type, label: productTypes.find(pt => pt.id === formData.product_type)?.name }}
-                onChange={(option) => handleInputChange({ target: { name: 'product_type', value: option?.value || 0 } } as any)}
+                name="pod_product_type"
+                value={{ value: formDataPOD.product_type, label: productTypes.find(pt => pt.id === formDataPOD.product_type)?.name }}
+                onChange={(option) => handleInputChange({ target: { name: 'pod_product_type', value: option?.value || 0 } } as any)}
                 options={productTypes.map(type => ({
                     value: type.id,
-                    label: type.name
+                    label: type.name    
                 }))}
                 required
             />
@@ -496,9 +549,9 @@ export default function ReferencesPage() {
         material: (
             <SelectInput
                 label="Material"
-                name="material"
-                value={{ value: formData.material, label: materials.find(m => m.id === formData.material)?.name }}
-                onChange={(option) => handleInputChange({ target: { name: 'material', value: option?.value || 0 } } as any)}
+                name="pod_material"
+                value={{ value: formDataPOD.material, label: materials.find(m => m.id === formDataPOD.material)?.name }}
+                onChange={(option) => handleInputChange({ target: { name: 'pod_material', value: option?.value || 0 } } as any)}
                 options={materials.map(material => ({
                     value: material.id,
                     label: material.name
@@ -506,12 +559,12 @@ export default function ReferencesPage() {
                 required
             />
         ),
-        reference: (
+        reference_internal: (
             <div className="relative">
                 <TextInput
-                    label="Referencia"
-                    name="reference"
-                    value={formData.reference}
+                    label="Referencia de compra"
+                    name="pod_reference_internal"
+                    value={formDataPOD.reference_internal}
                     onChange={handleInputChange}
                     disabled={!isReferenceEditable}
                     required
@@ -525,6 +578,16 @@ export default function ReferencesPage() {
                 </button>
             </div>
         ),
+        film_color: (
+            <TextInput
+                label="Color de Película"
+                name="film_color"
+                value={materials.find(m => m.id === formData.material)?.name === 'Maíz' ? 'Beige' : formData.film_color}
+                onChange={handleInputChange}
+                disabled={materials.find(m => m.id === formData.material)?.name === 'Maíz'}
+                required
+            />
+        ),
         measure_unit: (
             <SelectInput
                 label="Unidad de Medida"
@@ -535,16 +598,6 @@ export default function ReferencesPage() {
                     value: Number(key),
                     label: value
                 }))}
-                required
-            />
-        ),
-        film_color: (
-            <TextInput
-                label="Color de Película"
-                name="film_color"
-                value={materials.find(m => m.id === formData.material)?.name === 'Maíz' ? 'Beige' : formData.film_color}
-                onChange={handleInputChange}
-                disabled={materials.find(m => m.id === formData.material)?.name === 'Maíz'}
                 required
             />
         ),
