@@ -81,31 +81,43 @@ const FormModal: React.FC<FormModalProps> = ({
             </div>
           ))}
 
-          <div className="flex space-x-4">
+          <div className={`flex ${isMultiStep ? 'justify-between' : 'justify-end space-x-3'}`}>
+            {!isMultiStep && (
+              <button
+                type="button"
+                className="w-36 px-6 py-2 text-sm font-medium text-white bg-gray-500 rounded-lg shadow-lg hover:shadow-gray-500/30 hover:bg-gray-600 active:transform active:scale-95 transition-all duration-200"
+                onClick={onCancel}
+              >
+                Cancelar
+              </button>
+            )}
+            
             {isMultiStep ? (
               <>
-                {currentStep! > 1 && (
-                  <button
-                    type="button"
-                    onClick={onPrevious}
-                    className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg flex-1 transition-colors"
-                  >
-                    Anterior
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={onPrevious}
+                  disabled={currentStep! <= 1}
+                  className={`w-36 px-6 py-2 text-sm font-medium text-white rounded-lg shadow-lg transition-all duration-200 
+                    ${currentStep! <= 1 
+                      ? 'bg-gray-500 opacity-50' 
+                      : 'bg-gray-500 hover:bg-gray-600 active:transform active:scale-95 hover:shadow-gray-500/30'}`}
+                >
+                  ← Anterior
+                </button>
                 
                 {!isLastStep ? (
                   <button
                     type="button"
                     onClick={onNext}
-                    className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex-1 transition-colors"
+                    className="w-36 px-6 py-2 text-sm font-medium text-white bg-blue-500 rounded-lg shadow-lg hover:shadow-blue-500/30 hover:bg-blue-600 active:transform active:scale-95 transition-all duration-200"
                   >
-                    Siguiente
+                    Siguiente →
                   </button>
                 ) : (
                   <button
                     type="submit"
-                    className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg flex-1 transition-colors disabled:opacity-50"
+                    className="w-36 px-6 py-2 text-sm font-medium text-white bg-green-500 rounded-lg shadow-lg hover:shadow-green-500/30 hover:bg-green-600 active:transform active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     disabled={isSubmitting}
                   >
                     {isSubmitting ? 'Guardando...' : submitLabel}
@@ -115,20 +127,12 @@ const FormModal: React.FC<FormModalProps> = ({
             ) : (
               <button
                 type="submit"
-                className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg flex-1 transition-colors disabled:opacity-50"
+                className="w-36 px-6 py-2 text-sm font-medium text-white bg-green-500 rounded-lg shadow-lg hover:shadow-green-500/30 hover:bg-green-600 active:transform active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? 'Guardando...' : submitLabel}
               </button>
             )}
-
-            <button
-              type="button"
-              className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex-1 transition-colors"
-              onClick={onCancel}
-            >
-              Cancelar
-            </button>
           </div>
         </form>
       </div>

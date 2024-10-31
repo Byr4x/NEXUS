@@ -893,6 +893,9 @@ export default function ReferencesPage() {
         bagFields1.push('flap_type');
         if (formData.flap_type !== 0) {
           bagFields1.push('flap_size');
+          if (formData.flap_type === 4) {
+            bagFields1.push('tape');
+        }
         }
       }
 

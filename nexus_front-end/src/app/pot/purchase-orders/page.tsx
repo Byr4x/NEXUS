@@ -216,6 +216,9 @@ export default function ReferencesPage() {
     const [formDataPOD, setFormDataPOD] = useState<PODetailForm>(defaultPODetail);
     const [isReferenceEditable, setIsReferenceEditable] = useState(false);
     const [additiveCount, setAdditiveCount] = useState(0);
+    const [currentStep, setCurrentStep] = useState(1);
+    const [totalSteps, setTotalSteps] = useState(1);
+    console.log(formDataPO);
 
     useEffect(() => {
         fetchPOs();
@@ -334,12 +337,21 @@ export default function ReferencesPage() {
     const handleInputChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
     ) => {
-        const { name, value } = e.target;
-        const [formType, fieldName] = name.split('_');
-
+        const { name, value } = e.target;   
+        const underscoreIndex = name.indexOf('_');
+        const formType = name.slice(0, underscoreIndex); 
+        const fieldName = name.slice(underscoreIndex + 1); 
+    
         switch (formType) {
             case 'po':
-                setFormDataPO(prev => ({ ...prev, [fieldName]: value }));
+                setFormDataPO(prev => {
+                    const newState = { ...prev, [fieldName]: value };
+                    if (fieldName === 'ordered_quantity') {
+                        const quantity = parseInt(value) || 0;
+                        setTotalSteps(quantity + 2);
+                    }
+                    return newState;
+                });
                 break;
             case 'pod':
                 setFormDataPOD(prev => {
@@ -358,6 +370,7 @@ export default function ReferencesPage() {
                 break;
         }
     };
+    
 
     const handleFormSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -365,38 +378,49 @@ export default function ReferencesPage() {
         try {
             let response;
             let message = '';
-            let successCount = 0;
 
-            if (currentPO && currentPayment && currentPOD) {
+            if (currentPO) {
                 response = await axios.put(`http://127.0.0.1:8000/beiplas/business/purchaseOrders/${currentPO.id}/`, formDataPO);
-                successCount += response.data.status === 'success' ? 1 : 0;
-                response = await axios.put(`http://127.0.0.1:8000/beiplas/business/payments/${currentPayment.id}/`, formDataPayment);
-                successCount += response.data.status === 'success' ? 1 : 0;
-                response = await axios.put(`http://127.0.0.1:8000/beiplas/business/poDetails/${currentPOD.id}/`, formDataPOD);
-                successCount += response.data.status === 'success' ? 1 : 0;
-                message = successCount === 3 ? 'Orden de Compra actualizada correctamente' : 'Error al actualizar la Orden de Compra';
+                const poId = response.data.id;
+
+                const paymentData = { ...formDataPayment, purchase_order: poId };
+                response = await axios.put(`http://127.0.0.1:8000/beiplas/business/payments/${currentPayment?.id}/`, paymentData);
+
+                const detailsPromises = Array(formDataPO.ordered_quantity).map((_, index) => {
+                    const detailData = { ...formDataPOD, purchase_order: poId };
+                    return axios.put(`http://127.0.0.1:8000/beiplas/business/poDetails/${detailData.id}/`, detailData);
+                });
+
+                await Promise.all(detailsPromises);
+                message = 'Orden de Compra actualizada correctamente';
             } else {
                 response = await axios.post('http://127.0.0.1:8000/beiplas/business/purchaseOrders/', formDataPO);
-                successCount += response.data.status === 'success' ? 1 : 0;
-                response = await axios.post('http://127.0.0.1:8000/beiplas/business/payments/', formDataPayment);
-                successCount += response.data.status === 'success' ? 1 : 0;
-                response = await axios.post('http://127.0.0.1:8000/beiplas/business/poDetails/', formDataPOD);
-                message = successCount === 3 ? 'Orden de Compra creada correctamente' : 'Error al crear la Orden de Compra';
+                const poId = response.data.id;
+
+                const paymentData = { ...formDataPayment, purchase_order: poId };
+                response = await axios.post('http://127.0.0.1:8000/beiplas/business/payments/', paymentData);
+
+                const detailsPromises = Array(formDataPO.ordered_quantity).map((_, index) => {
+                    const detailData = { ...formDataPOD, purchase_order: poId };
+                    return axios.post('http://127.0.0.1:8000/beiplas/business/poDetails/', detailData);
+                });
+
+                await Promise.all(detailsPromises);
+                message = 'Orden de Compra creada correctamente';
             }
 
-            if (successCount === 3) {
-                showToast(message, 'success');
-                setIsReferenceEditable(false);
-                setFormModalOpen(false);
-                setCurrentPO(null);
-                setCurrentPayment(null);
-                setCurrentPOD(null);
-                setFormDataPO(defaultPurchaseOrder);
-                setFormDataPayment(defaultPayment);
-                setFormDataPOD(defaultPODetail);
-            } else {
-                showToast(message, 'error');
-            }
+            showToast(message, 'success');
+            setIsReferenceEditable(false);
+            setFormModalOpen(false);
+            setCurrentPO(null);
+            setCurrentPayment(null);
+            setCurrentPOD(null);
+            setFormDataPO(defaultPurchaseOrder);
+            setFormDataPayment(defaultPayment);
+            setFormDataPOD(defaultPODetail);
+            setCurrentStep(1);
+            setTotalSteps(1);
+            fetchPOs();
         } catch (error) {
             if (axios.isAxiosError(error) && error.response) {
                 showToast(error.response.data.message || 'An error occurred', 'error');
@@ -464,9 +488,19 @@ export default function ReferencesPage() {
         setCurrentPayment(null);
         setCurrentPOD(null);
         setAdditiveCount(0);
+        setFormDataPO(defaultPurchaseOrder);
+        setFormDataPayment(defaultPayment);
         setFormDataPOD(defaultPODetail);
         setFormModalOpen(false);
         showToast('Acción cancelada', 'info');
+    };
+
+    const handleNext = () => {
+        setCurrentStep(prev => Math.min(prev + 1, totalSteps));
+    };
+
+    const handlePrevious = () => {
+        setCurrentStep(prev => Math.max(prev - 1, 1));
     };
 
     const inputs = {
@@ -509,13 +543,11 @@ export default function ReferencesPage() {
         ),
         ordered_quantity: (
             <NumberInput
-                label="Cantidad Ordenada"
+                label="Cantidad de productos ordenados"
                 name="po_ordered_quantity"
-                value={formDataPO.ordered_quantity || 1}
+                value={formDataPO.ordered_quantity || 0}
                 onChange={handleInputChange}
                 required
-                min={0}
-                step={1}
             />
         ),
         //STEP 2 OF ordered_quantity (THIS SECTION IS REPEATED ordered_quantity times)
@@ -1027,6 +1059,8 @@ export default function ReferencesPage() {
         )
     };
 
+    const orderFields = ['order_date', 'customer', 'ordered_quantity'];
+
     const getDetailsLayout = () => {
         const commonFields = ['customer', 'product_type', 'material'];
         const dimensionFields = ['measure_unit'];
@@ -1071,6 +1105,9 @@ export default function ReferencesPage() {
                 bagFields1.push('flap_type');
                 if (formDataPOD.flap_type !== 0) {
                     bagFields1.push('flap_size');
+                    if (formDataPOD.flap_type === 4) {
+                        bagFields1.push('tape');
+                    }
                 }
             }
 
@@ -1095,7 +1132,7 @@ export default function ReferencesPage() {
             ].filter(row => row.length > 0);
         }
 
-        return [commonFields];
+        return [orderFields, commonFields];
     };
 
     /*const viewContent = {
@@ -1304,12 +1341,19 @@ export default function ReferencesPage() {
             {isFormModalOpen && (
                 <FormModal
                     title={currentPO ? 'Editar Orden de Compra' : 'Agregar Orden de Compra'}
-                    layout={getDetailsLayout()}
+                    layout={currentStep === 1 ? [orderFields] : 
+                           currentStep === totalSteps ? [['payment_method', 'payment_term', 'advance'], ['observations']] :
+                           getDetailsLayout()}
                     inputs={inputs}
                     onSubmit={handleFormSubmit}
                     onCancel={handleCancel}
                     submitLabel={currentPO ? 'Actualizar' : 'Crear'}
                     width='max-w-[70%]'
+                    currentStep={currentStep}
+                    totalSteps={totalSteps}
+                    onNext={handleNext}
+                    onPrevious={handlePrevious}
+                    isLastStep={currentStep === totalSteps}
                 />
             )}
 
