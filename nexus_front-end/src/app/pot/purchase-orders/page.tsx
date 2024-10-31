@@ -218,7 +218,6 @@ export default function ReferencesPage() {
     const [additiveCount, setAdditiveCount] = useState(0);
     const [currentStep, setCurrentStep] = useState(1);
     const [totalSteps, setTotalSteps] = useState(1);
-    console.log(formDataPO);
 
     useEffect(() => {
         fetchPOs();
@@ -261,7 +260,7 @@ export default function ReferencesPage() {
         try {
             const response = await axios.get('http://127.0.0.1:8000/beiplas/business/customers/');
             setCustomers(response.data);
-            setReferences(response.data.references);
+            console.log(response);
         } catch (error) {
             console.error('Error fetching customers:', error);
             showToast('Error fetching customers', 'error');
@@ -350,6 +349,11 @@ export default function ReferencesPage() {
                         const quantity = parseInt(value) || 0;
                         setTotalSteps(quantity + 2);
                     }
+
+                    if (fieldName === 'customer') {
+                        const customer = customers.find(c => c.id === value);
+                        setReferences(customer?.references);
+                    }
                     return newState;
                 });
                 break;
@@ -359,7 +363,7 @@ export default function ReferencesPage() {
                     if (fieldName === 'gussets_type') {
                         newState.die_cut_type = Number(value) === 1 ? 2 : 0;
                     }
-                    if (['product_type', 'material', 'width', 'length', 'measure_unit', 'caliber', 'gussets_type', 'first_gusset', 'second_gusset', 'flap_type', 'flap_size', 'tape', 'die_cut_type'].includes(fieldName)) {
+                    if (['reference', 'product_type', 'material', 'width', 'length', 'measure_unit', 'caliber', 'gussets_type', 'first_gusset', 'second_gusset', 'flap_type', 'flap_size', 'tape', 'die_cut_type'].includes(fieldName)) {
                         newState.reference_internal = generateReference(newState);
                     }
                     return newState;
@@ -555,7 +559,7 @@ export default function ReferencesPage() {
             <SelectInput
                 label="Referencia"
                 name="pod_reference"
-                value={formDataPOD.reference}
+                value={{ value: formDataPOD.reference, label: references?.find(reference => reference.id === formDataPOD.reference)?.reference }}
                 onChange={(option) => {
                     const selectedReference = references?.find(reference => reference.id === option?.value);
                     if (selectedReference) {
@@ -586,12 +590,12 @@ export default function ReferencesPage() {
                         }));
                         setAdditiveCount(selectedReference.additive.length)
                     }
-                    handleInputChange({ target: { name: 'pod_reference', value: option?.value || 0 } } as any);
+                    handleInputChange({ target: { name: 'pod_reference', value: option?.value} } as any);
                 }}
                 options={references?.map(reference => ({
                     value: reference.id,
                     label: reference.reference
-                })) || []}
+                }))}
             />
         ),
         product_type: (
@@ -1062,8 +1066,8 @@ export default function ReferencesPage() {
     const orderFields = ['order_date', 'customer', 'ordered_quantity'];
 
     const getDetailsLayout = () => {
-        const commonFields = ['customer', 'product_type', 'material'];
-        const dimensionFields = ['measure_unit'];
+        const commonFields = ['product_type', 'material'];
+        const dimensionFields = ['measure_unit', 'width'];
         const printFields = formDataPOD.has_print
             ? ['dynas_treaty_faces', 'pantones_quantity', 'pantones_codes']
             : [];
@@ -1072,10 +1076,11 @@ export default function ReferencesPage() {
 
         if (['Tubular', 'Semi-tubular'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name)) {
             return [
-                commonFields,
                 ['reference'],
+                commonFields,
+                ['reference_internal'],
                 line,
-                ['film_color', ...dimensionFields, 'width'],
+                ['film_color', ...dimensionFields],
                 ['caliber', 'roller_size'],
                 line,
                 ['additive_count', 'additive'],
@@ -1085,10 +1090,11 @@ export default function ReferencesPage() {
             ].filter(row => row.length > 0);
         } else if (['Lamina'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name)) {
             return [
-                commonFields,
                 ['reference'],
+                commonFields,
+                ['reference_internal'],
                 line,
-                ['film_color', ...dimensionFields, 'width', 'length'],
+                ['film_color', ...dimensionFields, 'length'],
                 ['caliber', 'roller_size'],
                 line,
                 ['additive_count', 'additive'],
@@ -1118,10 +1124,11 @@ export default function ReferencesPage() {
             bagFields2.push('sealing_type', 'caliber', 'roller_size');
 
             return [
-                commonFields,
                 ['reference'],
+                commonFields,
+                ['reference_internal'],
                 line,
-                ['film_color', ...dimensionFields, 'width', 'length'],
+                ['film_color', ...dimensionFields, 'length'],
                 bagFields1,
                 bagFields2,
                 line,
@@ -1132,7 +1139,7 @@ export default function ReferencesPage() {
             ].filter(row => row.length > 0);
         }
 
-        return [orderFields, commonFields];
+        return [['reference']];
     };
 
     /*const viewContent = {

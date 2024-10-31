@@ -1,5 +1,6 @@
 import React from 'react';
-import { RiCloseLine } from 'react-icons/ri';
+import { RiCloseLine, RiErrorWarningFill } from 'react-icons/ri';
+import { FaCheck } from 'react-icons/fa';
 
 interface FormModalProps {
   title: string;
@@ -16,6 +17,8 @@ interface FormModalProps {
   isLastStep?: boolean;
   errors?: { [key: string]: string };
   isSubmitting?: boolean;
+  stepNames?: string[];
+  stepErrors?: { [key: number]: boolean };
 }
 
 const FormModal: React.FC<FormModalProps> = ({
@@ -32,9 +35,47 @@ const FormModal: React.FC<FormModalProps> = ({
   onPrevious,
   isLastStep = false,
   errors = {},
-  isSubmitting = false
+  isSubmitting = false,
+  stepNames = [],
+  stepErrors = {}
 }) => {
   const isMultiStep = currentStep !== undefined && totalSteps !== undefined && totalSteps > 1;
+
+  const renderStepIndicator = () => {
+    return (
+      <div className="relative mb-8">
+        <div className="absolute top-1/2 left-4 h-1 bg-gray-200 -translate-y-3 translate-x-4 w-[95%]"></div>
+        <div 
+          className="absolute top-1/2 left-4  h-1 bg-green-500 -translate-y-3 transition-all duration-300 ease-in-out"
+          style={{ width: `${((currentStep! - 1) / (totalSteps! - 1)) * 95}%` }}
+        ></div>
+        <div className="relative flex justify-between">
+          {Array.from({ length: totalSteps! }, (_, i) => i + 1).map((step) => (
+            <div key={step} className="flex flex-col items-center">
+              <div  
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium z-10 ${
+                  step === currentStep
+                    ? 'bg-blue-500 text-white'
+                    : step < currentStep!
+                    ? 'bg-green-500 text-white'
+                    : 'bg-gray-200 text-gray-600'
+                } ${stepErrors[step] ? 'bg-red-500 text-white' : ''}`}
+              >
+                {stepErrors[step] ? (
+                  <RiErrorWarningFill size={16} />
+                ) : step < currentStep! ? (
+                  <FaCheck size={12} />
+                ) : (
+                  step
+                )}
+              </div>
+              <span className="mt-2 text-xs text-gray-500">{stepNames[step - 1] || `Paso ${step}`}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="fixed inset-0 flex bg-black bg-opacity-40 items-center justify-center z-50 overflow-y-auto py-10">
@@ -51,14 +92,7 @@ const FormModal: React.FC<FormModalProps> = ({
           </button>
         </div>
 
-        {isMultiStep && (
-          <div className="w-full bg-gray-200 rounded-full h-2.5 mb-6 dark:bg-gray-700">
-            <div 
-              className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
-              style={{ width: `${(currentStep! / totalSteps!) * 100}%` }}
-            ></div>
-          </div>
-        )}
+        {isMultiStep && renderStepIndicator()}
 
         {Object.keys(errors).length > 0 && (
           <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">
