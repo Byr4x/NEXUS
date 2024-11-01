@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, Reference } from 'react';
+import React, { useState, useEffect, useMemo, Reference, useRef } from 'react';
 import { motion } from 'framer-motion';
 import axios from 'axios';
 import { LuView, LuClipboardEdit, LuTrash2, LuPenLine } from 'react-icons/lu';
@@ -11,73 +11,7 @@ import FormModal from '@/components/modals/FormModal';
 import ViewModal from '@/components/modals/ViewModal';
 import TopTableElements from '@/components/ui/TopTableElements';
 import { showAlert, showToast } from '@/components/ui/Alerts';
-
-interface PurchaseOrder {
-    id: number;
-    details: PODetail[];
-    payments: Payment[];
-    employee: number;
-    order_date: Date;
-    customer: number;
-    observations: string;
-    delivery_date: Date;
-    subtotal: number;
-    iva: number;
-    total: number;
-}
-
-interface Payment {
-    id: number;
-    purchase_order: number;
-    payment_method: number;
-    payment_term: number | null;
-    advance: number | null;
-}
-
-interface PODetail {
-    id: number;
-    purchase_order: number;
-    reference: number;
-    product_type: number;
-    material: number;
-    reference_internal: string;
-    film_color: string;
-    measure_unit: number;
-    width: number;
-    length: number;
-    gussets_type: number;
-    first_gusset: number | null;
-    second_gusset: number | null;
-    flap_type: number;
-    flap_size: number | null;
-    tape: number;
-    die_cut_type: number;
-    sealing_type: number;
-    caliber: number;
-    roller_size: number;
-    additive: string[];
-    dynas_treaty_faces: number;
-    is_new_sketch: boolean;
-    sketch_url: string;
-    pantones_quantity: number;
-    pantones_codes: string[];
-    kilograms: number;
-    units: number;
-    kilogram_price: number;
-    unit_price: number;
-    production_observations: string;
-    delivery_location: string;
-    is_updated: boolean;
-    wo_number: number;
-}
-
-interface PurchaseOrderForm extends PurchaseOrder {
-    ordered_quantity?: number;
-}
-
-interface PODetailForm extends PODetail {
-    has_print?: boolean;
-}
+import { PurchaseOrder, PurchaseOrderForm, Payment, PODetail, PODetailForm, POErrors, PODErrors, PaymentErrors } from './interfaces';
 
 // Choice Objects
 const measureUnitChoices = {
@@ -217,8 +151,12 @@ export default function ReferencesPage() {
     const [isReferenceEditable, setIsReferenceEditable] = useState(false);
     const [additiveCount, setAdditiveCount] = useState(0);
     const [currentStep, setCurrentStep] = useState(1);
-    const [totalSteps, setTotalSteps] = useState(1);
+    const [totalSteps, setTotalSteps] = useState(3);
     const [allPODetails, setAllPODetails] = useState<PODetailForm[]>([]);
+    const [poErrors, setPOErrors] = useState<POErrors>({});
+    const [podErrors, setPODErrors] = useState<PODErrors>({});
+    const [paymentErrors, setPaymentErrors] = useState<PaymentErrors>({});
+    const [stepChanged, setStepChanged] = useState(false);
 
     useEffect(() => {
         fetchPOs();
@@ -236,6 +174,56 @@ export default function ReferencesPage() {
             }));
         }
     }, [formDataPOD.material]);
+
+    useEffect(() => {
+        if (stepChanged) {
+            if (currentStep > 1 && currentStep < totalSteps) {
+                // Validar el detalle actual
+                if (formDataPOD.reference) {
+                    const fieldsToValidate = [
+                        'pod_reference',
+                        'pod_product_type',
+                        'pod_material',
+                        'pod_width',
+                        'pod_length',
+                        'pod_caliber',
+                        'pod_kilograms',
+                        'pod_units',
+                        'pod_kilogram_price',
+                        'pod_unit_price'
+                    ];
+
+                    const errors: PODErrors = {};
+                    fieldsToValidate.forEach(field => {
+                        const fieldName = field.replace('pod_', '');
+                        const error = validateField(field, formDataPOD[fieldName as keyof PODetailForm]);
+                        if (error) {
+                            errors[fieldName as keyof PODErrors] = error;
+                        }
+                    });
+                    setPODErrors(errors);
+                }
+            } else if (currentStep === totalSteps) {
+                // Validar los campos del pago
+                const paymentFieldsToValidate = [
+                    'payment_payment_method',
+                    'payment_payment_term',
+                    'payment_advance'
+                ];
+
+                const errors: PaymentErrors = {};
+                paymentFieldsToValidate.forEach(field => {
+                    const fieldName = field.replace('payment_', '');
+                    const error = validateField(field, formDataPayment[fieldName as keyof Payment]);
+                    if (error) {
+                        errors[fieldName as keyof PaymentErrors] = error;
+                    }
+                });
+                setPaymentErrors(errors);
+            }
+            setStepChanged(false);
+        }
+    }, [currentStep, formDataPOD, formDataPayment, stepChanged]);
 
     const fetchPOs = async () => {
         try {
@@ -261,7 +249,6 @@ export default function ReferencesPage() {
         try {
             const response = await axios.get('http://127.0.0.1:8000/beiplas/business/customers/');
             setCustomers(response.data);
-            console.log(response);
         } catch (error) {
             console.error('Error fetching customers:', error);
             showToast('Error fetching customers', 'error');
@@ -286,6 +273,105 @@ export default function ReferencesPage() {
             console.error('Error fetching materials:', error);
             showToast('Error fetching materials', 'error');
         }
+    };
+
+    // Función de validación
+    const validateField = (name: string, value: any): string => {
+        console.log(formDataPOD.reference_internal, name, value);
+        const validations: { [key: string]: () => string } = {
+            // Validaciones para PO
+            'po_employee': () => {
+                if (!value) return 'El empleado es requerido';
+                return '';
+            },
+            'po_customer': () => {
+                if (value === 0) return 'El cliente es requerido';
+                return '';
+            },
+            'po_ordered_quantity': () => {
+                if (!value) return 'La cantidad es requerida';
+                if (value < 1) return 'La cantidad debe ser mayor a 0';
+                return '';
+            },
+
+            // Validaciones para POD
+            'pod_reference': () => {
+                if (!value) return 'La referencia es requerida';
+                return '';
+            },
+            'pod_product_type': () => {
+                if (!value) return 'El tipo de producto es requerido';
+                return '';
+            },
+            'pod_material': () => {
+                if (!value) return 'El material es requerido';
+                return '';
+            },
+            'pod_width': () => {
+                if (!value) return 'El ancho es requerido';
+                if (value <= 0) return 'El ancho debe ser mayor a 0';
+                return '';
+            },
+            'pod_length': () => {
+                if (['Lamina', 'Bolsa'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name)) {
+                    if (!value) return 'El largo es requerido';
+                    if (value <= 0) return 'El largo debe ser mayor a 0';
+                }
+                return '';
+            },
+            'pod_caliber': () => {
+                if (!value) return 'El calibre es requerido';
+                if (value <= 0) return 'El calibre debe ser mayor a 0';
+                return '';
+            },
+            'pod_kilograms': () => {
+                if (['Tubular', 'Semi-tubular'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name)) {
+                    if (!value) return 'Los kilogramos son requeridos';
+                    if (value <= 0) return 'Los kilogramos deben ser mayor a 0';
+                }
+                return '';
+            },
+            'pod_units': () => {
+                if (['Lamina', 'Bolsa'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name)) {
+                    if (!value) return 'Las unidades son requeridas';
+                    if (value <= 0) return 'Las unidades deben ser mayor a 0';
+                }
+                return '';
+            },
+            'pod_kilogram_price': () => {
+                if (['Tubular', 'Semi-tubular'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name)) {
+                    if (!value) return 'El precio por kilogramo es requerido';
+                    if (value <= 0) return 'El precio por kilogramo debe ser mayor a 0';
+                }
+                return '';
+            },
+            'pod_unit_price': () => {
+                if (['Lamina', 'Bolsa'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name)) {
+                    if (!value) return 'El precio por unidad es requerido';
+                    if (value <= 0) return 'El precio por unidad debe ser mayor a 0';
+                }
+                return '';
+            },
+
+            // Validaciones para Payment
+            'payment_payment_method': () => {
+                if (value === undefined) return 'El método de pago es requerido';
+                return '';
+            },
+            'payment_payment_term': () => {
+                if (formDataPayment.payment_method === 1 && !value) {
+                    return 'El término de pago es requerido para crédito';
+                }
+                if (value < 0) return 'El término debe ser mayor o igual a 0';
+                return '';
+            },
+            'payment_advance': () => {
+                if (value < 0) return 'El anticipo debe ser mayor o igual a 0';
+                return '';
+            },
+        };
+
+        return validations[name] ? validations[name]() : '';
     };
 
     const generateReference = (data: typeof formDataPOD): string => {
@@ -337,11 +423,14 @@ export default function ReferencesPage() {
     const handleInputChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
     ) => {
-        const { name, value } = e.target;   
+        const { name, value } = e.target;
         const underscoreIndex = name.indexOf('_');
-        const formType = name.slice(0, underscoreIndex); 
-        const fieldName = name.slice(underscoreIndex + 1); 
-    
+        const formType = name.slice(0, underscoreIndex);
+        const fieldName = name.slice(underscoreIndex + 1);
+
+        // Validar el campo
+        const error = validateField(name, value);
+
         switch (formType) {
             case 'po':
                 setFormDataPO(prev => {
@@ -357,6 +446,7 @@ export default function ReferencesPage() {
                     }
                     return newState;
                 });
+                setPOErrors(prev => ({ ...prev, [fieldName]: error }));
                 break;
             case 'pod':
                 setFormDataPOD(prev => {
@@ -364,18 +454,28 @@ export default function ReferencesPage() {
                     if (fieldName === 'gussets_type') {
                         newState.die_cut_type = Number(value) === 1 ? 2 : 0;
                     }
-                    if (['referencel', 'product_type', 'material', 'width', 'length', 'measure_unit', 'caliber', 'gussets_type', 'first_gusset', 'second_gusset', 'flap_type', 'flap_size', 'tape', 'die_cut_type'].includes(fieldName)) {
+                    if (fieldName === 'kilograms' || fieldName === 'kilogram_price') {
+                        newState.units = 1;
+                        newState.unit_price = 1;
+                    }
+                    if (fieldName === 'units' || fieldName === 'unit_price') {
+                        newState.kilograms = 1;
+                        newState.kilogram_price = 1;
+                    }
+                    if (['reference', 'product_type', 'material', 'width', 'length', 'measure_unit', 'caliber', 'gussets_type', 'first_gusset', 'second_gusset', 'flap_type', 'flap_size', 'tape', 'die_cut_type'].includes(fieldName)) {
                         newState.reference_internal = generateReference(newState);
                     }
                     return newState;
                 });
+                setPODErrors(prev => ({ ...prev, [fieldName]: error }));
                 break;
             case 'payment':
                 setFormDataPayment(prev => ({ ...prev, [fieldName]: value }));
+                setPaymentErrors(prev => ({ ...prev, [fieldName]: error }));
                 break;
         }
     };
-    
+
 
     const handleFormSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -494,14 +594,84 @@ export default function ReferencesPage() {
         setCurrentPayment(null);
         setCurrentPOD(null);
         setAdditiveCount(0);
+        setPOErrors({});
+        setPODErrors({});
+        setPaymentErrors({});
         setFormDataPO(defaultPurchaseOrder);
         setFormDataPayment(defaultPayment);
         setFormDataPOD(defaultPODetail);
+        setAllPODetails([]);
+        setCurrentStep(1);
+        setTotalSteps(3);
         setFormModalOpen(false);
         showToast('Acción cancelada', 'info');
     };
 
+    const scrollableRef = useRef(null);
+
+    const scrollToTop = () => {
+        if (scrollableRef.current) {
+            (scrollableRef.current as HTMLElement).scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+    };
+
     const handleNext = () => {
+        // 1. Validar el paso actual antes de avanzar
+        if (currentStep === 1) {
+            const poFieldsToValidate = [
+                'po_employee',
+                'po_customer',
+                'po_ordered_quantity'
+            ];
+
+            const errors: POErrors = {};
+            poFieldsToValidate.forEach(field => {
+                const fieldName = field.replace('po_', '');
+                const error = validateField(field, formDataPO[fieldName as keyof PurchaseOrderForm]);
+                if (error) {
+                    errors[fieldName as keyof POErrors] = error;
+                }
+            });
+
+            if (Object.keys(errors).length > 0) {
+                setPOErrors(errors);
+                return;
+            }
+        } else if (currentStep < totalSteps) {
+            if (formDataPOD.reference) {
+                const fieldsToValidate = [
+                    'pod_reference',
+                    'pod_product_type',
+                    'pod_material',
+                    'pod_width',
+                    'pod_length',
+                    'pod_caliber',
+                    'pod_kilograms',
+                    'pod_units',
+                    'pod_kilogram_price',
+                    'pod_unit_price'
+                ];
+
+                const errors: PODErrors = {};
+                fieldsToValidate.forEach(field => {
+                    const fieldName = field.replace('pod_', '');
+                    const error = validateField(field, formDataPOD[fieldName as keyof PODetailForm]);
+                    if (error) {
+                        errors[fieldName as keyof PODErrors] = error;
+                    }
+                });
+
+                if (Object.keys(errors).length > 0) {
+                    setPODErrors(errors);
+                    return;
+                }
+            }
+        }
+
+        // 2. Si pasa las validaciones, guardar el estado actual
         if (currentStep > 1 && currentStep < totalSteps) {
             setAllPODetails(prev => {
                 const newDetails = [...prev];
@@ -510,29 +680,58 @@ export default function ReferencesPage() {
             });
         }
 
-        setCurrentStep(prev => Math.min(prev + 1, totalSteps));
-        
-        if (currentStep > 1 && currentStep < totalSteps - 1) {
-            setFormDataPOD(defaultPODetail);
-            setAdditiveCount(0);
+        // 3. Avanzar al siguiente paso y cargar datos
+        const nextStep = Math.min(currentStep + 1, totalSteps);
+        setCurrentStep(nextStep);
+
+        if (nextStep > 1 && nextStep < totalSteps) {
+            const nextStepIndex = nextStep - 2;
+            const nextDetail = allPODetails[nextStepIndex];
+            
+            if (nextDetail) {
+                setFormDataPOD(nextDetail);
+                setAdditiveCount(nextDetail.additive.length);
+            } else {
+                setFormDataPOD(defaultPODetail);
+                setAdditiveCount(0);
+            }
         }
+
+        // 4. Marcar que el paso ha cambiado para activar la validación en useEffect
+        setStepChanged(true);
+        scrollToTop();
     };
 
     const handlePrevious = () => {
+        // Guardar el estado actual en allPODetails sin validación
+        if (currentStep > 1 && currentStep < totalSteps) {
+            setAllPODetails(prev => {
+                const newDetails = [...prev];
+                newDetails[currentStep - 2] = formDataPOD;
+                return newDetails;
+            });
+        }
+
+        // Retroceder al paso anterior
         const prevStep = currentStep - 1;
         setCurrentStep(prevStep);
-        
-        if (prevStep > 1 && prevStep < totalSteps) {
-            const detailIndex = prevStep - 2;
-            if (allPODetails[detailIndex]) {
-                setFormDataPOD(allPODetails[detailIndex]);
-                setAdditiveCount(allPODetails[detailIndex].additive.length);
-            }
+
+        // Cargar el detalle anterior
+        if (prevStep > 1) {
+            const prevStepIndex = prevStep - 2;
+            setFormDataPOD(allPODetails[prevStepIndex]);
+            setAdditiveCount(allPODetails[prevStepIndex].additive.length);
         }
+
+        // Limpiar errores al cambiar de paso
+        setPOErrors({});
+        setPODErrors({});
+        setPaymentErrors({});
+        
+        scrollToTop();
     };
 
     const inputs = {
-        //STEP 1
         employee: (
             <SelectInput
                 label="Empleado"
@@ -570,13 +769,19 @@ export default function ReferencesPage() {
             />
         ),
         ordered_quantity: (
-            <NumberInput
-                label="Cantidad de productos ordenados"
-                name="po_ordered_quantity"
-                value={formDataPO.ordered_quantity || 0}
-                onChange={handleInputChange}
-                required
-            />
+            <div>
+                <NumberInput
+                    label="Cantidad de productos ordenados"
+                    name="po_ordered_quantity"
+                    value={formDataPO.ordered_quantity || 0}
+                    min={1}
+                    onChange={handleInputChange}
+                    required
+                />
+                {poErrors.ordered_quantity && (
+                    <p className="text-sm text-red-500 mt-1">{poErrors.ordered_quantity}</p>
+                )}
+            </div>
         ),
         //STEP 2 OF ordered_quantity (THIS SECTION IS REPEATED ordered_quantity times)
         reference: (
@@ -614,7 +819,7 @@ export default function ReferencesPage() {
                         }));
                         setAdditiveCount(selectedReference.additive.length)
                     }
-                    handleInputChange({ target: { name: 'pod_reference', value: option?.value} } as any);
+                    handleInputChange({ target: { name: 'pod_reference', value: option?.value } } as any);
                 }}
                 options={references?.map(reference => ({
                     value: reference.id,
@@ -994,6 +1199,19 @@ export default function ReferencesPage() {
                 step={0.01}
             />
         ),
+        hidden_kilograms: (
+            <div className="hidden">
+                <NumberInput
+                    label="Kilogramos"
+                    name="pod_kilograms"
+                    value={formDataPOD.kilograms}
+                    onChange={handleInputChange}
+                    required
+                    min={0}
+                    step={0.01}
+                />
+            </div>
+        ),
         units: (
             <NumberInput
                 label="Unidades"
@@ -1004,6 +1222,19 @@ export default function ReferencesPage() {
                 min={0}
                 step={1}
             />
+        ),
+        hidden_units: (
+            <div className="hidden">
+                <NumberInput
+                    label="Unidades"
+                    name="pod_units"
+                    value={formDataPOD.units}
+                    onChange={handleInputChange}
+                    required
+                    min={0}
+                    step={1}
+                />
+            </div>
         ),
         kilogram_price: (
             <NumberInput
@@ -1016,6 +1247,19 @@ export default function ReferencesPage() {
                 step={0.01}
             />
         ),
+        hidden_kilogram_price: (
+            <div className="hidden">
+                <NumberInput
+                    label="Precio por Kilogramo"
+                    name="pod_kilogram_price"
+                    value={formDataPOD.kilogram_price}
+                    onChange={handleInputChange}
+                    required
+                    min={0}
+                    step={0.01}
+                />
+            </div>
+        ),
         unit_price: (
             <NumberInput
                 label="Precio por Unidad"
@@ -1026,6 +1270,19 @@ export default function ReferencesPage() {
                 min={0}
                 step={0.01}
             />
+        ),
+        hidden_unit_price: (
+            <div className="hidden">
+                <NumberInput
+                    label="Precio por Unidad"
+                    name="pod_unit_price"
+                    value={formDataPOD.unit_price}
+                    onChange={handleInputChange}
+                    required
+                    min={0}
+                    step={0.01}
+                />
+            </div>
         ),
         production_observations: (
             <TextArea
@@ -1048,8 +1305,8 @@ export default function ReferencesPage() {
             <SelectInput
                 label="Método de Pago"
                 name="payment_payment_method"
-                value={formDataPayment.payment_method}
-                onChange={handleInputChange}
+                value={{ value: formDataPayment.payment_method, label: paymentMethodChoices[formDataPayment.payment_method as keyof typeof paymentMethodChoices] }}
+                onChange={(option) => handleInputChange({ target: { name: 'payment_payment_method', value: option?.value || 0 } } as any)}
                 options={Object.entries(paymentMethodChoices).map(([key, value]) => ({
                     value: Number(key),
                     label: value
@@ -1060,6 +1317,7 @@ export default function ReferencesPage() {
             <NumberInput
                 label="Término de pago"
                 name="payment_payment_term"
+                placeholder="Días"
                 value={formDataPayment.payment_term || 0}
                 onChange={handleInputChange}
             />
@@ -1068,6 +1326,7 @@ export default function ReferencesPage() {
             <NumberInput
                 label="Anticipo"
                 name="payment_advance"
+                placeholder="$"
                 value={formDataPayment.advance || 0}
                 onChange={handleInputChange}
             />
@@ -1087,7 +1346,7 @@ export default function ReferencesPage() {
         )
     };
 
-    const orderFields = ['order_date', 'customer', 'ordered_quantity'];
+    const orderFields = ['order_date', 'employee', 'customer', 'ordered_quantity'];
 
     const getDetailsLayout = () => {
         const commonFields = ['product_type', 'material'];
@@ -1099,6 +1358,7 @@ export default function ReferencesPage() {
         const line = ['line'];
 
         if (['Tubular', 'Semi-tubular'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name)) {
+
             return [
                 ['reference'],
                 commonFields,
@@ -1110,7 +1370,9 @@ export default function ReferencesPage() {
                 ['additive_count', 'additive'],
                 line,
                 ['has_print'],
-                printFields
+                printFields,
+                line,
+                ['kilograms', 'kilogram_price'],
             ].filter(row => row.length > 0);
         } else if (['Lamina'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name)) {
             return [
@@ -1124,7 +1386,9 @@ export default function ReferencesPage() {
                 ['additive_count', 'additive'],
                 line,
                 ['has_print'],
-                printFields
+                printFields,
+                line,
+                ['units', 'unit_price'],
             ].filter(row => row.length > 0);
         } else if (['Bolsa'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name)) {
             const bagFields1 = ['gussets_type'];
@@ -1159,7 +1423,9 @@ export default function ReferencesPage() {
                 ['additive_count', 'additive'],
                 line,
                 ['has_print'],
-                printFields
+                printFields,
+                line,
+                ['units', 'unit_price'],
             ].filter(row => row.length > 0);
         }
 
@@ -1284,6 +1550,44 @@ export default function ReferencesPage() {
         )
     }; */
 
+    // Función auxiliar para obtener los errores del paso actual
+    const getCurrentStepErrors = () => {
+        switch (currentStep) {
+            case 1:
+                // Errores del primer paso (PO)
+                return Object.entries(poErrors).reduce((acc, [key, value]) => {
+                    if (value) acc[`Empleado - ${key}`] = value;
+                    return acc;
+                }, {} as Record<string, string>);
+
+            case totalSteps:
+                // Errores del último paso (Payment)
+                return Object.entries(paymentErrors).reduce((acc, [key, value]) => {
+                    if (value) acc[`Pago - ${key}`] = value;
+                    return acc;
+                }, {} as Record<string, string>);
+
+            default:
+                // Errores de los pasos intermedios (POD)
+                return Object.entries(podErrors).reduce((acc, [key, value]) => {
+                    if (value) acc[`Detalle - ${key}`] = value;
+                    return acc;
+                }, {} as Record<string, string>);
+        }
+    };
+
+    // Función para verificar si hay errores en un paso específico
+    const hasStepErrors = (step: number): boolean => {
+        switch (step) {
+            case 1:
+                return Object.values(poErrors).some(error => error !== '');
+            case totalSteps:
+                return Object.values(paymentErrors).some(error => error !== '');
+            default:
+                return Object.values(podErrors).some(error => error !== '');
+        }
+    };
+
     return (
         <div className="container">
             <TopTableElements
@@ -1354,7 +1658,7 @@ export default function ReferencesPage() {
                                                 onClick={() => handleEdit(po, po.payments[0], po.details[0])}
                                             >
                                                 <LuClipboardEdit size={20} />
-                                            </button>*/}    
+                                            </button>*/}
                                             <button
                                                 className="text-red-500 hover:text-red-700 mr-3 transition-colors"
                                                 onClick={() => handleDelete(po.id)}
@@ -1372,9 +1676,9 @@ export default function ReferencesPage() {
             {isFormModalOpen && (
                 <FormModal
                     title={currentPO ? 'Editar Orden de Compra' : 'Agregar Orden de Compra'}
-                    layout={currentStep === 1 ? [orderFields] : 
-                           currentStep === totalSteps ? [['payment_method', 'payment_term', 'advance'], ['observations']] :
-                           getDetailsLayout()}
+                    layout={currentStep === 1 ? [orderFields] :
+                        currentStep === totalSteps ? [['payment_method', 'payment_term', 'advance'], ['observations']] :
+                            getDetailsLayout()}
                     inputs={inputs}
                     onSubmit={handleFormSubmit}
                     onCancel={handleCancel}
@@ -1385,6 +1689,13 @@ export default function ReferencesPage() {
                     onNext={handleNext}
                     onPrevious={handlePrevious}
                     isLastStep={currentStep === totalSteps}
+                    errors={getCurrentStepErrors()}
+                    stepErrors={{
+                        1: hasStepErrors(1),
+                        2: hasStepErrors(2),
+                        3: hasStepErrors(3),
+                    }}
+                    scrollableRef={scrollableRef}
                 />
             )}
 

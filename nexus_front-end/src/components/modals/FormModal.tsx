@@ -17,8 +17,8 @@ interface FormModalProps {
   isLastStep?: boolean;
   errors?: { [key: string]: string };
   isSubmitting?: boolean;
-  stepNames?: string[];
   stepErrors?: { [key: number]: boolean };
+  scrollableRef?: React.RefObject<HTMLDivElement>;
 }
 
 const FormModal: React.FC<FormModalProps> = ({
@@ -36,49 +36,57 @@ const FormModal: React.FC<FormModalProps> = ({
   isLastStep = false,
   errors = {},
   isSubmitting = false,
-  stepNames = [],
-  stepErrors = {}
+  stepErrors = {},
+  scrollableRef = null
 }) => {
   const isMultiStep = currentStep !== undefined && totalSteps !== undefined && totalSteps > 1;
 
   const renderStepIndicator = () => {
     return (
-      <div className="relative mb-8">
-        <div className="absolute top-1/2 left-4 h-1 bg-gray-200 -translate-y-3 translate-x-4 w-[95%]"></div>
-        <div 
-          className="absolute top-1/2 left-4  h-1 bg-green-500 -translate-y-3 transition-all duration-300 ease-in-out"
-          style={{ width: `${((currentStep! - 1) / (totalSteps! - 1)) * 95}%` }}
-        ></div>
-        <div className="relative flex justify-between">
-          {Array.from({ length: totalSteps! }, (_, i) => i + 1).map((step) => (
-            <div key={step} className="flex flex-col items-center">
-              <div  
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium z-10 ${
-                  step === currentStep
-                    ? 'bg-blue-500 text-white'
-                    : step < currentStep!
-                    ? 'bg-green-500 text-white'
-                    : 'bg-gray-200 text-gray-600'
-                } ${stepErrors[step] ? 'bg-red-500 text-white' : ''}`}
-              >
-                {stepErrors[step] ? (
-                  <RiErrorWarningFill size={16} />
-                ) : step < currentStep! ? (
-                  <FaCheck size={12} />
-                ) : (
-                  step
-                )}
-              </div>
-              <span className="mt-2 text-xs text-gray-500">{stepNames[step - 1] || `Paso ${step}`}</span>
+      <div className="relative mb-8 px-4">
+        <div className="flex justify-center">
+          <div className="relative w-full max-w-3xl">
+            <div className="absolute top-4 left-0 right-0">
+              <div className="absolute h-1 w-full bg-gray-200"></div>
+              <div 
+                className="absolute h-1 bg-green-500 transition-all duration-300 ease-in-out"
+                style={{ 
+                  width: `${((currentStep! - 1) / (totalSteps! - 1)) * 100}%`,
+                  maxWidth: '100%'
+                }}
+              ></div>
             </div>
-          ))}
+            <div className="relative flex justify-between">
+              {Array.from({ length: totalSteps! }, (_, i) => i + 1).map((step) => (
+                <div key={step} className="flex flex-col items-center">
+                  <div  
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium z-10 transition-colors duration-200
+                      ${step === currentStep
+                        ? 'bg-blue-500 text-white'
+                        : step < currentStep!
+                        ? 'bg-green-500 text-white'
+                        : 'bg-gray-200 text-gray-600'
+                      } ${stepErrors[step] && step === currentStep ? 'bg-red-500 text-white' : ''}`}
+                  >
+                    {stepErrors[step] && step === currentStep  ? (
+                      <RiErrorWarningFill size={16} />
+                    ) : step < currentStep! ? (
+                      <FaCheck size={12} />
+                    ) : (
+                      step
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     );
   };
 
   return (
-    <div className="fixed inset-0 flex bg-black bg-opacity-40 items-center justify-center z-50 overflow-y-auto py-10">
+    <div className="fixed inset-0 flex bg-black bg-opacity-40 items-center justify-center z-50 overflow-y-auto py-10" ref={scrollableRef}>
       <div className={`bg-white dark:bg-gray-800 p-6 rounded-lg w-full ${width ? width : 'max-w-[40%]'} shadow-xl my-auto`}>
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white text-center">
@@ -94,7 +102,7 @@ const FormModal: React.FC<FormModalProps> = ({
 
         {isMultiStep && renderStepIndicator()}
 
-        {Object.keys(errors).length > 0 && (
+        {Object.keys(errors).length > 0 && currentStep && (
           <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">
             <ul className="list-disc list-inside">
               {Object.entries(errors).map(([key, value]) => (
@@ -144,15 +152,19 @@ const FormModal: React.FC<FormModalProps> = ({
                   <button
                     type="button"
                     onClick={onNext}
-                    className="w-36 px-6 py-2 text-sm font-medium text-white bg-blue-500 rounded-lg shadow-lg hover:shadow-blue-500/30 hover:bg-blue-600 active:transform active:scale-95 transition-all duration-200"
+                    className={`w-36 px-6 py-2 text-sm font-medium text-white bg-blue-500 rounded-lg shadow-lg active:transform active:scale-95 transition-all duration-200
+                        ${stepErrors[currentStep!] ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-blue-500/30 hover:bg-blue-600'}`}
+                    disabled={stepErrors[currentStep!]}
                   >
                     Siguiente →
                   </button>
                 ) : (
                   <button
-                    type="submit"
-                    className="w-36 px-6 py-2 text-sm font-medium text-white bg-green-500 rounded-lg shadow-lg hover:shadow-green-500/30 hover:bg-green-600 active:transform active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={isSubmitting}
+                    type="button"
+                    onClick={onSubmit}
+                    className={`w-36 px-6 py-2 text-sm font-medium text-white bg-green-500 rounded-lg shadow-lg active:transform active:scale-95 transition-all duration-200 
+                        ${stepErrors[currentStep!] ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-green-500/30 hover:bg-green-600'}`}
+                    disabled={isSubmitting || stepErrors[currentStep!]}
                   >
                     {isSubmitting ? 'Guardando...' : submitLabel}
                   </button>
@@ -160,8 +172,10 @@ const FormModal: React.FC<FormModalProps> = ({
               </>
             ) : (
               <button
-                type="submit"
-                className="w-36 px-6 py-2 text-sm font-medium text-white bg-green-500 rounded-lg shadow-lg hover:shadow-green-500/30 hover:bg-green-600 active:transform active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                type="button"
+                onClick={onSubmit}
+                className={`w-36 px-6 py-2 text-sm font-medium text-white bg-green-500 rounded-lg shadow-lg active:transform active:scale-95 transition-all duration-200 
+                    ${stepErrors[currentStep!] ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-green-500/30 hover:bg-green-600'}`}
                 disabled={isSubmitting}
               >
                 {isSubmitting ? 'Guardando...' : submitLabel}
