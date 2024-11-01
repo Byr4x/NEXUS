@@ -156,8 +156,8 @@ class PurchaseOrder(models.Model):
     employee = models.ForeignKey(Employee, on_delete=models.PROTECT, related_name='purchase_orders', related_query_name='purchase_order')
     observations = models.TextField(null=True, blank=True)
     subtotal = models.DecimalField(max_digits=10, decimal_places=2)
-    iva = models.DecimalField(max_digits=10, decimal_places=2, editable=False)
-    total = models.DecimalField(max_digits=10, decimal_places=2, editable=False)
+    iva = models.DecimalField(max_digits=10, decimal_places=2, editable=False, null=True, blank=True)
+    total = models.DecimalField(max_digits=10, decimal_places=2, editable=False, null=True, blank=True)
     delivery_date = models.DateField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -176,14 +176,14 @@ class Payment(models.Model):
         0: 'CONTADO',
         1: 'CRÉDITO'
     }
-    method = models.CharField(max_length=20, choices=method_choices, default=0)
+    payment_method = models.CharField(max_length=20, choices=method_choices, default=0)
     payment_term = models.PositiveIntegerField(null=True, blank=True)
     advance = models.DecimalField(null=True, blank=True, max_digits=10, decimal_places=2)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return self.method
+        return self.payment_method
     
 class PODetail(models.Model):
     id = models.AutoField(primary_key=True)
@@ -205,7 +205,7 @@ class PODetail(models.Model):
     units = models.PositiveIntegerField()
     kilogram_price = models.DecimalField(max_digits=10, decimal_places=2)
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)
-    additive = ArrayField(models.CharField(max_length=30))
+    additive = ArrayField(models.CharField(max_length=30), null=True, blank=True)
     sealing_type_choices = {
         0: 'Sin sellado',
         1: 'Lateral',
