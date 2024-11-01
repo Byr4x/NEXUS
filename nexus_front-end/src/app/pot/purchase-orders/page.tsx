@@ -277,7 +277,6 @@ export default function ReferencesPage() {
 
     // Función de validación
     const validateField = (name: string, value: any): string => {
-        console.log(formDataPOD.reference_internal, name, value);
         const validations: { [key: string]: () => string } = {
             // Validaciones para PO
             'po_employee': () => {
@@ -421,7 +420,7 @@ export default function ReferencesPage() {
     };
 
     const handleInputChange = (
-        e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+        e: { target: { name: string; value: string | Date | null } }
     ) => {
         const { name, value } = e.target;
         const underscoreIndex = name.indexOf('_');
@@ -436,32 +435,46 @@ export default function ReferencesPage() {
                 setFormDataPO(prev => {
                     const newState = { ...prev, [fieldName]: value };
                     if (fieldName === 'ordered_quantity') {
-                        const quantity = parseInt(value) || 0;
+                        const quantity = parseInt(value as string) || 0;
                         setTotalSteps(quantity + 2);
                     }
 
                     if (fieldName === 'customer') {
                         const customer = customers.find(c => c.id === value);
                         setReferences(customer?.references);
+                        setAllPODetails([]);
                     }
+
                     return newState;
                 });
                 setPOErrors(prev => ({ ...prev, [fieldName]: error }));
                 break;
+
             case 'pod':
                 setFormDataPOD(prev => {
                     const newState = { ...prev, [fieldName]: value };
+                    if (fieldName === 'reference') {
+                        setPODErrors({});
+                    }
+
                     if (fieldName === 'gussets_type') {
                         newState.die_cut_type = Number(value) === 1 ? 2 : 0;
                     }
+
+                    if (fieldName === 'first_gusset') {
+                        newState.second_gusset = Number(value);
+                    }
+
                     if (fieldName === 'kilograms' || fieldName === 'kilogram_price') {
-                        newState.units = 1;
-                        newState.unit_price = 1;
+                        newState.units = 0;
+                        newState.unit_price = 0;
                     }
+
                     if (fieldName === 'units' || fieldName === 'unit_price') {
-                        newState.kilograms = 1;
-                        newState.kilogram_price = 1;
+                        newState.kilograms = 0;
+                        newState.kilogram_price = 0;
                     }
+
                     if (['reference', 'product_type', 'material', 'width', 'length', 'measure_unit', 'caliber', 'gussets_type', 'first_gusset', 'second_gusset', 'flap_type', 'flap_size', 'tape', 'die_cut_type'].includes(fieldName)) {
                         newState.reference_internal = generateReference(newState);
                     }
@@ -469,6 +482,7 @@ export default function ReferencesPage() {
                 });
                 setPODErrors(prev => ({ ...prev, [fieldName]: error }));
                 break;
+
             case 'payment':
                 setFormDataPayment(prev => ({ ...prev, [fieldName]: value }));
                 setPaymentErrors(prev => ({ ...prev, [fieldName]: error }));
@@ -476,21 +490,54 @@ export default function ReferencesPage() {
         }
     };
 
+    const getCurrentDateString = (): string => {
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0'); // Mes comienza en 0
+        const day = String(today.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`; // Formato YYYY-MM-DD
+    };
 
     const handleFormSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         try {
+            delete formDataPO.id;
+            delete formDataPO.details;
+            delete formDataPO.payments;
+            delete formDataPO.iva;
+            delete formDataPO.total;
+            delete formDataPO.ordered_quantity;
+            delete formDataPOD.id;
+            delete formDataPOD.has_print;
+            delete formDataPOD.wo_number;
+            delete formDataPayment.id;
+
             let response;
             let message = '';
+            let subtotal = allPODetails.map(detail => detail.kilograms * detail.kilogram_price + detail.units * detail.unit_price).reduce((acc, curr) => acc + curr, 0);
+            const POData = {
+                ...formDataPO,
+                subtotal: subtotal,
+                delivery_date: formDataPO.delivery_date instanceof Date
+                    ? formDataPO.delivery_date.toISOString().split('T')[0]
+                    : formDataPO.delivery_date,
+                order_date: formDataPO.order_date instanceof Date
+                    ? formDataPO.order_date.toISOString().split('T')[0]
+                    : formDataPO.order_date,
+            }
+            formDataPOD.first_gusset = formDataPOD.first_gusset === null ? 0.00 : formDataPOD.first_gusset;
+            formDataPOD.second_gusset = formDataPOD.second_gusset === null ? 0.00 : formDataPOD.second_gusset;
+            formDataPOD.flap_size = formDataPOD.flap_size === null ? 0.00 : formDataPOD.flap_size;
 
             if (currentPO) {
-                response = await axios.put(`http://127.0.0.1:8000/beiplas/business/purchaseOrders/${currentPO.id}/`, formDataPO);
+                response = await axios.put(`http://127.0.0.1:8000/beiplas/business/purchaseOrders/${currentPO.id}/`, POData);
                 const poId = response.data.id;
 
                 const paymentData = { ...formDataPayment, purchase_order: poId };
                 response = await axios.put(`http://127.0.0.1:8000/beiplas/business/payments/${currentPayment?.id}/`, paymentData);
 
+                console.log(allPODetails)
                 const detailsPromises = allPODetails.map(detailData => {
                     const detail = { ...detailData, purchase_order: poId };
                     return axios.put(`http://127.0.0.1:8000/beiplas/business/poDetails/${detail.id}/`, detail);
@@ -499,34 +546,53 @@ export default function ReferencesPage() {
                 await Promise.all(detailsPromises);
                 message = 'Orden de Compra actualizada correctamente';
             } else {
-                response = await axios.post('http://127.0.0.1:8000/beiplas/business/purchaseOrders/', formDataPO);
-                const poId = response.data.id;
+                try {
+                    response = await axios.post('http://127.0.0.1:8000/beiplas/business/purchaseOrders/', POData);
 
-                const paymentData = { ...formDataPayment, purchase_order: poId };
-                response = await axios.post('http://127.0.0.1:8000/beiplas/business/payments/', paymentData);
+                    if (response.status === 201) {
+                        const poId = response.data.data.id;
+                        const paymentData = { ...formDataPayment, purchase_order: poId };
 
-                const detailsPromises = allPODetails.map(detailData => {
-                    const detail = { ...detailData, purchase_order: poId };
-                    return axios.post('http://127.0.0.1:8000/beiplas/business/poDetails/', detail);
-                });
+                        response = await axios.post('http://127.0.0.1:8000/beiplas/business/payments/', paymentData);
 
-                await Promise.all(detailsPromises);
-                message = 'Orden de Compra creada correctamente';
+                        if (response.status === 201) {
+                            console.log("Detalles a enviar:", allPODetails); // Agregado para verificar el contenido
+
+                            const detailsPromises = allPODetails.map(detailData => {
+                                const detail = { ...detailData, purchase_order: poId };
+                                console.log("Detalle enviado:", detail); // Verifica cada detalle
+                                return axios.post('http://127.0.0.1:8000/beiplas/business/poDetails/', detail)
+                                    .catch(error => {
+                                        console.error("Error al crear el detalle:", error.response.data); // Manejo de errores
+                                    });
+                            });
+
+                            await Promise.all(detailsPromises);
+                            message = 'Orden de Compra creada correctamente';
+
+                            showToast(message, 'success');
+                            setIsReferenceEditable(false);
+                            setFormModalOpen(false);
+                            setCurrentPO(null);
+                            setCurrentPayment(null);
+                            setCurrentPOD(null);
+                            setFormDataPO(defaultPurchaseOrder);
+                            setFormDataPayment(defaultPayment);
+                            setFormDataPOD(defaultPODetail);
+                            setAllPODetails([]);
+                            setCurrentStep(1);
+                            setTotalSteps(1);
+                            fetchPOs();
+                        } else {
+                            await axios.delete(`http://127.0.0.1:8000/beiplas/business/purchaseOrders/${poId}/`);
+                            message = 'Error al crear la Orden de Compra';
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error creating PO:', error);
+                    throw error;
+                }
             }
-
-            showToast(message, 'success');
-            setIsReferenceEditable(false);
-            setFormModalOpen(false);
-            setCurrentPO(null);
-            setCurrentPayment(null);
-            setCurrentPOD(null);
-            setFormDataPO(defaultPurchaseOrder);
-            setFormDataPayment(defaultPayment);
-            setFormDataPOD(defaultPODetail);
-            setAllPODetails([]);
-            setCurrentStep(1);
-            setTotalSteps(1);
-            fetchPOs();
         } catch (error) {
             if (axios.isAxiosError(error) && error.response) {
                 showToast(error.response.data.message || 'An error occurred', 'error');
@@ -619,7 +685,6 @@ export default function ReferencesPage() {
     };
 
     const handleNext = () => {
-        // 1. Validar el paso actual antes de avanzar
         if (currentStep === 1) {
             const poFieldsToValidate = [
                 'po_employee',
@@ -687,7 +752,7 @@ export default function ReferencesPage() {
         if (nextStep > 1 && nextStep < totalSteps) {
             const nextStepIndex = nextStep - 2;
             const nextDetail = allPODetails[nextStepIndex];
-            
+
             if (nextDetail) {
                 setFormDataPOD(nextDetail);
                 setAdditiveCount(nextDetail.additive.length);
@@ -727,7 +792,7 @@ export default function ReferencesPage() {
         setPOErrors({});
         setPODErrors({});
         setPaymentErrors({});
-        
+
         scrollToTop();
     };
 
@@ -736,11 +801,11 @@ export default function ReferencesPage() {
             <SelectInput
                 label="Empleado"
                 name="po_employee"
-                value={{ value: formDataPO.employee, label: employees.find(e => e.id === formDataPO.employee)?.name }}
+                value={{ value: formDataPO.employee, label: employees.find(e => e.id === formDataPO.employee)?.first_name || '' }}
                 onChange={(option) => handleInputChange({ target: { name: 'po_employee', value: option?.value || 0 } } as any)}
                 options={employees.map(employee => ({
                     value: employee.id,
-                    label: employee.name
+                    label: employee.first_name + ' ' + employee.last_name
                 }))}
                 required
             />
@@ -749,7 +814,7 @@ export default function ReferencesPage() {
             <DateInput
                 name="po_order_date"
                 label="Fecha de Orden"
-                selectedDate={new Date()}
+                selectedDate={new Date(getCurrentDateString())}
                 onChange={() => { }}
                 required
                 disabled={true}
@@ -771,7 +836,7 @@ export default function ReferencesPage() {
         ordered_quantity: (
             <div>
                 <NumberInput
-                    label="Cantidad de productos ordenados"
+                    label="Cantidad de productos"
                     name="po_ordered_quantity"
                     value={formDataPO.ordered_quantity || 0}
                     min={1}
@@ -1129,7 +1194,7 @@ export default function ReferencesPage() {
         ),
         is_new_sketch: (
             <div className="flex items-center space-x-2">
-                <label htmlFor="has_print" className="text-sm font-medium">
+                <label htmlFor="is_new_sketch" className="text-sm font-medium">
                     ¿El arte es nuevo?
                 </label>
                 <Switch
@@ -1199,19 +1264,6 @@ export default function ReferencesPage() {
                 step={0.01}
             />
         ),
-        hidden_kilograms: (
-            <div className="hidden">
-                <NumberInput
-                    label="Kilogramos"
-                    name="pod_kilograms"
-                    value={formDataPOD.kilograms}
-                    onChange={handleInputChange}
-                    required
-                    min={0}
-                    step={0.01}
-                />
-            </div>
-        ),
         units: (
             <NumberInput
                 label="Unidades"
@@ -1222,19 +1274,6 @@ export default function ReferencesPage() {
                 min={0}
                 step={1}
             />
-        ),
-        hidden_units: (
-            <div className="hidden">
-                <NumberInput
-                    label="Unidades"
-                    name="pod_units"
-                    value={formDataPOD.units}
-                    onChange={handleInputChange}
-                    required
-                    min={0}
-                    step={1}
-                />
-            </div>
         ),
         kilogram_price: (
             <NumberInput
@@ -1247,19 +1286,6 @@ export default function ReferencesPage() {
                 step={0.01}
             />
         ),
-        hidden_kilogram_price: (
-            <div className="hidden">
-                <NumberInput
-                    label="Precio por Kilogramo"
-                    name="pod_kilogram_price"
-                    value={formDataPOD.kilogram_price}
-                    onChange={handleInputChange}
-                    required
-                    min={0}
-                    step={0.01}
-                />
-            </div>
-        ),
         unit_price: (
             <NumberInput
                 label="Precio por Unidad"
@@ -1270,19 +1296,6 @@ export default function ReferencesPage() {
                 min={0}
                 step={0.01}
             />
-        ),
-        hidden_unit_price: (
-            <div className="hidden">
-                <NumberInput
-                    label="Precio por Unidad"
-                    name="pod_unit_price"
-                    value={formDataPOD.unit_price}
-                    onChange={handleInputChange}
-                    required
-                    min={0}
-                    step={0.01}
-                />
-            </div>
         ),
         production_observations: (
             <TextArea
@@ -1331,6 +1344,19 @@ export default function ReferencesPage() {
                 onChange={handleInputChange}
             />
         ),
+        delivery_date: (
+            <DateInput
+                name="po_delivery_date"
+                label="Fecha de Entrega"
+                selectedDate={formDataPO.delivery_date}
+                onChange={(date) => handleInputChange({
+                    target: { name: 'po_delivery_date', value: date || null }
+                })}
+                required
+                disabled={false}
+            />
+
+        ),
         observations: (
             <TextArea
                 label="Observaciones"
@@ -1351,6 +1377,7 @@ export default function ReferencesPage() {
     const getDetailsLayout = () => {
         const commonFields = ['product_type', 'material'];
         const dimensionFields = ['measure_unit', 'width'];
+        const has_print = ['has_print'];
         const printFields = formDataPOD.has_print
             ? ['dynas_treaty_faces', 'pantones_quantity', 'pantones_codes']
             : [];
@@ -1358,6 +1385,10 @@ export default function ReferencesPage() {
         const line = ['line'];
 
         if (['Tubular', 'Semi-tubular'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name)) {
+
+            if (formDataPOD.has_print) {
+                has_print.push('is_new_sketch');
+            }
 
             return [
                 ['reference'],
@@ -1369,12 +1400,19 @@ export default function ReferencesPage() {
                 line,
                 ['additive_count', 'additive'],
                 line,
-                ['has_print'],
+                has_print,
                 printFields,
                 line,
                 ['kilograms', 'kilogram_price'],
+                line,
+                ['delivery_location', 'production_observations']
             ].filter(row => row.length > 0);
         } else if (['Lamina'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name)) {
+
+            if (formDataPOD.has_print) {
+                has_print.push('is_new_sketch');
+            }
+
             return [
                 ['reference'],
                 commonFields,
@@ -1385,10 +1423,12 @@ export default function ReferencesPage() {
                 line,
                 ['additive_count', 'additive'],
                 line,
-                ['has_print'],
+                has_print,
                 printFields,
                 line,
                 ['units', 'unit_price'],
+                line,
+                ['delivery_location', 'production_observations']
             ].filter(row => row.length > 0);
         } else if (['Bolsa'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name)) {
             const bagFields1 = ['gussets_type'];
@@ -1411,6 +1451,10 @@ export default function ReferencesPage() {
             }
             bagFields2.push('sealing_type', 'caliber', 'roller_size');
 
+            if (formDataPOD.has_print) {
+                has_print.push('is_new_sketch');
+            }
+
             return [
                 ['reference'],
                 commonFields,
@@ -1422,10 +1466,11 @@ export default function ReferencesPage() {
                 line,
                 ['additive_count', 'additive'],
                 line,
-                ['has_print'],
+                has_print,
                 printFields,
                 line,
                 ['units', 'unit_price'],
+                ['delivery_location', 'production_observations']
             ].filter(row => row.length > 0);
         }
 
@@ -1619,11 +1664,11 @@ export default function ReferencesPage() {
                             {POs
                                 .filter(po =>
                                     customers.find(c => c.id === po.customer)?.company_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                    po.details.find(detail => detail.reference.toString().toLowerCase().includes(searchTerm.toLowerCase())) ||
-                                    po.details.find(detail => detail.wo_number.toString().toLowerCase().includes(searchTerm.toLowerCase())) ||
+                                    po.details?.find(detail => detail.reference.toString().toLowerCase().includes(searchTerm.toLowerCase())) ||
+                                    po.details?.find(detail => detail.wo_number?.toString().toLowerCase().includes(searchTerm.toLowerCase())) ||
                                     po.order_date.toString().toLowerCase().includes(searchTerm.toLowerCase()) ||
                                     po.delivery_date.toString().toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                    po.total.toString().toLowerCase().includes(searchTerm.toLowerCase())
+                                    po.total?.toString().toLowerCase().includes(searchTerm.toLowerCase())
                                 )
                                 .map((po) => (
                                     <TableRow key={po.id}>
@@ -1631,7 +1676,7 @@ export default function ReferencesPage() {
                                             {customers.find(c => c.id === po.customer)?.company_name}
                                         </TableCell>
                                         <TableCell>
-                                            {po.details.map((detail, index) => (
+                                            {po.details?.map((detail, index) => (
                                                 <div key={detail.id}>
                                                     O.T. {detail.wo_number} - Ficha {detail.reference}
                                                 </div>
@@ -1661,7 +1706,7 @@ export default function ReferencesPage() {
                                             </button>*/}
                                             <button
                                                 className="text-red-500 hover:text-red-700 mr-3 transition-colors"
-                                                onClick={() => handleDelete(po.id)}
+                                                onClick={() => handleDelete(po.id || 0)}
                                             >
                                                 <LuTrash2 size={20} />
                                             </button>
@@ -1677,7 +1722,7 @@ export default function ReferencesPage() {
                 <FormModal
                     title={currentPO ? 'Editar Orden de Compra' : 'Agregar Orden de Compra'}
                     layout={currentStep === 1 ? [orderFields] :
-                        currentStep === totalSteps ? [['payment_method', 'payment_term', 'advance'], ['observations']] :
+                        currentStep === totalSteps ? [['payment_method', 'payment_term', 'advance', 'delivery_date'], ['observations']] :
                             getDetailsLayout()}
                     inputs={inputs}
                     onSubmit={handleFormSubmit}

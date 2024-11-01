@@ -86,6 +86,7 @@ export const SelectInput: React.FC<SelectInputProps> = ({ label, name, value, on
       value={value}
       onChange={onChange}
       options={options}
+      placeholder="Seleccione una opción"
       className="react-select-container"
       classNamePrefix="react-select"
       isClearable

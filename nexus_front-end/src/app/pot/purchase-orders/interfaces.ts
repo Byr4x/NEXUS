@@ -1,19 +1,19 @@
 export interface PurchaseOrder {
-    id: number;
-    details: PODetail[];
-    payments: Payment[];
+    id?: number;
+    details?: PODetail[];
+    payments?: Payment[];
     employee: number;
     order_date: Date;
     customer: number;
     observations: string;
     delivery_date: Date;
     subtotal: number;
-    iva: number;
-    total: number;
+    iva?: number;
+    total?: number;
 }
 
 export interface Payment {
-    id: number;
+    id?: number;
     purchase_order: number;
     payment_method: number;
     payment_term: number | null;
@@ -21,7 +21,7 @@ export interface Payment {
 }
 
 export interface PODetail {
-    id: number;
+    id?: number;
     purchase_order: number;
     reference: number;
     product_type: number;
@@ -54,7 +54,7 @@ export interface PODetail {
     production_observations: string;
     delivery_location: string;
     is_updated: boolean;
-    wo_number: number;
+    wo_number?: number;
 }
 
 export interface PurchaseOrderForm extends PurchaseOrder {
