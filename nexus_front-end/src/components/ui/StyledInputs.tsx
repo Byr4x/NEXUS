@@ -75,9 +75,10 @@ interface SelectInputProps {
   options: { value: any; label: string }[];
   required?: boolean;
   disabled?: boolean;
+  isClearable?: boolean;
 }
 
-export const SelectInput: React.FC<SelectInputProps> = ({ label, name, value, onChange, options, required, disabled }) => (
+export const SelectInput: React.FC<SelectInputProps> = ({ label, name, value, onChange, options, required, disabled, isClearable }) => (
   <div>
     <label htmlFor={name} className="block mb-1 font-medium text-gray-700 dark:text-gray-300">{label} {required && <span className="text-red-500">*</span>}</label>
     <Select
@@ -89,7 +90,7 @@ export const SelectInput: React.FC<SelectInputProps> = ({ label, name, value, on
       placeholder="Seleccione una opción"
       className="react-select-container"
       classNamePrefix="react-select"
-      isClearable
+      isClearable={isClearable}
       isDisabled={disabled}
       styles={{
         control: (provided) => ({

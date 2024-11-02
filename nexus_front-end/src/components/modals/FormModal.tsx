@@ -48,9 +48,9 @@ const FormModal: React.FC<FormModalProps> = ({
           <div className="relative w-full max-w-3xl">
             <div className="absolute top-4 left-0 right-0">
               <div className="absolute h-1 w-full bg-gray-200"></div>
-              <div 
+              <div
                 className="absolute h-1 bg-green-500 transition-all duration-300 ease-in-out"
-                style={{ 
+                style={{
                   width: `${((currentStep! - 1) / (totalSteps! - 1)) * 100}%`,
                   maxWidth: '100%'
                 }}
@@ -59,16 +59,16 @@ const FormModal: React.FC<FormModalProps> = ({
             <div className="relative flex justify-between">
               {Array.from({ length: totalSteps! }, (_, i) => i + 1).map((step) => (
                 <div key={step} className="flex flex-col items-center">
-                  <div  
+                  <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium z-10 transition-colors duration-200
                       ${step === currentStep
                         ? 'bg-blue-500 text-white'
                         : step < currentStep!
-                        ? 'bg-green-500 text-white'
-                        : 'bg-gray-200 text-gray-600'
+                          ? 'bg-green-500 text-white'
+                          : 'bg-gray-200 text-gray-600'
                       } ${stepErrors[step] && step === currentStep ? 'bg-red-500 text-white' : ''}`}
                   >
-                    {stepErrors[step] && step === currentStep  ? (
+                    {stepErrors[step] && step === currentStep ? (
                       <RiErrorWarningFill size={16} />
                     ) : step < currentStep! ? (
                       <FaCheck size={12} />
@@ -92,8 +92,8 @@ const FormModal: React.FC<FormModalProps> = ({
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white text-center">
             {isMultiStep ? `${title} - Paso ${currentStep} de ${totalSteps}` : title}
           </h2>
-          <button 
-            onClick={onCancel} 
+          <button
+            onClick={onCancel}
             className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100 transition-colors"
           >
             <RiCloseLine size={24} />
@@ -101,16 +101,6 @@ const FormModal: React.FC<FormModalProps> = ({
         </div>
 
         {isMultiStep && renderStepIndicator()}
-
-        {Object.keys(errors).length > 0 && currentStep && (
-          <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">
-            <ul className="list-disc list-inside">
-              {Object.entries(errors).map(([key, value]) => (
-                <li key={key}>{value}</li>
-              ))}
-            </ul>
-          </div>
-        )}
 
         <form onSubmit={onSubmit}>
           {layout.map((row, rowIndex) => (
@@ -123,6 +113,16 @@ const FormModal: React.FC<FormModalProps> = ({
             </div>
           ))}
 
+          {Object.keys(errors).length > 0 && currentStep && (
+            <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">
+              <ul className="list-disc list-inside">
+                {Object.entries(errors).map(([key, value]) => (
+                  <li key={key}>{value}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <div className={`flex ${isMultiStep ? 'justify-between' : 'justify-end space-x-3'}`}>
             {!isMultiStep && (
               <button
@@ -133,7 +133,7 @@ const FormModal: React.FC<FormModalProps> = ({
                 Cancelar
               </button>
             )}
-            
+
             {isMultiStep ? (
               <>
                 <button
@@ -141,13 +141,13 @@ const FormModal: React.FC<FormModalProps> = ({
                   onClick={onPrevious}
                   disabled={currentStep! <= 1}
                   className={`w-36 px-6 py-2 text-sm font-medium text-white rounded-lg shadow-lg transition-all duration-200 
-                    ${currentStep! <= 1 
-                      ? 'bg-gray-500 opacity-50' 
+                    ${currentStep! <= 1
+                      ? 'bg-gray-500 opacity-50'
                       : 'bg-gray-500 hover:bg-gray-600 active:transform active:scale-95 hover:shadow-gray-500/30'}`}
                 >
                   ← Anterior
                 </button>
-                
+
                 {!isLastStep ? (
                   <button
                     type="button"

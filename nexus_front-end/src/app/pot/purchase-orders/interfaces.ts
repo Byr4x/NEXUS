@@ -74,16 +74,17 @@ export interface POErrors {
 
 export interface PODErrors {
     reference?: string;
-    product_type?: string;
-    material?: string;
     width?: string;
     length?: string;
+    first_gusset?: string;
+    flap_size?: string;
     caliber?: string;
     roller_size?: string;
     kilograms?: string;
     units?: string;
     kilogram_price?: string;
     unit_price?: string;
+    delivery_location?: string;
 }
 
 export interface PaymentErrors {

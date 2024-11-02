@@ -167,10 +167,17 @@ export default function ReferencesPage() {
     }, []);
 
     useEffect(() => {
-        if (materials.find(m => m.id === formDataPOD.material)?.name === 'Maíz') {
+        if (materials.find(m => m.id === formDataPOD.material)?.name.toUpperCase() === ('MAÍZ' || 'MAIZ')) {
             setFormDataPOD(prev => ({
                 ...prev,
                 film_color: 'SIN COLOR'
+            }));
+        }
+
+        if (materials.find(m => m.id === formDataPOD.material)?.name.toUpperCase() !== ('MAÍZ' || 'MAIZ')) {
+            setFormDataPOD(prev => ({
+                ...prev,
+                film_color: formDataPOD.film_color === 'SIN COLOR' ? 'TRANSPARENTE' : formDataPOD.film_color
             }));
         }
     }, [formDataPOD.material]);
@@ -182,15 +189,17 @@ export default function ReferencesPage() {
                 if (formDataPOD.reference) {
                     const fieldsToValidate = [
                         'pod_reference',
-                        'pod_product_type',
-                        'pod_material',
                         'pod_width',
                         'pod_length',
+                        'pod_first_gusset',
+                        'pod_flap_size',
                         'pod_caliber',
+                        'pod_roller_size',
                         'pod_kilograms',
                         'pod_units',
                         'pod_kilogram_price',
-                        'pod_unit_price'
+                        'pod_unit_price',
+                        'pod_delivery_location'
                     ];
 
                     const errors: PODErrors = {};
@@ -284,7 +293,7 @@ export default function ReferencesPage() {
                 return '';
             },
             'po_customer': () => {
-                if (value === 0) return 'El cliente es requerido';
+                if (!value) return 'El cliente es requerido';
                 return '';
             },
             'po_ordered_quantity': () => {
@@ -292,18 +301,10 @@ export default function ReferencesPage() {
                 if (value < 1) return 'La cantidad debe ser mayor a 0';
                 return '';
             },
-
+    
             // Validaciones para POD
             'pod_reference': () => {
                 if (!value) return 'La referencia es requerida';
-                return '';
-            },
-            'pod_product_type': () => {
-                if (!value) return 'El tipo de producto es requerido';
-                return '';
-            },
-            'pod_material': () => {
-                if (!value) return 'El material es requerido';
                 return '';
             },
             'pod_width': () => {
@@ -318,9 +319,28 @@ export default function ReferencesPage() {
                 }
                 return '';
             },
+            'pod_first_gusset': () => {
+                if (formDataPOD.gussets_type !== 0) {
+                    if (!value) return 'El fuelle es requerido';
+                    if (value <= 0) return 'El fuelle debe ser mayor a 0';
+                }
+                return '';
+            },
+            'pod_flap_size': () => {
+                if (formDataPOD.flap_type !== 0 && formDataPOD.gussets_type !== 1) {
+                    if (!value) return 'El tamaño de la solapa es requerido';
+                    if (value <= 0) return 'El tamaño de la solapa debe ser mayor a 0';
+                }
+                return '';
+            },
             'pod_caliber': () => {
                 if (!value) return 'El calibre es requerido';
                 if (value <= 0) return 'El calibre debe ser mayor a 0';
+                return '';
+            },
+            'pod_roller_size': () => {
+                if (!value) return 'El tamaño del rodillo es requerido';
+                if (value <= 0) return 'El tamaño del rodillo debe ser mayor a 0';
                 return '';
             },
             'pod_kilograms': () => {
@@ -351,27 +371,32 @@ export default function ReferencesPage() {
                 }
                 return '';
             },
-
+            'pod_delivery_location': () => {
+                if (!value) return 'La ubicación de entrega es requerida';
+                return '';
+            },
+    
             // Validaciones para Payment
             'payment_payment_method': () => {
                 if (value === undefined) return 'El método de pago es requerido';
                 return '';
             },
             'payment_payment_term': () => {
-                if (formDataPayment.payment_method === 1 && !value) {
-                    return 'El término de pago es requerido para crédito';
+                if (formDataPayment.payment_method === 1) {
+                    if (!value) return 'El término de pago es requerido para crédito';
+                    if (value < 0) return 'El término debe ser mayor o igual a 0';
                 }
-                if (value < 0) return 'El término debe ser mayor o igual a 0';
                 return '';
             },
             'payment_advance': () => {
-                if (value < 0) return 'El anticipo debe ser mayor o igual a 0';
+                if (value && value < 0) return 'El anticipo debe ser mayor o igual a 0';
                 return '';
             },
         };
-
+    
         return validations[name] ? validations[name]() : '';
     };
+    
 
     const generateReference = (data: typeof formDataPOD): string => {
         let reference = '';
@@ -454,15 +479,40 @@ export default function ReferencesPage() {
                 setFormDataPOD(prev => {
                     const newState = { ...prev, [fieldName]: value };
                     if (fieldName === 'reference') {
-                        setPODErrors({});
+                        if (value === '' || value === null || value === undefined) {
+                            setPODErrors({
+                                reference: 'La referencia es requerida'
+                            });
+                        } else {
+                            setPODErrors({});
+                        }
+                    }
+                    if (fieldName === 'film_color') {
+                        if (materials.find(m => m.id === formDataPOD.material)?.name.toUpperCase() !== ('MAÍZ' || 'MAIZ')) {
+                            if (value === '' || value === null || value === undefined) {
+                                newState.film_color = 'TRANSPARENTE';
+                            }
+                        }
                     }
 
                     if (fieldName === 'gussets_type') {
                         newState.die_cut_type = Number(value) === 1 ? 2 : 0;
+                        if (Number(value) === 0) {
+                            setPODErrors(prev => ({ ...prev, first_gusset: '' }));
+                            newState.first_gusset = 0;
+                        }
                     }
 
                     if (fieldName === 'first_gusset') {
                         newState.second_gusset = Number(value);
+                    }
+
+                    if (fieldName === 'flap_type') {
+                        if (Number(value) === 0) {
+                            setPODErrors(prev => ({ ...prev, flap_size: '' }));
+                            newState.flap_size = 0;
+                            newState.tape = 0;
+                        }
                     }
 
                     if (fieldName === 'kilograms' || fieldName === 'kilogram_price') {
@@ -502,102 +552,66 @@ export default function ReferencesPage() {
         e.preventDefault();
 
         try {
-            delete formDataPO.id;
-            delete formDataPO.details;
-            delete formDataPO.payments;
-            delete formDataPO.iva;
-            delete formDataPO.total;
-            delete formDataPO.ordered_quantity;
-            delete formDataPOD.id;
-            delete formDataPOD.has_print;
-            delete formDataPOD.wo_number;
-            delete formDataPayment.id;
-
-            let response;
-            let message = '';
-            let subtotal = allPODetails.map(detail => detail.kilograms * detail.kilogram_price + detail.units * detail.unit_price).reduce((acc, curr) => acc + curr, 0);
+            // 1. Crear Purchase Order
             const POData = {
-                ...formDataPO,
-                subtotal: subtotal,
+                customer: formDataPO.customer,
+                employee: formDataPO.employee,
+                observations: formDataPO.observations,
                 delivery_date: formDataPO.delivery_date instanceof Date
                     ? formDataPO.delivery_date.toISOString().split('T')[0]
                     : formDataPO.delivery_date,
                 order_date: formDataPO.order_date instanceof Date
                     ? formDataPO.order_date.toISOString().split('T')[0]
                     : formDataPO.order_date,
-            }
-            formDataPOD.first_gusset = formDataPOD.first_gusset === null ? 0.00 : formDataPOD.first_gusset;
-            formDataPOD.second_gusset = formDataPOD.second_gusset === null ? 0.00 : formDataPOD.second_gusset;
-            formDataPOD.flap_size = formDataPOD.flap_size === null ? 0.00 : formDataPOD.flap_size;
+                subtotal: allPODetails.reduce((acc, detail) =>
+                    acc + (detail.kilograms * detail.kilogram_price + detail.units * detail.unit_price), 0)
+            };
 
-            if (currentPO) {
-                response = await axios.put(`http://127.0.0.1:8000/beiplas/business/purchaseOrders/${currentPO.id}/`, POData);
-                const poId = response.data.id;
+            const poResponse = await axios.post('http://127.0.0.1:8000/beiplas/business/purchaseOrders/', POData);
 
-                const paymentData = { ...formDataPayment, purchase_order: poId };
-                response = await axios.put(`http://127.0.0.1:8000/beiplas/business/payments/${currentPayment?.id}/`, paymentData);
+            if (poResponse.status === 201) {
+                const poId = poResponse.data.data.id;
 
-                console.log(allPODetails)
-                const detailsPromises = allPODetails.map(detailData => {
-                    const detail = { ...detailData, purchase_order: poId };
-                    return axios.put(`http://127.0.0.1:8000/beiplas/business/poDetails/${detail.id}/`, detail);
-                });
+                // 2. Crear Payment
+                const paymentData = {
+                    purchase_order: poId,
+                    payment_method: formDataPayment.payment_method,
+                    payment_term: formDataPayment.payment_term || null,
+                    advance: formDataPayment.advance || null
+                };
 
-                await Promise.all(detailsPromises);
-                message = 'Orden de Compra actualizada correctamente';
-            } else {
-                try {
-                    response = await axios.post('http://127.0.0.1:8000/beiplas/business/purchaseOrders/', POData);
+                const paymentResponse = await axios.post('http://127.0.0.1:8000/beiplas/business/payments/', paymentData);
 
-                    if (response.status === 201) {
-                        const poId = response.data.data.id;
-                        const paymentData = { ...formDataPayment, purchase_order: poId };
-
-                        response = await axios.post('http://127.0.0.1:8000/beiplas/business/payments/', paymentData);
-
-                        if (response.status === 201) {
-                            console.log("Detalles a enviar:", allPODetails); // Agregado para verificar el contenido
-
-                            const detailsPromises = allPODetails.map(detailData => {
-                                const detail = { ...detailData, purchase_order: poId };
-                                console.log("Detalle enviado:", detail); // Verifica cada detalle
-                                return axios.post('http://127.0.0.1:8000/beiplas/business/poDetails/', detail)
-                                    .catch(error => {
-                                        console.error("Error al crear el detalle:", error.response.data); // Manejo de errores
-                                    });
-                            });
-
-                            await Promise.all(detailsPromises);
-                            message = 'Orden de Compra creada correctamente';
-
-                            showToast(message, 'success');
-                            setIsReferenceEditable(false);
-                            setFormModalOpen(false);
-                            setCurrentPO(null);
-                            setCurrentPayment(null);
-                            setCurrentPOD(null);
-                            setFormDataPO(defaultPurchaseOrder);
-                            setFormDataPayment(defaultPayment);
-                            setFormDataPOD(defaultPODetail);
-                            setAllPODetails([]);
-                            setCurrentStep(1);
-                            setTotalSteps(1);
-                            fetchPOs();
-                        } else {
+                if (paymentResponse.status === 201) {
+                    // 3. Crear PODetails secuencialmente
+                    for (const detailData of allPODetails) {
+                        try {
+                            const detail = {
+                                ...detailData,
+                                purchase_order: poId,
+                                first_gusset: detailData.first_gusset || 0,
+                                second_gusset: detailData.second_gusset || 0,
+                                flap_size: detailData.flap_size || 0
+                            };
+                            await axios.post('http://127.0.0.1:8000/beiplas/business/poDetails/', detail);
+                        } catch (error) {
+                            console.error("Error creating detail:", error);
+                            // Si falla un detalle, eliminar la PO y payment
                             await axios.delete(`http://127.0.0.1:8000/beiplas/business/purchaseOrders/${poId}/`);
-                            message = 'Error al crear la Orden de Compra';
+                            throw new Error('Error creating purchase order details');
                         }
                     }
-                } catch (error) {
-                    console.error('Error creating PO:', error);
-                    throw error;
+
+                    showToast('Orden de Compra creada correctamente', 'success');
+                    handleCancel(); // Resetear el formulario
+                    fetchPOs(); // Actualizar la lista
                 }
             }
         } catch (error) {
             if (axios.isAxiosError(error) && error.response) {
-                showToast(error.response.data.message || 'An error occurred', 'error');
+                showToast(error.response.data.message || 'Error al crear la Orden de Compra', 'error');
             } else {
-                showToast('An unexpected error occurred', 'error');
+                showToast('Error inesperado al crear la Orden de Compra', 'error');
             }
         }
     };
@@ -706,18 +720,27 @@ export default function ReferencesPage() {
                 return;
             }
         } else if (currentStep < totalSteps) {
+
+            if (formDataPOD.reference === 0 || formDataPOD.reference === null || formDataPOD.reference === undefined) {
+                setPODErrors({
+                    reference: 'La referencia es requerida'
+                });
+                return;
+            }
             if (formDataPOD.reference) {
                 const fieldsToValidate = [
-                    'pod_reference',
-                    'pod_product_type',
-                    'pod_material',
+                    'pod_reference_internal',
                     'pod_width',
                     'pod_length',
+                    'pod_first_gusset',
+                    'pod_flap_size',
                     'pod_caliber',
+                    'pod_roller_size',
                     'pod_kilograms',
                     'pod_units',
                     'pod_kilogram_price',
-                    'pod_unit_price'
+                    'pod_unit_price',
+                    'pod_delivery_location'
                 ];
 
                 const errors: PODErrors = {};
@@ -798,17 +821,23 @@ export default function ReferencesPage() {
 
     const inputs = {
         employee: (
-            <SelectInput
-                label="Empleado"
-                name="po_employee"
-                value={{ value: formDataPO.employee, label: employees.find(e => e.id === formDataPO.employee)?.first_name || '' }}
-                onChange={(option) => handleInputChange({ target: { name: 'po_employee', value: option?.value || 0 } } as any)}
-                options={employees.map(employee => ({
-                    value: employee.id,
-                    label: employee.first_name + ' ' + employee.last_name
-                }))}
-                required
-            />
+            <div>
+                <SelectInput
+                    label="Empleado"
+                    name="po_employee"
+                    value={{ value: formDataPO.employee, label: employees.find(e => e.id === formDataPO.employee)?.first_name || '' }}
+                    onChange={(option) => handleInputChange({ target: { name: 'po_employee', value: option?.value || 0 } } as any)}
+                    options={employees.map(employee => ({
+                        value: employee.id,
+                        label: employee.first_name + ' ' + employee.last_name
+                    }))}
+                    isClearable
+                    required
+                />
+                {poErrors.employee && (
+                    <p className="text-md text-red-500 mt-1 pl-1">{poErrors.employee}</p>
+                )}
+            </div>
         ),
         order_date: (
             <DateInput
@@ -821,17 +850,23 @@ export default function ReferencesPage() {
             />
         ),
         customer: (
-            <SelectInput
-                label="Cliente"
-                name="po_customer"
-                value={{ value: formDataPO.customer, label: customers.find(c => c.id === formDataPO.customer)?.company_name }}
-                onChange={(option) => handleInputChange({ target: { name: 'po_customer', value: option?.value || 0 } } as any)}
-                options={customers.map(customer => ({
-                    value: customer.id,
-                    label: customer.company_name
-                }))}
-                required
-            />
+            <div>
+                <SelectInput
+                    label="Cliente"
+                    name="po_customer"
+                    value={{ value: formDataPO.customer, label: customers.find(c => c.id === formDataPO.customer)?.company_name }}
+                    onChange={(option) => handleInputChange({ target: { name: 'po_customer', value: option?.value || 0 } } as any)}
+                    options={customers.map(customer => ({
+                        value: customer.id,
+                        label: customer.company_name
+                    }))}
+                    isClearable
+                    required
+                />
+                {poErrors.customer && (
+                    <p className="text-md text-red-500 mt-1 pl-1">{poErrors.customer}</p>
+                )}
+            </div>
         ),
         ordered_quantity: (
             <div>
@@ -850,47 +885,54 @@ export default function ReferencesPage() {
         ),
         //STEP 2 OF ordered_quantity (THIS SECTION IS REPEATED ordered_quantity times)
         reference: (
-            <SelectInput
-                label="Referencia"
-                name="pod_reference"
-                value={{ value: formDataPOD.reference, label: references?.find(reference => reference.id === formDataPOD.reference)?.reference }}
-                onChange={(option) => {
-                    const selectedReference = references?.find(reference => reference.id === option?.value);
-                    if (selectedReference) {
-                        setFormDataPOD(prevState => ({
-                            ...prevState,
-                            reference: option?.value,
-                            product_type: selectedReference.product_type,
-                            material: selectedReference.material,
-                            film_color: selectedReference.film_color,
-                            measure_unit: selectedReference.measure_unit,
-                            width: selectedReference.width,
-                            length: selectedReference.length,
-                            gussets_type: selectedReference.gussets_type,
-                            first_gusset: selectedReference.first_gusset,
-                            second_gusset: selectedReference.second_gusset,
-                            flap_type: selectedReference.flap_type,
-                            flap_size: selectedReference.flap_size,
-                            tape: selectedReference.tape,
-                            die_cut_type: selectedReference.die_cut_type,
-                            sealing_type: selectedReference.sealing_type,
-                            caliber: selectedReference.caliber,
-                            roller_size: selectedReference.roller_size,
-                            additive: selectedReference.additive,
-                            dynas_treaty_faces: selectedReference.dynas_treaty_faces,
-                            pantones_quantity: selectedReference.pantones_quantity,
-                            pantones_codes: selectedReference.pantones_codes,
-                            sketch_url: selectedReference.sketch_url,
-                        }));
-                        setAdditiveCount(selectedReference.additive.length)
-                    }
-                    handleInputChange({ target: { name: 'pod_reference', value: option?.value } } as any);
-                }}
-                options={references?.map(reference => ({
-                    value: reference.id,
-                    label: reference.reference
-                }))}
-            />
+            <div>
+                <SelectInput
+                    label="Referencia"
+                    name="pod_reference"
+                    value={{ value: formDataPOD.reference, label: references?.find(reference => reference.id === formDataPOD.reference)?.reference }}
+                    onChange={(option) => {
+                        const selectedReference = references?.find(reference => reference.id === option?.value);
+                        if (selectedReference) {
+                            setFormDataPOD(prevState => ({
+                                ...prevState,
+                                reference: option?.value,
+                                product_type: selectedReference.product_type,
+                                material: selectedReference.material,
+                                film_color: selectedReference.film_color,
+                                measure_unit: selectedReference.measure_unit,
+                                width: selectedReference.width,
+                                length: selectedReference.length,
+                                gussets_type: selectedReference.gussets_type,
+                                first_gusset: selectedReference.first_gusset,
+                                second_gusset: selectedReference.second_gusset,
+                                flap_type: selectedReference.flap_type,
+                                flap_size: selectedReference.flap_size,
+                                tape: selectedReference.tape,
+                                die_cut_type: selectedReference.die_cut_type,
+                                sealing_type: selectedReference.sealing_type,
+                                caliber: selectedReference.caliber,
+                                roller_size: selectedReference.roller_size,
+                                additive: selectedReference.additive,
+                                dynas_treaty_faces: selectedReference.dynas_treaty_faces,
+                                pantones_quantity: selectedReference.pantones_quantity,
+                                pantones_codes: selectedReference.pantones_codes,
+                                sketch_url: selectedReference.sketch_url,
+                            }));
+                            setAdditiveCount(selectedReference.additive.length)
+                        }
+                        handleInputChange({ target: { name: 'pod_reference', value: option?.value } } as any);
+                    }}
+                    options={references?.map(reference => ({
+                        value: reference.id,
+                        label: reference.reference
+                    }))}
+                    isClearable
+                    required
+                />
+                {podErrors.reference && (
+                    <p className="text-md text-red-500 mt-1 pl-1">{podErrors.reference}</p>
+                )}
+            </div>
         ),
         product_type: (
             <SelectInput
@@ -903,20 +945,21 @@ export default function ReferencesPage() {
                     label: type.name
                 }))}
                 required
+                disabled
             />
         ),
         material: (
-            <SelectInput
-                label="Material"
-                name="pod_material"
-                value={{ value: formDataPOD.material, label: materials.find(m => m.id === formDataPOD.material)?.name }}
-                onChange={(option) => handleInputChange({ target: { name: 'pod_material', value: option?.value || 0 } } as any)}
-                options={materials.map(material => ({
-                    value: material.id,
-                    label: material.name
-                }))}
-                required
-            />
+                <SelectInput
+                    label="Material"
+                    name="pod_material"
+                    value={{ value: formDataPOD.material, label: materials.find(m => m.id === formDataPOD.material)?.name }}
+                    onChange={(option) => handleInputChange({ target: { name: 'pod_material', value: option?.value || 0 } } as any)}
+                    options={materials.map(material => ({
+                        value: material.id,
+                        label: material.name
+                    }))}
+                    required
+                />
         ),
         reference_internal: (
             <div className="relative">
@@ -941,7 +984,7 @@ export default function ReferencesPage() {
             <TextInput
                 label="Color de Película"
                 name="pod_film_color"
-                value={materials.find(m => m.id === formDataPOD.material)?.name === 'Maíz' ? 'Beige' : formDataPOD.film_color}
+                value={materials.find(m => m.id === formDataPOD.material)?.name === 'Maíz' ? 'SIN COLOR' : formDataPOD.film_color}
                 onChange={handleInputChange}
                 disabled={materials.find(m => m.id === formDataPOD.material)?.name === 'Maíz'}
                 required
@@ -1067,7 +1110,6 @@ export default function ReferencesPage() {
                                 value: Number(key),
                                 label: value
                             }))}
-                        required
                         disabled={formDataPOD.gussets_type === 1}
                     />
                     {formDataPOD.gussets_type === 1 && (
@@ -1102,7 +1144,7 @@ export default function ReferencesPage() {
         ),
         roller_size: (
             <NumberInput
-                label="Tamaño del Rodillo"
+                label="Rodillo"
                 name="pod_roller_size"
                 value={formDataPOD.roller_size}
                 onChange={handleInputChange}
@@ -1311,6 +1353,7 @@ export default function ReferencesPage() {
                 name="pod_delivery_location"
                 value={formDataPOD.delivery_location}
                 onChange={handleInputChange}
+                required
             />
         ),
         //STEP 3 AFTER DETAILS
@@ -1427,7 +1470,6 @@ export default function ReferencesPage() {
                 printFields,
                 line,
                 ['units', 'unit_price'],
-                line,
                 ['delivery_location', 'production_observations']
             ].filter(row => row.length > 0);
         } else if (['Bolsa'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name)) {
@@ -1446,7 +1488,7 @@ export default function ReferencesPage() {
             }
 
             const bagFields2 = [];
-            if (formDataPOD.gussets_type !== 1 && formDataPOD.flap_type !== 4) {
+            if (formDataPOD.flap_type !== 4) {
                 bagFields2.push('die_cut_type');
             }
             bagFields2.push('sealing_type', 'caliber', 'roller_size');
@@ -1613,7 +1655,7 @@ export default function ReferencesPage() {
                 }, {} as Record<string, string>);
 
             default:
-                // Errores de los pasos intermedios (POD)
+                // Errores de los pasos intermedios (PODetails)
                 return Object.entries(podErrors).reduce((acc, [key, value]) => {
                     if (value) acc[`Detalle - ${key}`] = value;
                     return acc;
@@ -1631,6 +1673,21 @@ export default function ReferencesPage() {
             default:
                 return Object.values(podErrors).some(error => error !== '');
         }
+    };
+
+    // Crear un objeto dinámico de stepErrors basado en totalSteps
+    const getStepErrors = () => {
+        const errors: { [key: number]: boolean } = {
+            1: hasStepErrors(1), // Primer paso (PO)
+            [totalSteps]: hasStepErrors(totalSteps), // Último paso (Payment)
+        };
+
+        // Agregar errores para los pasos intermedios (PODetails)
+        for (let i = 2; i < totalSteps; i++) {
+            errors[i] = hasStepErrors(i);
+        }
+
+        return errors;
     };
 
     return (
@@ -1654,7 +1711,7 @@ export default function ReferencesPage() {
                     <Table>
                         <TableHeader>
                             <TableHead>Cliente</TableHead>
-                            <TableHead>Ficha - O.T.</TableHead>
+                            <TableHead>O.T. - Ficha</TableHead>
                             <TableHead>Fecha de Solicitud</TableHead>
                             <TableHead>Fecha de Remisión</TableHead>
                             <TableHead>Total</TableHead>
@@ -1735,11 +1792,7 @@ export default function ReferencesPage() {
                     onPrevious={handlePrevious}
                     isLastStep={currentStep === totalSteps}
                     errors={getCurrentStepErrors()}
-                    stepErrors={{
-                        1: hasStepErrors(1),
-                        2: hasStepErrors(2),
-                        3: hasStepErrors(3),
-                    }}
+                    stepErrors={getStepErrors()}
                     scrollableRef={scrollableRef}
                 />
             )}

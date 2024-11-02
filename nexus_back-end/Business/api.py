@@ -83,6 +83,21 @@ class PurchaseOrderViewSet(BaseViewSet):
     queryset = PurchaseOrder.objects.all()
     serializer_class = PurchaseOrderSerializer
 
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            instance = serializer.save()
+            return Response({
+                "status": "success",
+                "data": serializer.data,
+                "message": f"{self.format_model_name()} created successfully."
+            }, status=status.HTTP_201_CREATED)
+        return Response({
+            "status": "error",
+            "errors": serializer.errors,
+            "message": f"Failed to create {(self.format_model_name()).lower()}."
+        }, status=status.HTTP_400_BAD_REQUEST)
+
 class PaymentViewSet(BaseViewSet):
     queryset = Payment.objects.all()
     serializer_class = PaymentSerializer
@@ -90,6 +105,19 @@ class PaymentViewSet(BaseViewSet):
 class PODetailViewSet(BaseViewSet):
     queryset = PODetail.objects.all()
     serializer_class = PODetailSerializer
+
+    def create(self, request, *args, **kwargs):
+        # Asegurarse de que la PO existe antes de crear el detalle
+        purchase_order_id = request.data.get('purchase_order')
+        try:
+            PurchaseOrder.objects.get(id=purchase_order_id)
+        except PurchaseOrder.DoesNotExist:
+            return Response({
+                "status": "error",
+                "message": "Purchase Order does not exist."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        return super().create(request, *args, **kwargs)
 
 class PODetailChangeLogViewSet(BaseViewSet):
     queryset = PODetailChangeLog.objects.all()

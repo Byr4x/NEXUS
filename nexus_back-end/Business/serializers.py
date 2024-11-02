@@ -8,10 +8,26 @@ class PODetailChangeLogSerializer(serializers.ModelSerializer):
 
 class PODetailSerializer(serializers.ModelSerializer):  
     change_logs = PODetailChangeLogSerializer(many=True, read_only=True)
+    wo_number = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = PODetail
         fields = '__all__'
+
+    def create(self, validated_data):
+        # Obtener el último wo_number para este año
+        from django.db.models import Max
+        from datetime import datetime
+        
+        current_year = datetime.now().year
+        last_wo = PODetail.objects.filter(
+            created_at__year=current_year
+        ).aggregate(Max('wo_number'))['wo_number__max']
+        
+        # Asignar el siguiente número
+        validated_data['wo_number'] = (last_wo or 0) + 1
+        
+        return super().create(validated_data)
 
 class PaymentSerializer(serializers.ModelSerializer):
     class Meta:
