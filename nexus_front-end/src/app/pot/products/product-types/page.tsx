@@ -202,7 +202,7 @@ export default function ProductTypesPage() {
         <TextInput
           label="Nombre"
           name="name"
-          placeholder='Nombre del tipo de producto'
+          placeholder='Ej. Bolsa'
           value={formData.name}
           onChange={handleInputChange}
           onBlur={handleInputBlur}
@@ -218,7 +218,7 @@ export default function ProductTypesPage() {
         <TextArea
           label="Descripción"
           name="description"
-          placeholder='Descripción del tipo de producto'
+          placeholder='Opcional: Descripción del tipo de producto'
           value={formData.description}
           onChange={handleInputChange}
         />

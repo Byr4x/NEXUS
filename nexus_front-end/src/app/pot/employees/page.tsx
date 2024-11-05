@@ -1,4 +1,4 @@
-'use client';
+'use client'
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
@@ -11,6 +11,8 @@ import FormModal from '@/components/modals/FormModal';
 import ViewModal from '@/components/modals/ViewModal';
 import TopTableElements from '@/components/ui/TopTableElements';
 import { showAlert, showToast } from '@/components/ui/Alerts';
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css';
 
 interface Employee {
   id: number;
@@ -100,13 +102,12 @@ export default function EmployeesPage() {
         return !value.toString().trim() ? 'Los apellidos son obligatorios' :
           value.toString().trim().split(/\s+/).length < 2 ? 'Debe contener al menos dos palabras' : '';
       case 'phone_number':
-        return !value ? 'El número de teléfono es obligatorio' :
-          !/^\d+$/.test(value.toString()) ? 'Solo se permiten números' :
-            value.toString().length < 7 ? 'Mínimo 7 números' :
-              value.toString().length > 15 ? 'Máximo 15 números' : '';
+        if (!value) return 'El número de teléfono es obligatorio';
+        if (!/^\d+$/.test(value.toString())) return 'Solo se permiten números';
+        if (value.toString().length < 7 || value.toString().length > 15) return 'El número debe tener entre 7 y 15 dígitos';
+        return '';
       case 'email':
-        return value && !/\S+@\S+\.\S+/.test(value.toString()) ? 'Formato de email inválido' :
-          employees.some(e => e.email === value && e.id !== currentEmployee?.id) ? 'El email ya está en uso' : '';
+        return value && !/\S+@\S+\.\S+/.test(value.toString()) ? 'Formato de email inválido' : '';
       case 'position':
         return value === 0 ? 'El cargo es obligatorio' : '';
       default:
@@ -116,13 +117,20 @@ export default function EmployeesPage() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-
     let sanitizedValue = value.trimStart().replace(/\s{2,}/g, ' ');
-
     setFormData(prev => ({ ...prev, [name]: sanitizedValue }));
-
     if (touchedFields[name as keyof typeof touchedFields]) {
       setFormErrors(prev => ({ ...prev, [name]: validateField(name, sanitizedValue) }));
+    }
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    const numericValue = value.replace(/\D/g, '');
+    const truncatedValue = numericValue.slice(0, 15);
+    setFormData(prev => ({ ...prev, [name]: truncatedValue }));
+    if (touchedFields.phone_number) {
+      setFormErrors(prev => ({ ...prev, phone_number: validateField('phone_number', truncatedValue) }));
     }
   };
 
@@ -372,13 +380,14 @@ export default function EmployeesPage() {
         <TextInput
           label="Nombres"
           name="first_name"
+          placeholder='Ej. Juan Camilo'
           value={formData.first_name}
           onChange={handleInputChange}
           onBlur={handleInputBlur}
           required={true}
         />
         {touchedFields.first_name && formErrors.first_name && (
-          <p className="text-red-500 ml-1">{formErrors.first_name}</p>
+          <p  className="text-red-500 ml-1">{formErrors.first_name}</p>
         )}
       </div>
     ),
@@ -387,6 +396,7 @@ export default function EmployeesPage() {
         <TextInput
           label="Apellidos"
           name="last_name"
+          placeholder='Ej. Pérez Gómez'
           value={formData.last_name}
           onChange={handleInputChange}
           onBlur={handleInputBlur}
@@ -403,8 +413,9 @@ export default function EmployeesPage() {
           label="Teléfono"
           name="phone_number"
           value={formData.phone_number}
-          onChange={handleInputChange}
+          onChange={handlePhoneChange}
           onBlur={handleInputBlur}
+          placeholder="Ej. 3001234567"
           required={true}
         />
         {touchedFields.phone_number && formErrors.phone_number && (
@@ -418,6 +429,7 @@ export default function EmployeesPage() {
           label="Email"
           name="email"
           value={formData.email}
+          placeholder='example@domain.com'
           onChange={handleInputChange}
           onBlur={handleInputBlur}
         />
@@ -440,7 +452,7 @@ export default function EmployeesPage() {
         <SelectInput
           label="Cargo"
           name="position"
-          value={positionsOptions.find(option => option.value === formData.position)}
+          value={{ label: positionsOptions.find(option => option.value === formData.position)?.label, value: formData.position }}
           onChange={handleSelectChange}
           options={positionsOptions}
           required={true}
@@ -494,7 +506,9 @@ export default function EmployeesPage() {
               {filteredEmployees.map((employee) => (
                 <TableRow key={employee.id}>
                   <TableCell className={employee.is_active ? '' : 'opacity-40'}>{employee.first_name} {employee.last_name}</TableCell>
-                  <TableCell className={employee.is_active ? '' : 'opacity-40'}>{employee.phone_number}</TableCell>
+                  <TableCell className={employee.is_active ? '' : 'opacity-40'}>
+                    {employee.phone_number ? employee.phone_number.replace(/(\d{3})(\d{3})(\d{4})/, '$1 $2 $3') : 'N/A'}
+                  </TableCell>
                   <TableCell className={employee.is_active ? '' : 'opacity-40'}>{employee.email || 'N/A'}</TableCell>
                   <TableCell className={employee.is_active ? '' : 'opacity-40'}>{employee.entity}</TableCell>
                   <TableCell className={employee.is_active ? '' : 'opacity-40'}>

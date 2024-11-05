@@ -71,16 +71,32 @@ const paymentMethodChoices = {
     1: 'Crédito'
 };
 
+// Añade estas funciones de utilidad al inicio del componente ReferencesPage
+const getColombiaDate = (date?: Date): Date => {
+    const colombiaOffset = -5; // UTC-5
+    const now = date || new Date();
+    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+    return new Date(utc + (3600000 * colombiaOffset));
+};
+
+const getMinDeliveryDate = (): Date => {
+    const minDate = getColombiaDate();
+    minDate.setDate(minDate.getDate() + 15);
+    // Establecer la hora a medianoche
+    minDate.setHours(0, 0, 0, 0);
+    return minDate;
+};
+
 export default function ReferencesPage() {
     const defaultPurchaseOrder: PurchaseOrderForm = {
         id: 0,
         details: [],
         payments: [],
-        order_date: new Date(),
+        order_date: getColombiaDate(),
         customer: 0,
         employee: 0,
         observations: '',
-        delivery_date: new Date(),
+        delivery_date: getMinDeliveryDate(),
         subtotal: 0,
         iva: 0,
         total: 0,
@@ -195,6 +211,8 @@ export default function ReferencesPage() {
                         'pod_flap_size',
                         'pod_caliber',
                         'pod_roller_size',
+                        'pod_pantones_quantity',
+                        'pod_pantones_codes',
                         'pod_kilograms',
                         'pod_units',
                         'pod_kilogram_price',
@@ -301,10 +319,14 @@ export default function ReferencesPage() {
                 if (value < 1) return 'La cantidad debe ser mayor a 0';
                 return '';
             },
-    
+
             // Validaciones para POD
             'pod_reference': () => {
                 if (!value) return 'La referencia es requerida';
+                return '';
+            },
+            'pod_reference_internal': () => {
+                if (!value) return 'La referencia interna es requerida';
                 return '';
             },
             'pod_width': () => {
@@ -343,6 +365,25 @@ export default function ReferencesPage() {
                 if (value <= 0) return 'El tamaño del rodillo debe ser mayor a 0';
                 return '';
             },
+            'pod_pantones_quantity': () => {
+                if (formDataPOD.has_print && !value) return 'La cantidad de Pantones es requerida';
+                if (formDataPOD.has_print && value <= 0) return 'La cantidad de Pantones debe ser mayor a 0';
+                return '';
+            },
+            'pod_pantones_codes': () => {
+                if (formDataPOD.has_print && formDataPOD.pantones_quantity > 0) {
+                    let codes = 0;
+                    formDataPOD.pantones_codes.map(code => code.length > 0 && codes++);
+                    if (codes === 0) {
+                        return 'Los códigos Pantone no pueden estar vacíos';
+                    }
+
+                    if (formDataPOD.pantones_codes.some(code => !code)) {
+                        return 'Debe ingresar todos los códigos Pantone requeridos';
+                    }
+                }
+                return '';
+            },
             'pod_kilograms': () => {
                 if (['Tubular', 'Semi-tubular'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name)) {
                     if (!value) return 'Los kilogramos son requeridos';
@@ -375,7 +416,7 @@ export default function ReferencesPage() {
                 if (!value) return 'La ubicación de entrega es requerida';
                 return '';
             },
-    
+
             // Validaciones para Payment
             'payment_payment_method': () => {
                 if (value === undefined) return 'El método de pago es requerido';
@@ -392,11 +433,23 @@ export default function ReferencesPage() {
                 if (value && value < 0) return 'El anticipo debe ser mayor o igual a 0';
                 return '';
             },
+            'po_delivery_date': () => {
+                if (!value) return 'La fecha de entrega es requerida';
+                const minDate = getMinDeliveryDate();
+                if (new Date(value) < minDate) {
+                    return `La fecha de entrega debe ser posterior al ${minDate.toLocaleDateString('es-CO', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    })}`;
+                }
+                return '';
+            },
         };
-    
+
         return validations[name] ? validations[name]() : '';
     };
-    
+
 
     const generateReference = (data: typeof formDataPOD): string => {
         let reference = '';
@@ -531,9 +584,14 @@ export default function ReferencesPage() {
                     return newState;
                 });
                 setPODErrors(prev => ({ ...prev, [fieldName]: error }));
+                console.log(podErrors);
                 break;
 
             case 'payment':
+                if (fieldName === 'payment_method') {
+                    if (Number(value) === 0) setPaymentErrors(prev => ({ ...prev, payment_term: '' }));
+                }
+                
                 setFormDataPayment(prev => ({ ...prev, [fieldName]: value }));
                 setPaymentErrors(prev => ({ ...prev, [fieldName]: error }));
                 break;
@@ -541,18 +599,46 @@ export default function ReferencesPage() {
     };
 
     const getCurrentDateString = (): string => {
-        const today = new Date();
+        const today = getColombiaDate();
         const year = today.getFullYear();
-        const month = String(today.getMonth() + 1).padStart(2, '0'); // Mes comienza en 0
+        const month = String(today.getMonth() + 1).padStart(2, '0');
         const day = String(today.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`; // Formato YYYY-MM-DD
+        return `${year}-${month}-${day}`;
     };
 
     const handleFormSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
+        // 1. Validar campos del último paso (Payment)
+        const paymentFieldsToValidate = [
+            'payment_payment_method',
+            'payment_payment_term',
+            'payment_advance',
+            'po_delivery_date'
+        ];
+
+        const finalStepErrors: { [key: string]: string } = {};
+        paymentFieldsToValidate.forEach(field => {
+            const fieldName = field.replace('payment_', '').replace('po_', '');
+            const value = field.startsWith('payment_') 
+                ? formDataPayment[fieldName as keyof Payment]
+                : formDataPO[fieldName as keyof PurchaseOrderForm];
+            const error = validateField(field, value);
+            if (error) {
+                finalStepErrors[fieldName] = error;
+            }
+        });
+
+        if (Object.keys(finalStepErrors).length > 0) {
+            setPaymentErrors(prev => ({
+                ...prev,
+                ...finalStepErrors
+            }));
+            return;
+        }
+
         try {
-            // 1. Crear Purchase Order
+            // 2. Crear Purchase Order
             const POData = {
                 customer: formDataPO.customer,
                 employee: formDataPO.employee,
@@ -572,7 +658,7 @@ export default function ReferencesPage() {
             if (poResponse.status === 201) {
                 const poId = poResponse.data.data.id;
 
-                // 2. Crear Payment
+                // 3. Crear Payment
                 const paymentData = {
                     purchase_order: poId,
                     payment_method: formDataPayment.payment_method,
@@ -583,7 +669,7 @@ export default function ReferencesPage() {
                 const paymentResponse = await axios.post('http://127.0.0.1:8000/beiplas/business/payments/', paymentData);
 
                 if (paymentResponse.status === 201) {
-                    // 3. Crear PODetails secuencialmente
+                    // 4. Crear PODetails secuencialmente
                     for (const detailData of allPODetails) {
                         try {
                             const detail = {
@@ -736,6 +822,8 @@ export default function ReferencesPage() {
                     'pod_flap_size',
                     'pod_caliber',
                     'pod_roller_size',
+                    'pod_pantones_quantity',
+                    'pod_pantones_codes',
                     'pod_kilograms',
                     'pod_units',
                     'pod_kilogram_price',
@@ -843,7 +931,7 @@ export default function ReferencesPage() {
             <DateInput
                 name="po_order_date"
                 label="Fecha de Orden"
-                selectedDate={new Date(getCurrentDateString())}
+                selectedDate={new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Bogota' }))}
                 onChange={() => { }}
                 required
                 disabled={true}
@@ -949,35 +1037,40 @@ export default function ReferencesPage() {
             />
         ),
         material: (
-                <SelectInput
-                    label="Material"
-                    name="pod_material"
-                    value={{ value: formDataPOD.material, label: materials.find(m => m.id === formDataPOD.material)?.name }}
-                    onChange={(option) => handleInputChange({ target: { name: 'pod_material', value: option?.value || 0 } } as any)}
-                    options={materials.map(material => ({
-                        value: material.id,
-                        label: material.name
-                    }))}
-                    required
-                />
+            <SelectInput
+                label="Material"
+                name="pod_material"
+                value={{ value: formDataPOD.material, label: materials.find(m => m.id === formDataPOD.material)?.name }}
+                onChange={(option) => handleInputChange({ target: { name: 'pod_material', value: option?.value || 0 } } as any)}
+                options={materials.map(material => ({
+                    value: material.id,
+                    label: material.name
+                }))}
+                required
+            />
         ),
         reference_internal: (
-            <div className="relative">
-                <TextInput
-                    label="Referencia de compra"
-                    name="pod_reference_internal"
-                    value={formDataPOD.reference_internal}
-                    onChange={handleInputChange}
-                    disabled={!isReferenceEditable}
-                    required
-                />
-                <button
-                    type="button"
-                    onClick={() => setIsReferenceEditable(!isReferenceEditable)}
-                    className="absolute right-2 top-9 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                >
-                    <LuPenLine size={18} />
-                </button>
+            <div>
+                <div className="relative">
+                    <TextInput
+                        label="Referencia de compra"
+                        name="pod_reference_internal"
+                        value={formDataPOD.reference_internal}
+                        onChange={handleInputChange}
+                        disabled={!isReferenceEditable}
+                        required
+                    />
+                    <button
+                        type="button"
+                        onClick={() => setIsReferenceEditable(!isReferenceEditable)}
+                        className="absolute right-2 top-9 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                    >
+                        <LuPenLine size={18} />
+                    </button>
+                </div>
+                {podErrors.reference_internal && (
+                    <p className="text-md text-red-500 mt-1 pl-1">{podErrors.reference_internal}</p>
+                )}
             </div>
         ),
         film_color: (
@@ -987,7 +1080,6 @@ export default function ReferencesPage() {
                 value={materials.find(m => m.id === formDataPOD.material)?.name === 'Maíz' ? 'SIN COLOR' : formDataPOD.film_color}
                 onChange={handleInputChange}
                 disabled={materials.find(m => m.id === formDataPOD.material)?.name === 'Maíz'}
-                required
             />
         ),
         measure_unit: (
@@ -1000,30 +1092,39 @@ export default function ReferencesPage() {
                     value: Number(key),
                     label: value
                 }))}
-                required
             />
         ),
         width: (
-            <NumberInput
-                label="Ancho"
-                name="pod_width"
-                value={formDataPOD.width}
-                onChange={handleInputChange}
-                required
-                min={0}
-                step={0.01}
-            />
+            <div>
+                <NumberInput
+                    label="Ancho"
+                    name="pod_width"
+                    value={formDataPOD.width}
+                    onChange={handleInputChange}
+                    required
+                    min={0}
+                    step={0.01}
+                />
+                {podErrors.width && (
+                    <p className="text-md text-red-500 mt-1 pl-1">{podErrors.width}</p>
+                )}
+            </div>
         ),
         length: ['Lamina', 'Bolsa'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name) && (
-            <NumberInput
-                label="Largo"
-                name="pod_length"
-                value={formDataPOD.length}
-                onChange={handleInputChange}
-                required
-                min={0}
-                step={0.01}
-            />
+            <div>
+                <NumberInput
+                    label="Largo"
+                    name="pod_length"
+                    value={formDataPOD.length}
+                    onChange={handleInputChange}
+                    required
+                    min={0}
+                    step={0.01}
+                />
+                {podErrors.length && (
+                    <p className="text-md text-red-500 mt-1 pl-1">{podErrors.length}</p>
+                )}
+            </div>
         ),
         gussets_type: ['Bolsa'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name) && (
             <SelectInput
@@ -1038,15 +1139,20 @@ export default function ReferencesPage() {
             />
         ),
         first_gusset: ['Bolsa'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name) && formDataPOD.gussets_type !== 0 && (
-            <NumberInput
-                label="Tamaño de Fuelle"
-                name="pod_first_gusset"
-                value={formDataPOD.first_gusset || 0}
-                onChange={handleInputChange}
-                min={0}
-                step={0.01}
-                required
-            />
+            <div>
+                <NumberInput
+                    label="Tamaño de Fuelle"
+                    name="pod_first_gusset"
+                    value={formDataPOD.first_gusset || 0}
+                    onChange={handleInputChange}
+                    min={0}
+                    step={0.01}
+                    required
+                />
+                {podErrors.first_gusset && (
+                    <p className="text-md text-red-500 mt-1 pl-1">{podErrors.first_gusset}</p>
+                )}
+            </div>
         ),
         flap_type: ['Bolsa'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name) && formDataPOD.gussets_type !== 1 && (
             <SelectInput
@@ -1063,15 +1169,20 @@ export default function ReferencesPage() {
         flap_size: ['Bolsa'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name) &&
             formDataPOD.gussets_type !== 1 &&
             formDataPOD.flap_type !== 0 && (
-                <NumberInput
-                    label="Tamaño de Solapa"
-                    name="pod_flap_size"
-                    value={formDataPOD.flap_size || 0}
-                    onChange={handleInputChange}
-                    min={0}
-                    step={0.01}
-                    required
-                />
+                <div>
+                    <NumberInput
+                        label="Tamaño de Solapa"
+                        name="pod_flap_size"
+                        value={formDataPOD.flap_size || 0}
+                        onChange={handleInputChange}
+                        min={0}
+                        step={0.01}
+                        required
+                    />
+                    {podErrors.flap_size && (
+                        <p className="text-md text-red-500 mt-1 pl-1">{podErrors.flap_size}</p>
+                    )}
+                </div>
             ),
         tape: ['Bolsa'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name) &&
             formDataPOD.flap_type === 4 && (
@@ -1132,26 +1243,36 @@ export default function ReferencesPage() {
             />
         ),
         caliber: (
-            <NumberInput
-                label="Calibre"
-                name="pod_caliber"
-                value={formDataPOD.caliber}
-                onChange={handleInputChange}
-                required
-                min={0}
-                step={0.01}
-            />
+            <div>
+                <NumberInput
+                    label="Calibre"
+                    name="pod_caliber"
+                    value={formDataPOD.caliber}
+                    onChange={handleInputChange}
+                    required
+                    min={0}
+                    step={0.01}
+                />
+                {podErrors.caliber && (
+                    <p className="text-md text-red-500 mt-1 pl-1">{podErrors.caliber}</p>
+                )}
+            </div>
         ),
         roller_size: (
-            <NumberInput
-                label="Rodillo"
-                name="pod_roller_size"
-                value={formDataPOD.roller_size}
-                onChange={handleInputChange}
-                required
-                min={0}
-                step={0.01}
-            />
+            <div>
+                <NumberInput
+                    label="Rodillo"
+                    name="pod_roller_size"
+                    value={formDataPOD.roller_size}
+                    onChange={handleInputChange}
+                    required
+                    min={0}
+                    step={0.01}
+                />
+                {podErrors.roller_size && (
+                    <p className="text-md text-red-500 mt-1 pl-1">{podErrors.roller_size}</p>
+                )}
+            </div>
         ),
         additive_count: (
             <SelectInput
@@ -1212,6 +1333,11 @@ export default function ReferencesPage() {
                             pantones_quantity: checked ? prev.pantones_quantity : 0,
                             pantones_codes: checked ? prev.pantones_codes : []
                         }));
+                        setPODErrors(prev => ({
+                            ...prev,
+                            pantones_quantity: '',
+                            pantones_codes: ''
+                        }));
                     }}
                 />
             </div>
@@ -1252,92 +1378,122 @@ export default function ReferencesPage() {
             </div>
         ),
         pantones_quantity: formDataPOD.has_print && (
-            <SelectInput
-                label="Cantidad de Pantones"
-                name="pod_pantones_quantity"
-                value={{
-                    value: formDataPOD.pantones_quantity,
-                    label: formDataPOD.pantones_quantity.toString()
-                }}
-                onChange={(option) => {
-                    const value = option?.value || 0;
-                    setFormDataPOD(prev => ({
-                        ...prev,
-                        pantones_quantity: value,
-                        pantones_codes: Array(value).fill('').slice(0, 4)
-                    }));
-                }}
-                options={[1, 2, 3, 4].map(num => ({
-                    value: num,
-                    label: num.toString()
-                }))}
-                required
-            />
+            <div>
+                <SelectInput
+                    label="Cantidad de Pantones"
+                    name="pod_pantones_quantity"
+                    value={{
+                        value: formDataPOD.pantones_quantity,
+                        label: formDataPOD.pantones_quantity.toString()
+                    }}
+                    onChange={(option) => {
+                        const value = option?.value || 0;
+                        setFormDataPOD(prev => ({
+                            ...prev,
+                            pantones_quantity: value,
+                            pantones_codes: Array(value).fill('').slice(0, 4)
+                        }));
+                    }}
+                    options={[1, 2, 3, 4].map(num => ({
+                        value: num,
+                        label: num.toString()
+                    }))}
+                    required
+                />
+                {podErrors.pantones_quantity && (
+                    <p className="text-md text-red-500 mt-1 pl-1">{podErrors.pantones_quantity}</p>
+                )}
+            </div>
         ),
         pantones_codes: formDataPOD.has_print && formDataPOD.pantones_quantity > 0 && (
-            <div className="space-y-2">
-                {Array.from({ length: Math.min(formDataPOD.pantones_quantity, 4) }).map((_, index) => (
-                    <TextInput
-                        key={index}
-                        label={`Pantone ${index + 1}`}
-                        name={`pod_pantone_${index}`}
-                        value={formDataPOD.pantones_codes[index] || ''}
-                        onChange={(e) => {
-                            const newPantoneCodes = [...formDataPOD.pantones_codes];
-                            newPantoneCodes[index] = e.target.value;
-                            setFormDataPOD(prev => ({
-                                ...prev,
-                                pantones_codes: newPantoneCodes
-                            }));
-                        }}
-                        required
-                    />
-                ))}
+            <div>
+                <div className="space-y-2">
+                    {Array.from({ length: Math.min(formDataPOD.pantones_quantity, 4) }).map((_, index) => (
+                        <TextInput
+                            key={index}
+                            label={`Pantone ${index + 1}`}
+                            name={`pod_pantone_${index}`}
+                            value={formDataPOD.pantones_codes[index] || ''}
+                            onChange={(e) => {
+                                const newPantoneCodes = [...formDataPOD.pantones_codes];
+                                newPantoneCodes[index] = e.target.value;
+                                setFormDataPOD(prev => ({
+                                    ...prev,
+                                    pantones_codes: newPantoneCodes
+                                }));
+                            }}
+                            required
+                        />
+                    ))}
+                </div>
+                {podErrors.pantones_codes && (
+                    <p className="text-md text-red-500 mt-1 pl-1">{podErrors.pantones_codes}</p>
+                )}
             </div>
         ),
         kilograms: (
-            <NumberInput
-                label="Kilogramos"
-                name="pod_kilograms"
-                value={formDataPOD.kilograms}
-                onChange={handleInputChange}
-                required
-                min={0}
-                step={0.01}
-            />
+            <div>
+                <NumberInput
+                    label="Kilogramos"
+                    name="pod_kilograms"
+                    value={formDataPOD.kilograms}
+                    onChange={handleInputChange}
+                    required
+                    min={0}
+                    step={0.01}
+                />
+                {podErrors.kilograms && (
+                    <p className="text-md text-red-500 mt-1 pl-1">{podErrors.kilograms}</p>
+                )}
+            </div>
         ),
         units: (
-            <NumberInput
-                label="Unidades"
-                name="pod_units"
-                value={formDataPOD.units}
-                onChange={handleInputChange}
-                required
-                min={0}
-                step={1}
-            />
+            <div>
+                <NumberInput
+                    label="Unidades"
+                    name="pod_units"
+                    value={formDataPOD.units}
+                    onChange={handleInputChange}
+                    required
+                    min={0}
+                    step={1}
+                />
+                {podErrors.units && (
+                    <p className="text-md text-red-500 mt-1 pl-1">{podErrors.units}</p>
+                )}
+            </div>
         ),
         kilogram_price: (
-            <NumberInput
-                label="Precio por Kilogramo"
-                name="pod_kilogram_price"
-                value={formDataPOD.kilogram_price}
-                onChange={handleInputChange}
-                required
-                min={0}
-                step={0.01}
-            />
+            <div>
+                <NumberInput
+                    label="Precio por Kilogramo"
+                    name="pod_kilogram_price"
+                    value={formDataPOD.kilogram_price}
+                    onChange={handleInputChange}
+                    required
+                    min={0}
+                    step={0.01}
+                />
+                {podErrors.kilogram_price && (
+                    <p className="text-md text-red-500 mt-1 pl-1">{podErrors.kilogram_price}</p>
+                )}
+            </div>
         ),
         unit_price: (
-            <NumberInput
-                label="Precio por Unidad"
-                name="pod_unit_price"
-                value={formDataPOD.unit_price}
-                onChange={handleInputChange}
-                required
-                min={0}
-                step={0.01}
-            />
+            <div>
+                <NumberInput
+                    label="Precio por Unidad"
+                    name="pod_unit_price"
+                    value={formDataPOD.unit_price}
+                    onChange={handleInputChange}
+                    required
+                    min={0}
+                    step={0.01}
+                />
+                {podErrors.unit_price && (
+                    <p className="text-md text-red-500 mt-1 pl-1">{podErrors.unit_price}</p>
+                )}
+            </div>
         ),
         production_observations: (
             <TextArea
@@ -1348,13 +1504,18 @@ export default function ReferencesPage() {
             />
         ),
         delivery_location: (
-            <TextInput
-                label="Lugar de Entrega"
-                name="pod_delivery_location"
-                value={formDataPOD.delivery_location}
-                onChange={handleInputChange}
-                required
-            />
+            <div>
+                <TextInput
+                    label="Lugar de Entrega"
+                    name="pod_delivery_location"
+                    value={formDataPOD.delivery_location}
+                    onChange={handleInputChange}
+                    required
+                />
+                {podErrors.delivery_location && (
+                    <p className="text-md text-red-500 mt-1 pl-1">{podErrors.delivery_location}</p>
+                )}
+            </div>
         ),
         //STEP 3 AFTER DETAILS
         payment_method: (
@@ -1370,13 +1531,19 @@ export default function ReferencesPage() {
             />
         ),
         payment_term: (
-            <NumberInput
-                label="Término de pago"
-                name="payment_payment_term"
-                placeholder="Días"
-                value={formDataPayment.payment_term || 0}
-                onChange={handleInputChange}
-            />
+            <div>
+                <NumberInput
+                    label="Término de pago"
+                    name="payment_payment_term"
+                    placeholder="Días"
+                    value={formDataPayment.payment_term || 0}
+                    onChange={handleInputChange}
+                    required={formDataPayment.payment_method === 1}
+                />
+                {paymentErrors.payment_term && (
+                    <p className="text-md text-red-500 mt-1 pl-1">{paymentErrors.payment_term}</p>
+                )}
+            </div>
         ),
         advance: (
             <NumberInput
@@ -1388,17 +1555,25 @@ export default function ReferencesPage() {
             />
         ),
         delivery_date: (
-            <DateInput
-                name="po_delivery_date"
-                label="Fecha de Entrega"
-                selectedDate={formDataPO.delivery_date}
-                onChange={(date) => handleInputChange({
-                    target: { name: 'po_delivery_date', value: date || null }
-                })}
-                required
-                disabled={false}
-            />
-
+            <div>
+                <DateInput
+                    name="po_delivery_date"
+                    label="Fecha de Entrega"
+                    minDate={getMinDeliveryDate()}
+                    selectedDate={formDataPO.delivery_date}
+                    onChange={(date) => handleInputChange({
+                        target: { 
+                            name: 'po_delivery_date', 
+                            value: date ? getColombiaDate(date) : null 
+                        }
+                    })}
+                    required
+                    disabled={false}
+                />
+                {poErrors.delivery_date && (
+                    <p className="text-md text-red-500 mt-1 pl-1">{poErrors.delivery_date}</p>
+                )}
+            </div>
         ),
         observations: (
             <TextArea

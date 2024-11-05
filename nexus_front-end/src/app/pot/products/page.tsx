@@ -309,7 +309,7 @@ export default function ProductsPage() {
         <TextInput
           label="Nombre"
           name="name"
-          placeholder='Nombre del producto'
+          placeholder='Ej. Bolsa de MAHÍZ'
           value={formData.name}
           onChange={handleInputChange}
           onBlur={handleInputBlur}
@@ -325,7 +325,7 @@ export default function ProductsPage() {
         <TextArea
           label="Descripción"
           name="description"
-          placeholder='Descripción del producto'
+          placeholder='Opcional: Descripción del producto'
           value={formData.description}
           onChange={handleInputChange}
         />
@@ -336,7 +336,7 @@ export default function ProductsPage() {
         <SelectInput
           label="Tipo de Producto"
           name="product_type"
-          value={productTypes.find(pt => pt.id === formData.product_type)}
+          value={{ label: productTypes.find(pt => pt.id === formData.product_type)?.name, value: formData.product_type }}
           onChange={(selectedOption) => handleInputChange({ target: { name: 'product_type', value: selectedOption ? selectedOption.value : null } })}
           options={productTypes.map(pt => ({ value: pt.id, label: pt.name }))}
           required={true}
@@ -351,7 +351,7 @@ export default function ProductsPage() {
         <SelectInput
           label="Material"
           name="material"
-          value={materials.find(m => m.id === formData.material)}
+          value={{ label: formData.material !== null ? materials.find(m => m.id === formData.material)?.name : '', value: formData.material }}
           onChange={(selectedOption) => handleInputChange({ target: { name: 'material', value: selectedOption ? selectedOption.value : null } })}
           options={materials.map(m => ({ value: m.id, label: m.name }))}
           required={true}

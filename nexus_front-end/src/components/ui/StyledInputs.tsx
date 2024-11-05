@@ -84,7 +84,7 @@ export const SelectInput: React.FC<SelectInputProps> = ({ label, name, value, on
     <Select
       id={name}
       name={name}
-      value={value}
+      value={ { label: (value.label !== null && value.label !== undefined && value.label !== '' ? value.label : 'Seleccione...'), value: value.value } }
       onChange={onChange}
       options={options}
       placeholder="Seleccione una opción"
@@ -172,17 +172,41 @@ interface DateInputProps {
   required?: boolean;
   name?: string;
   disabled?: boolean;
+  minDate?: Date;
+  maxDate?: Date;
+  excludeDateIntervals?: Array<{ start: Date; end: Date }>;
 }
 
-export const DateInput: React.FC<DateInputProps> = ({ label, selectedDate, onChange, required, name, disabled }) => (
+export const DateInput: React.FC<DateInputProps> = ({ 
+  label, 
+  selectedDate, 
+  onChange, 
+  required, 
+  name, 
+  disabled,
+  minDate,
+  maxDate,
+  excludeDateIntervals 
+}) => (
   <div>
-    <label className="block mb-1 text-gray-700 dark:text-gray-300">{label} {required && <span className="text-red-500">*</span>}</label>
+    <label className="block mb-1 text-gray-700 dark:text-gray-300">
+      {label} {required && <span className="text-red-500">*</span>}
+    </label>
     <DatePicker
       name={name}
       selected={selectedDate}
       onChange={onChange}
-      className="w-full p-2 border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
+      className="w-full p-2 rounded-md border border-gray-300 bg-white text-gray-900 shadow-sm focus:border-sky-500 focus:ring-sky-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-sky-400 dark:focus:ring-sky-400"
       disabled={disabled}
+      minDate={minDate}
+      maxDate={maxDate}
+      excludeDateIntervals={excludeDateIntervals}
+      calendarClassName="dark:bg-gray-800 dark:text-white"
+      dayClassName={date =>
+        date.getDate() === selectedDate?.getDate()
+          ? 'bg-sky-500 text-white hover:bg-sky-600'
+          : 'text-gray-900 dark:text-gray-100'
+      }
     />
   </div>
 );
@@ -371,6 +395,35 @@ const styles = `
 
   .react-select-container .react-select__single-value {
     color: var(--input-text);
+  }
+
+  .react-datepicker {
+    background-color: var(--input-bg) !important;
+    border-color: var(--input-border) !important;
+  }
+
+  .react-datepicker__header {
+    background-color: var(--input-bg) !important;
+    border-bottom-color: var(--input-border) !important;
+  }
+
+  .react-datepicker__current-month,
+  .react-datepicker__day-name,
+  .react-datepicker__day {
+    color: var(--input-text) !important;
+  }
+
+  .react-datepicker__day:hover {
+    background-color: var(--input-hover-bg) !important;
+  }
+
+  .react-datepicker__day--selected {
+    background-color: var(--input-selected-bg) !important;
+    color: var(--input-selected-text) !important;
+  }
+
+  .react-datepicker__day--disabled {
+    color: var(--input-border) !important;
   }
 `;
 

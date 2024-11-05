@@ -209,7 +209,7 @@ export default function PositionsPage() {
         <TextInput
           label="Nombre"
           name="name"
-          placeholder='Cargo del empleado'
+          placeholder='Ej. Asesor comercial'
           value={formData.name}
           onChange={handleInputChange}
           onBlur={handleInputBlur}
@@ -225,7 +225,7 @@ export default function PositionsPage() {
         <TextArea
           label="Descripción"
           name="description"
-          placeholder='Descripción del cargo'
+          placeholder='Opcional: Descripción del cargo'
           value={formData.description}
           onChange={handleInputChange}
         />

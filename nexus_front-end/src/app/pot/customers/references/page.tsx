@@ -11,6 +11,7 @@ import FormModal from '@/components/modals/FormModal';
 import ViewModal from '@/components/modals/ViewModal';
 import TopTableElements from '@/components/ui/TopTableElements';
 import { showAlert, showToast } from '@/components/ui/Alerts';
+import { ReferenceErrors } from './interfaces';
 
 interface Reference {
   id: number;
@@ -140,12 +141,30 @@ export default function ReferencesPage() {
 
   const [additiveCount, setAdditiveCount] = useState(0);
 
+  const [errors, setErrors] = useState<ReferenceErrors>({});
+
   useEffect(() => {
     fetchReferences();
     fetchCustomers();
     fetchProductTypes();
     fetchMaterials();
   }, []);
+
+  useEffect(() => {
+    if (materials.find(m => m.id === formData.material)?.name.toUpperCase() === ('MAÍZ' || 'MAIZ')) {
+        setFormData(prev => ({
+            ...prev,
+            film_color: 'SIN COLOR'
+        }));
+    }
+
+    if (materials.find(m => m.id === formData.material)?.name.toUpperCase() !== ('MAÍZ' || 'MAIZ')) {
+        setFormData(prev => ({
+            ...prev,
+            film_color: formData.film_color === 'SIN COLOR' ? 'TRANSPARENTE' : formData.film_color
+        }));
+    }
+  }, [formData.material]);
 
   const fetchReferences = async () => {
     try {
@@ -253,10 +272,144 @@ export default function ReferencesPage() {
     }
 
     setFormData(newFormData);
+
+    const error = validateField(name, value);
+    setErrors(prev => ({
+      ...prev,
+      [name]: error
+    }));
+
+    const relatedValidations: { [key: string]: string[] } = {
+      'product_type': ['length'],
+      'gussets_type': ['first_gusset', 'die_cut_type'],
+      'flap_type': ['flap_size'],
+      'material': ['film_color'],
+      'has_print': ['pantones_codes', 'dynas_treaty_faces']
+    };
+
+    if (relatedValidations[name]) {
+      relatedValidations[name].forEach(relatedField => {
+        const relatedError = validateField(relatedField, newFormData[relatedField as keyof FormData]);
+        setErrors(prev => ({
+          ...prev,
+          [relatedField]: relatedError
+        }));
+      });
+    }
+  };
+
+  const handleSelectChange = (name: string, option: { value: any, label: string } | null) => {
+    const value = option?.value ?? 0;
+    handleInputChange({ target: { name, value } } as any);
+  };
+
+  const validateField = (name: string, value: any): string => {
+    const validations: { [key: string]: () => string } = {
+      'reference': () => {
+        if (!value) return 'La referencia es requerida';
+        return '';
+      },
+      'customer': () => {
+        if (!value) return 'El cliente es requerido';
+        return '';
+      },
+      'product_type': () => {
+        if (!value) return 'El tipo de producto es requerido';
+        return '';
+      },
+      'material': () => {
+        if (!value) return 'El material es requerido';
+        return '';
+      },
+      'width': () => {
+        if (!value) return 'El ancho es requerido';
+        if (value <= 0) return 'El ancho debe ser mayor a 0';
+        return '';
+      },
+      'length': () => {
+        if (['Lamina', 'Bolsa'].includes(productTypes.find(pt => pt.id === formData.product_type)?.name)) {
+          if (!value) return 'El largo es requerido';
+          if (value <= 0) return 'El largo debe ser mayor a 0';
+        }
+        return '';
+      },
+      'measure_unit': () => {
+        if (value === undefined) return 'La unidad de medida es requerida';
+        return '';
+      },
+      'caliber': () => {
+        if (!value) return 'El calibre es requerido';
+        if (value <= 0) return 'El calibre debe ser mayor a 0';
+        return '';
+      },
+      'first_gusset': () => {
+        if (formData.gussets_type !== 0) {
+          if (!value) return 'El fuelle es requerido';
+          if (value <= 0) return 'El fuelle debe ser mayor a 0';
+        }
+        return '';
+      },
+      'flap_size': () => {
+        if (formData.flap_type !== 0 && formData.gussets_type !== 1) {
+          if (!value) return 'El tamaño de la solapa es requerido';
+          if (value <= 0) return 'El tamaño de la solapa debe ser mayor a 0';
+        }
+        return '';
+      },
+      'roller_size': () => {
+        if (!value) return 'El tamaño del rodillo es requerido';
+        if (value <= 0) return 'El tamaño del rodillo debe ser mayor a 0';
+        return '';
+      },
+      'pantones_quantity': () => {
+        if (formData.has_print && !value) return 'La cantidad de Pantones es requerida';
+        if (formData.has_print && value <= 0) return 'La cantidad de Pantones debe ser mayor a 0';
+        return '';
+      },
+      'pantones_codes': () => {
+        if (formData.has_print && formData.pantones_quantity > 0) {
+          let codes = 0;
+          formData.pantones_codes.map(code => code.length > 0 && codes++);
+          if (codes === 0) {
+            return 'Los códigos Pantone no pueden estar vacíos';
+          }
+
+          if (formData.pantones_codes.some(code => !code)) {
+            return 'Debe ingresar todos los códigos Pantone requeridos';
+          }
+        }
+        return '';
+      }
+    };
+
+    return validations[name] ? validations[name]() : '';
+  };
+
+  const validateForm = (): boolean => {
+    const newErrors: ReferenceErrors = {};
+    let isValid = true;
+
+    // Validar cada campo
+    Object.keys(formData).forEach((key) => {
+      const error = validateField(key, formData[key as keyof FormData]);
+      if (error) {
+        newErrors[key as keyof ReferenceErrors] = error;
+        isValid = false;
+      }
+    });
+
+    setErrors(newErrors);
+    return isValid;
   };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!validateForm()) {
+      console.log(errors);
+      showToast('Por favor, corrija los errores en el formulario', 'error');
+      return;
+    }
 
     const dataToSubmit = {
       ...formData,
@@ -449,6 +602,7 @@ export default function ReferencesPage() {
     setIsReferenceEditable(false);
     setCurrentReference(null);
     setAdditiveCount(0);
+    setErrors({});
     setFormData({
       customer: 0,
       reference: '',
@@ -482,61 +636,90 @@ export default function ReferencesPage() {
 
   const inputs = {
     customer: (
-      <SelectInput
-        label="Cliente"
-        name="customer"
-        value={{ value: formData.customer, label: customers.find(c => c.id === formData.customer)?.company_name }}
-        onChange={(option) => handleInputChange({ target: { name: 'customer', value: option?.value || 0 } } as any)}
-        options={customers.map(customer => ({
-          value: customer.id,
-          label: customer.company_name
-        }))}
-        required
-      />
-    ),
-    product_type: (
-      <SelectInput
-        label="Tipo de Producto"
-        name="product_type"
-        value={{ value: formData.product_type, label: productTypes.find(pt => pt.id === formData.product_type)?.name }}
-        onChange={(option) => handleInputChange({ target: { name: 'product_type', value: option?.value || 0 } } as any)}
-        options={productTypes.map(type => ({
-          value: type.id,
-          label: type.name
-        }))}
-        required
-      />
-    ),
-    material: (
-      <SelectInput
-        label="Material"
-        name="material"
-        value={{ value: formData.material, label: materials.find(m => m.id === formData.material)?.name }}
-        onChange={(option) => handleInputChange({ target: { name: 'material', value: option?.value || 0 } } as any)}
-        options={materials.map(material => ({
-          value: material.id,
-          label: material.name
-        }))}
-        required
-      />
-    ),
-    reference: (
-      <div className="relative">
-        <TextInput
-          label="Referencia"
-          name="reference"
-          value={formData.reference}
-          onChange={handleInputChange}
-          disabled={!isReferenceEditable}
+      <div>
+        <SelectInput
+          label="Cliente"
+          name="customer"
+          value={{
+            value: formData.customer,
+            label: customers.find(c => c.id === formData.customer)?.company_name
+          }}
+          onChange={(option) => handleSelectChange('customer', option)}
+          options={customers.map(customer => ({
+            value: customer.id,
+            label: customer.company_name
+          }))}
           required
         />
-        <button
-          type="button"
-          onClick={() => setIsReferenceEditable(!isReferenceEditable)}
-          className="absolute right-2 top-9 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-        >
-          <LuPenLine size={18} />
-        </button>
+        {errors.customer && (
+          <p className="text-md text-red-500 mt-1 pl-1">{errors.customer}</p>
+        )}
+      </div>
+    ),
+    product_type: (
+      <div>
+        <SelectInput
+          label="Tipo de Producto"
+          name="product_type"
+          value={{
+            value: formData.product_type,
+            label: productTypes.find(pt => pt.id === formData.product_type)?.name
+          }}
+          onChange={(option) => handleSelectChange('product_type', option)}
+          options={productTypes.map(type => ({
+            value: type.id,
+            label: type.name
+          }))}
+          required
+        />
+        {errors.product_type && (
+          <p className="text-md text-red-500 mt-1 pl-1">{errors.product_type}</p>
+        )}
+      </div>
+    ),
+    material: (
+      <div>
+        <SelectInput
+          label="Material"
+          name="material"
+          value={{
+            value: formData.material,
+            label: materials.find(m => m.id === formData.material)?.name
+          }}
+          onChange={(option) => handleSelectChange('material', option)}
+          options={materials.map(material => ({
+            value: material.id,
+            label: material.name
+          }))}
+          required
+        />
+        {errors.material && (
+          <p className="text-md text-red-500 mt-1 pl-1">{errors.material}</p>
+        )}
+      </div>
+    ),
+    reference: (
+      <div>
+        <div className="relative">
+          <TextInput
+            label="Referencia"
+            name="reference"
+            value={formData.reference}
+            onChange={handleInputChange}
+            disabled={!isReferenceEditable}
+            required
+          />
+          <button
+            type="button"
+            onClick={() => setIsReferenceEditable(!isReferenceEditable)}
+            className="absolute right-2 top-9 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+          >
+            <LuPenLine size={18} />
+          </button>
+        </div>
+        {errors.reference && (
+          <p className="text-md text-red-500 mt-1 pl-1">{errors.reference}</p>
+        )}
       </div>
     ),
     measure_unit: (
@@ -544,52 +727,61 @@ export default function ReferencesPage() {
         label="Unidad de Medida"
         name="measure_unit"
         value={{ value: formData.measure_unit, label: measureUnitChoices[formData.measure_unit as keyof typeof measureUnitChoices] }}
-        onChange={(option) => handleInputChange({ target: { name: 'measure_unit', value: option?.value || 0 } } as any)}
+        onChange={(option) => handleSelectChange('measure_unit', option)}
         options={Object.entries(measureUnitChoices).map(([key, value]) => ({
           value: Number(key),
           label: value
         }))}
-        required
       />
     ),
     film_color: (
       <TextInput
         label="Color de Película"
         name="film_color"
-        value={materials.find(m => m.id === formData.material)?.name === 'Maíz' ? 'Beige' : formData.film_color}
+        value={materials.find(m => m.id === formData.material)?.name === 'Maíz' ? 'SIN COLOR' : formData.film_color}
         onChange={handleInputChange}
         disabled={materials.find(m => m.id === formData.material)?.name === 'Maíz'}
-        required
       />
     ),
     width: (
-      <NumberInput
-        label="Ancho"
-        name="width"
-        value={formData.width}
-        onChange={handleInputChange}
-        required
-        min={0}
-        step={0.01}
-      />
+      <div>
+        <NumberInput
+          label="Ancho"
+          name="width"
+          value={formData.width}
+          onChange={handleInputChange}
+          required
+          min={0}
+          step={0.01}
+        />
+        {errors.width && (
+          <p className="text-md text-red-500 mt-1 pl-1">{errors.width}</p>
+        )}
+      </div>
     ),
     length: ['Lamina', 'Bolsa'].includes(productTypes.find(pt => pt.id === formData.product_type)?.name) && (
-      <NumberInput
-        label="Largo"
-        name="length"
-        value={formData.length}
-        onChange={handleInputChange}
-        required
-        min={0}
-        step={0.01}
-      />
+      <div>
+        <NumberInput
+          label="Largo"
+          name="length"
+          value={formData.length}
+          onChange={handleInputChange}
+          required
+          min={0}
+          step={0.01}
+        />
+        {errors.length && (
+          <p className="text-md text-red-500 mt-1 pl-1">{errors.length}</p>
+        )}
+      </div>
     ),
     gussets_type: ['Bolsa'].includes(productTypes.find(pt => pt.id === formData.product_type)?.name) && (
+
       <SelectInput
         label="Tipo de Fuelle"
         name="gussets_type"
         value={{ value: formData.gussets_type, label: gussetsTypeChoices[formData.gussets_type as keyof typeof gussetsTypeChoices] }}
-        onChange={(option) => handleInputChange({ target: { name: 'gussets_type', value: option?.value || 0 } } as any)}
+        onChange={(option) => handleSelectChange('gussets_type', option)}
         options={Object.entries(gussetsTypeChoices).map(([key, value]) => ({
           value: Number(key),
           label: value
@@ -597,22 +789,27 @@ export default function ReferencesPage() {
       />
     ),
     first_gusset: ['Bolsa'].includes(productTypes.find(pt => pt.id === formData.product_type)?.name) && formData.gussets_type !== 0 && (
-      <NumberInput
-        label="Tamaño de Fuelle"
-        name="first_gusset"
-        value={formData.first_gusset || 0}
-        onChange={handleInputChange}
-        min={0}
-        step={0.01}
-        required
-      />
+      <div>
+        <NumberInput
+          label="Tamaño de Fuelle"
+          name="first_gusset"
+          value={formData.first_gusset || 0}
+          onChange={handleInputChange}
+          min={0}
+          step={0.01}
+          required
+        />
+        {errors.first_gusset && (
+          <p className="text-md text-red-500 mt-1 pl-1">{errors.first_gusset}</p>
+        )}
+      </div>
     ),
     flap_type: ['Bolsa'].includes(productTypes.find(pt => pt.id === formData.product_type)?.name) && formData.gussets_type !== 1 && (
       <SelectInput
         label="Tipo de Solapa"
         name="flap_type"
         value={{ value: formData.flap_type, label: flapTypeChoices[formData.flap_type as keyof typeof flapTypeChoices] }}
-        onChange={(option) => handleInputChange({ target: { name: 'flap_type', value: option?.value || 0 } } as any)}
+        onChange={(option) => handleSelectChange('flap_type', option)}
         options={Object.entries(flapTypeChoices).map(([key, value]) => ({
           value: Number(key),
           label: value
@@ -622,15 +819,20 @@ export default function ReferencesPage() {
     flap_size: ['Bolsa'].includes(productTypes.find(pt => pt.id === formData.product_type)?.name) &&
       formData.gussets_type !== 1 &&
       formData.flap_type !== 0 && (
-        <NumberInput
-          label="Tamaño de Solapa"
-          name="flap_size"
-          value={formData.flap_size || 0}
-          onChange={handleInputChange}
-          min={0}
-          step={0.01}
-          required
-        />
+        <div>
+          <NumberInput
+            label="Tamaño de Solapa"
+            name="flap_size"
+            value={formData.flap_size || 0}
+            onChange={handleInputChange}
+            min={0}
+            step={0.01}
+            required
+          />
+          {errors.flap_size && (
+            <p className="text-md text-red-500 mt-1 pl-1">{errors.flap_size}</p>
+          )}
+        </div>
       ),
     die_cut_type: ['Bolsa'].includes(productTypes.find(pt => pt.id === formData.product_type)?.name) &&
       formData.flap_type !== 4 && (
@@ -642,9 +844,7 @@ export default function ReferencesPage() {
               value: formData.die_cut_type,
               label: dieCutTypeChoices[formData.die_cut_type as keyof typeof dieCutTypeChoices]
             }}
-            onChange={(option) => handleInputChange({
-              target: { name: 'die_cut_type', value: option?.value || 0 }
-            } as any)}
+            onChange={(option) => handleSelectChange('die_cut_type', option)}
             options={Object.entries(dieCutTypeChoices)
               .filter(([key, _]) => {
                 if (formData.gussets_type === 1) {
@@ -656,7 +856,6 @@ export default function ReferencesPage() {
                 value: Number(key),
                 label: value
               }))}
-            required
             disabled={formData.gussets_type === 1}
           />
           {formData.gussets_type === 1 && (
@@ -671,7 +870,7 @@ export default function ReferencesPage() {
         label="Tipo de Sellado"
         name="sealing_type"
         value={{ value: formData.sealing_type, label: sealingTypeChoices[formData.sealing_type as keyof typeof sealingTypeChoices] }}
-        onChange={(option) => handleInputChange({ target: { name: 'sealing_type', value: option?.value || 0 } } as any)}
+        onChange={(option) => handleSelectChange('sealing_type', option)}
         options={Object.entries(sealingTypeChoices).map(([key, value]) => ({
           value: Number(key),
           label: value
@@ -679,26 +878,36 @@ export default function ReferencesPage() {
       />
     ),
     caliber: (
-      <NumberInput
-        label="Calibre"
-        name="caliber"
-        value={formData.caliber}
-        onChange={handleInputChange}
-        required
-        min={0}
-        step={0.01}
-      />
+      <div>
+        <NumberInput
+          label="Calibre"
+          name="caliber"
+          value={formData.caliber}
+          onChange={handleInputChange}
+          required
+          min={0}
+          step={0.01}
+        />
+        {errors.caliber && (
+          <p className="text-md text-red-500 mt-1 pl-1">{errors.caliber}</p>
+        )}
+      </div>
     ),
     roller_size: (
-      <NumberInput
-        label="Tamaño del Rodillo"
-        name="roller_size"
-        value={formData.roller_size}
-        onChange={handleInputChange}
-        required
-        min={0}
-        step={0.01}
-      />
+      <div>
+        <NumberInput
+          label="Tamaño del Rodillo"
+          name="roller_size"
+          value={formData.roller_size}
+          onChange={handleInputChange}
+          required
+          min={0}
+          step={0.01}
+        />
+        {errors.roller_size && (
+          <p className="text-md text-red-500 mt-1 pl-1">{errors.roller_size}</p>
+        )}
+      </div>
     ),
     tape: ['Bolsa'].includes(productTypes.find(pt => pt.id === formData.product_type)?.name) &&
       formData.flap_type === 4 && (
@@ -706,7 +915,7 @@ export default function ReferencesPage() {
           label="Tipo de Cinta"
           name="tape"
           value={{ value: formData.tape, label: tapeChoices[formData.tape as keyof typeof tapeChoices] }}
-          onChange={(option) => handleInputChange({ target: { name: 'tape', value: option?.value || 0 } } as any)}
+          onChange={(option) => handleSelectChange('tape', option)}
           options={Object.entries(tapeChoices).map(([key, value]) => ({
             value: Number(key),
             label: value
@@ -722,13 +931,7 @@ export default function ReferencesPage() {
           id="has_print"
           checked={formData.has_print || false}
           onCheckedChange={(checked) => {
-            setFormData(prev => ({
-              ...prev,
-              has_print: checked,
-              dynas_treaty_faces: checked ? prev.dynas_treaty_faces : 0,
-              pantones_quantity: checked ? prev.pantones_quantity : 0,
-              pantones_codes: checked ? prev.pantones_codes : []
-            }));
+            handlePrintChange(checked);
           }}
         />
       </div>
@@ -741,9 +944,7 @@ export default function ReferencesPage() {
           value: formData.dynas_treaty_faces,
           label: dynasTreatyFacesChoices[formData.dynas_treaty_faces as keyof typeof dynasTreatyFacesChoices]
         }}
-        onChange={(option) => handleInputChange({
-          target: { name: 'dynas_treaty_faces', value: option?.value || 0 }
-        } as any)}
+        onChange={(option) => handleSelectChange('dynas_treaty_faces', option)}
         options={Object.entries(dynasTreatyFacesChoices).map(([key, value]) => ({
           value: Number(key),
           label: value
@@ -752,49 +953,54 @@ export default function ReferencesPage() {
       />
     ),
     pantones_quantity: formData.has_print && (
-      <SelectInput
-        label="Cantidad de Pantones"
-        name="pantones_quantity"
-        value={{
-          value: formData.pantones_quantity,
-          label: formData.pantones_quantity.toString()
-        }}
-        onChange={(option) => {
-          const value = option?.value || 0;
-          setFormData(prev => ({
-            ...prev,
-            pantones_quantity: value,
-            pantones_codes: Array(value).fill('').slice(0, 4) // Reset pantone codes array with new length
-          }));
-        }}
-        options={[1, 2, 3, 4].map(num => ({
-          value: num,
-          label: num.toString()
-        }))}
-        required
-      />
+      <div>
+        <SelectInput
+          label="Cantidad de Pantones"
+          name="pantones_quantity"
+          value={{
+            value: formData.pantones_quantity,
+            label: formData.pantones_quantity.toString()
+          }}
+          onChange={(option) => {
+            const value = option?.value || 0;
+            setFormData(prev => ({
+              ...prev,
+              pantones_quantity: value,
+              pantones_codes: Array(value).fill('').slice(0, 4) // Reset pantone codes array with new length
+            }));
+          }}
+          options={[1, 2, 3, 4].map(num => ({
+            value: num,
+            label: num.toString()
+          }))}
+          required
+        />
+        {errors.pantones_quantity && (
+          <p className="text-md text-red-500 mt-1 pl-1">{errors.pantones_quantity}</p>
+        )}
+      </div>
     ),
     pantones_codes: formData.has_print && formData.pantones_quantity > 0 && (
-      <div className="space-y-2">
+      <div>
         <div className="space-y-2">
-          {Array.from({ length: Math.min(formData.pantones_quantity, 4) }).map((_, index) => (
-            <TextInput
-              key={index}
-              label={`Pantone ${index + 1}`}
-              name={`pantone_${index}`}
-              value={formData.pantones_codes[index] || ''}
-              onChange={(e) => {
-                const newPantoneCodes = [...formData.pantones_codes];
-                newPantoneCodes[index] = e.target.value;
-                setFormData(prev => ({
-                  ...prev,
-                  pantones_codes: newPantoneCodes
-                }));
-              }}
-              required
-            />
-          ))}
+          <div className="space-y-2">
+            {Array.from({ length: Math.min(formData.pantones_quantity, 4) }).map((_, index) => (
+              <TextInput
+                key={index}
+                label={`Pantone ${index + 1}`}
+                name={`pantone_${index}`}
+                value={formData.pantones_codes[index] || ''}
+                onChange={(e) => {
+                  handlePantoneChange(index, e.target.value);
+                }}
+                required
+              />
+            ))}
+          </div>
         </div>
+        {errors.pantones_codes && (
+          <p className="text-md text-red-500 mt-1 pl-1">{errors.pantones_codes}</p>
+        )}
       </div>
     ),
     additive_count: (
@@ -895,7 +1101,7 @@ export default function ReferencesPage() {
           bagFields1.push('flap_size');
           if (formData.flap_type === 4) {
             bagFields1.push('tape');
-        }
+          }
         }
       }
 
@@ -1043,12 +1249,54 @@ export default function ReferencesPage() {
 
   useEffect(() => {
     if (materials.find(m => m.id === formData.material)?.name === 'Maíz') {
-      setFormData(prev => ({
-        ...prev,
+      const newFormData = {
+        ...formData,
         film_color: 'SIN COLOR'
+      };
+      setFormData(newFormData);
+
+      const error = validateField('film_color', 'SIN COLOR');
+      setErrors(prev => ({
+        ...prev,
+        film_color: error
       }));
     }
   }, [formData.material]);
+
+  const handlePantoneChange = (index: number, value: string) => {
+    const newPantoneCodes = [...formData.pantones_codes];
+    newPantoneCodes[index] = value;
+    const newFormData = {
+      ...formData,
+      pantones_codes: newPantoneCodes
+    };
+    setFormData(newFormData);
+
+    const error = validateField('pantones_codes', newPantoneCodes);
+    setErrors(prev => ({
+      ...prev,
+      pantones_codes: error
+    }));
+  };
+
+  const handlePrintChange = (checked: boolean) => {
+    const newFormData = {
+      ...formData,
+      has_print: checked,
+      dynas_treaty_faces: checked ? formData.dynas_treaty_faces : 0,
+      pantones_quantity: checked ? formData.pantones_quantity : 0,
+      pantones_codes: checked ? formData.pantones_codes : []
+    };
+    setFormData(newFormData);
+
+    ['pantones_codes', 'dynas_treaty_faces'].forEach(field => {
+      const error = validateField(field, newFormData[field as keyof FormData]);
+      setErrors(prev => ({
+        ...prev,
+        [field]: error
+      }));
+    });
+  };
 
   return (
     <div className="container">

@@ -6,7 +6,7 @@ class Customer(models.Model):
     nit = models.PositiveIntegerField(unique=True)
     company_name = models.CharField(max_length=300)
     contact = models.CharField(max_length=200, null=True, blank=True)
-    contact_email = models.EmailField(unique=True, null=True, blank=True)
+    contact_email = models.EmailField(null=True, blank=True)
     contact_phone_number = models.CharField(max_length=15, null=True, blank=True)
     location = models.CharField(max_length=200)
     is_active = models.BooleanField(default=True)
@@ -42,7 +42,7 @@ class Employee(models.Model):
     
 class ProductType(models.Model):
     name = models.CharField(max_length=25)
-    description = models.TextField()
+    description = models.TextField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -52,7 +52,7 @@ class ProductType(models.Model):
 
 class Material(models.Model):
     name = models.CharField(max_length=25)
-    description = models.TextField()
+    description = models.TextField(null=True, blank=True)
     weight_constant = models.DecimalField(max_digits=8, decimal_places=6)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)

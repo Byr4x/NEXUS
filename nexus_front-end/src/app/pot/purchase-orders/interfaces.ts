@@ -70,16 +70,20 @@ export interface POErrors {
     employee?: string;
     customer?: string;
     ordered_quantity?: string;
+    delivery_date?: string;
 }
 
 export interface PODErrors {
     reference?: string;
+    reference_internal?: string;
     width?: string;
     length?: string;
     first_gusset?: string;
     flap_size?: string;
     caliber?: string;
     roller_size?: string;
+    pantones_quantity?: string;
+    pantones_codes?: string;
     kilograms?: string;
     units?: string;
     kilogram_price?: string;

@@ -50,85 +50,94 @@ export default function MaterialsPage() {
     return ''
   }
 
-  const validateWeightConstant = (weight_constant: number) => {
-    if (weight_constant <= 0) {
-      return 'La constante de peso debe ser mayor que 0'
+  const validateWeightConstant = (weight_constant: string) => {
+    const number = parseFloat(weight_constant);
+    if (isNaN(number) || number <= 0) {
+      return 'La constante de peso debe ser mayor que 0';
     }
-    return ''
+    return '';
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
+    const { name, value } = e.target;
+    let sanitizedValue = value.trimStart().replace(/\s{2,}/g, ' ');
 
-    let sanitizedValue = value.trimStart().replace(/\s{2,}/g, ' ')
+    if (name === 'weight_constant') {
+      if (!/^\d*\.?\d*$/.test(sanitizedValue) && sanitizedValue !== '') {
+        return;
+      }
+    }
 
-    setFormData(prev => ({ ...prev, [name]: name === 'weight_constant' ? parseFloat(sanitizedValue) : sanitizedValue }))
+    setFormData(prev => ({
+      ...prev,
+      [name]: name === 'weight_constant' ? sanitizedValue : sanitizedValue
+    }));
 
     if (name === 'name' && touchedFields.name) {
-      setFormErrors(prev => ({ ...prev, name: validateName(sanitizedValue) }))
+      setFormErrors(prev => ({ ...prev, name: validateName(sanitizedValue) }));
     }
     if (name === 'weight_constant' && touchedFields.weight_constant) {
-      setFormErrors(prev => ({ ...prev, weight_constant: validateWeightConstant(parseFloat(sanitizedValue)) }))
+      setFormErrors(prev => ({ ...prev, weight_constant: validateWeightConstant(sanitizedValue) }));
     }
   }
 
   const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name } = e.target
-    setTouchedFields(prev => ({ ...prev, [name]: true }))
+    const { name } = e.target;
+    setTouchedFields(prev => ({ ...prev, [name]: true }));
     if (name === 'name') {
-      setFormErrors(prev => ({ ...prev, name: validateName(formData.name) }))
+      setFormErrors(prev => ({ ...prev, name: validateName(formData.name) }));
     }
     if (name === 'weight_constant') {
-      setFormErrors(prev => ({ ...prev, weight_constant: validateWeightConstant(formData.weight_constant) }))
+      setFormErrors(prev => ({ ...prev, weight_constant: validateWeightConstant(formData.weight_constant.toString()) }));
     }
   }
 
   const handleFormSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const nameError = validateName(formData.name)
-    const weightConstantError = validateWeightConstant(formData.weight_constant)
-    setFormErrors({ name: nameError, weight_constant: weightConstantError })
-    setTouchedFields({ name: true, weight_constant: true })
+    e.preventDefault();
+    const nameError = validateName(formData.name);
+    const weightConstantError = validateWeightConstant(formData.weight_constant.toString());
+    setFormErrors({ name: nameError, weight_constant: weightConstantError });
+    setTouchedFields({ name: true, weight_constant: true });
 
     if (nameError || weightConstantError) {
-      showToast('Por favor, corrija los errores antes de enviar', 'error')
-      return
+      showToast('Por favor, corrija los errores antes de enviar', 'error');
+      return;
     }
     try {
       let response;
       let message = '';
 
       if (currentMaterial) {
-        response = await axios.put(`http://127.0.0.1:8000/beiplas/business/materials/${currentMaterial.id}/`, formData)
+        response = await axios.put(`http://127.0.0.1:8000/beiplas/business/materials/${currentMaterial.id}/`, formData);
         message = 'Material actualizado correctamente';
       } else {
-        response = await axios.post('http://127.0.0.1:8000/beiplas/business/materials/', formData)
+        response = await axios.post('http://127.0.0.1:8000/beiplas/business/materials/', formData);
         message = 'Material creado correctamente';
       }
 
       if (response.data.status === 'success') {
-        showToast(message, 'success')
-        fetchMaterials()
-        setFormModalOpen(false)
-        setCurrentMaterial(null)
-        setFormData({ name: '', description: '', weight_constant: 0, is_active: true })
+        showToast(message, 'success');
+        fetchMaterials();
+        setFormModalOpen(false);
+        setCurrentMaterial(null);
+        setFormData({ name: '', description: '', weight_constant: 0, is_active: true });
       } else {
-        showToast(response.data.message, 'error')
+        showToast(response.data.message, 'error');
       }
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {
-        showToast(error.response.data.message || 'An error occurred', 'error')
+        showToast(error.response.data.message || 'An error occurred', 'error');
       } else {
-        showToast('An unexpected error occurred', 'error')
+        showToast('An unexpected error occurred', 'error');
       }
     }
   }
 
   const handleEdit = (material: Material) => {
-    setCurrentMaterial(material)
-    setFormData({ name: material.name, description: material.description, weight_constant: material.weight_constant, is_active: material.is_active })
-    setFormModalOpen(true)
-  }
+    setCurrentMaterial(material);
+    setFormData({ name: material.name, description: material.description, weight_constant: material.weight_constant, is_active: material.is_active });
+    setFormModalOpen(true);
+  };
 
   const handleDelete = async (material: Material) => {
     showAlert(
@@ -142,26 +151,26 @@ export default function MaterialsPage() {
       },
       async () => {
         try {
-          const response = await axios.delete(`http://127.0.0.1:8000/beiplas/business/materials/${material.id}/`)
+          const response = await axios.delete(`http://127.0.0.1:8000/beiplas/business/materials/${material.id}/`);
           if (response.status === 204) {
-            showToast('Material eliminado correctamente', 'success')
-            fetchMaterials()
+            showToast('Material eliminado correctamente', 'success');
+            fetchMaterials();
           } else {
-            showToast(response.data.message, 'error')
+            showToast(response.data.message, 'error');
           }
         } catch (error) {
           if (axios.isAxiosError(error) && error.response) {
-            showToast(error.response.data.message || 'Error al eliminar el material', 'error')
+            showToast(error.response.data.message || 'Error al eliminar el material', 'error');
           } else {
-            showToast('An unexpected error occurred', 'error')
+            showToast('An unexpected error occurred', 'error');
           }
         }
       },
       () => {
-        showToast('Eliminación cancelada', 'info')
+        showToast('Eliminación cancelada', 'info');
       }
-    )
-  }
+    );
+  };
 
   const handleSwitchChange = async (id: number, currentStatus: boolean) => {
     showAlert(
@@ -178,7 +187,7 @@ export default function MaterialsPage() {
           const newStatus = !currentStatus;
           const material = materials.find(m => m.id === id);
           if (!material) {
-            showToast('Material not found', 'error')
+            showToast('Material not found', 'error');
             return;
           }
 
@@ -191,26 +200,26 @@ export default function MaterialsPage() {
 
           const response = await axios.patch(`http://127.0.0.1:8000/beiplas/business/materials/${id}/`, updatedData);
           if (response.data.status === 'success') {
-            showToast(response.data.message, 'success')
+            showToast(response.data.message, 'success');
             setMaterials(materials.map(m =>
               m.id === id ? { ...m, is_active: newStatus } : m
             ));
           } else {
-            showToast(response.data.message, 'error')
+            showToast(response.data.message, 'error');
           }
         } catch (error) {
           if (axios.isAxiosError(error) && error.response) {
-            showToast(error.response.data.message || 'Error updating material status', 'error')
+            showToast(error.response.data.message || 'Error updating material status', 'error');
           } else {
-            showToast('An unexpected error occurred', 'error')
+            showToast('An unexpected error occurred', 'error');
           }
         }
       },
       () => {
-        showToast('Cambio de estado cancelado', 'info')
+        showToast('Cambio de estado cancelado', 'info');
       }
-    )
-  }
+    );
+  };
 
   const inputs = {
     name: (
@@ -218,7 +227,7 @@ export default function MaterialsPage() {
         <TextInput
           label="Nombre"
           name="name"
-          placeholder='Nombre del material'
+          placeholder='Ej. Maíz'
           value={formData.name}
           onChange={handleInputChange}
           onBlur={handleInputBlur}
@@ -234,7 +243,7 @@ export default function MaterialsPage() {
         <TextArea
           label="Descripción"
           name="description"
-          placeholder='Descripción del material'
+          placeholder='Opcional: Descripción del material'
           value={formData.description}
           onChange={handleInputChange}
         />
@@ -242,13 +251,14 @@ export default function MaterialsPage() {
     ),
     weight_constant: (
       <div>
-        <NumberInput
+        <TextInput
           label="Constante de peso"
           name="weight_constant"
-          value={formData.weight_constant}
+          value={formData.weight_constant.toString()}
           onChange={handleInputChange}
           onBlur={handleInputBlur}
           required={true}
+          placeholder='Ej. 0.001'
         />
         {touchedFields.weight_constant && formErrors.weight_constant && (
           <p className="text-red-500 ml-1">{formErrors.weight_constant}</p>
@@ -258,13 +268,13 @@ export default function MaterialsPage() {
   }
 
   const handleCancel = () => {
-    setCurrentMaterial(null)
-    setFormData({ name: '', description: '', weight_constant: 0, is_active: true })
-    setFormErrors({ name: '', weight_constant: '' })
-    setTouchedFields({ name: false, weight_constant: false })
-    setFormModalOpen(false)
-    showToast('Acción cancelada', 'info')
-  }
+    setCurrentMaterial(null);
+    setFormData({ name: '', description: '', weight_constant: 0, is_active: true });
+    setFormErrors({ name: '', weight_constant: '' });
+    setTouchedFields({ name: false, weight_constant: false });
+    setFormModalOpen(false);
+    showToast('Acción cancelada', 'info');
+  };
 
   const handleSearch = (searchTerm: string) => {
     setSearchTerm(searchTerm);
@@ -343,5 +353,5 @@ export default function MaterialsPage() {
         />
       )}
     </div>
-  )
+  );
 }

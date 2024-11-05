@@ -12,6 +12,8 @@ import ViewModal from '@/components/modals/ViewModal';
 import TopTableElements from '@/components/ui/TopTableElements';
 import { showAlert, showToast } from '@/components/ui/Alerts';
 import { useRouter } from 'next/navigation';
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css';
 
 interface Customer {
   id: number;
@@ -86,10 +88,11 @@ export default function CustomersPage() {
         return '';
       case 'company_name':
         return !value.trim() ? 'El nombre de la empresa es obligatorio' :
-          value.trim().length < 3 ? 'El nombre debe tener al menos 3 letras' : '';
+          value.trim().length < 3 ? 'El nombre debe tener al menos 3 letras' :
+          customers.some(c => c.company_name === value && c.id !== currentCustomer?.id) ? 'Este nombre de empresa ya está en uso' : '';
       case 'contact_email':
         return value && !/\S+@\S+\.\S+/.test(value) ? 'Formato de email inválido' :
-          customers.some(c => c.contact_email === value && c.id !== currentCustomer?.id) ? 'Este email ya está en uso' : '';
+          customers.some(c => c.contact_email === value && c.id !== currentCustomer?.id) && value !== '' ? 'Este email ya está en uso' : '';
       case 'contact_phone_number':
         return value && !/^\d{7,15}$/.test(value) ? 'El número de teléfono debe tener entre 7 y 15 dígitos' : '';
       case 'location':
@@ -340,6 +343,13 @@ export default function CustomersPage() {
     }
   };
 
+  const handlePhoneChange = (value: string) => {
+    setFormData(prev => ({ ...prev, contact_phone_number: value }));
+    if (touchedFields.contact_phone_number) {
+      setFormErrors(prev => ({ ...prev, contact_phone_number: validateField('contact_phone_number', value) }));
+    }
+  };
+
   const inputs = {
     nit: (
       <div>
@@ -347,6 +357,7 @@ export default function CustomersPage() {
           label="NIT"
           name="nit"
           value={parseInt(formData.nit)}
+          placeholder='Ej. 1234567890'
           onChange={handleInputChange}
           onBlur={handleInputBlur}
           required={true}
@@ -362,6 +373,7 @@ export default function CustomersPage() {
           label="Nombre de la Empresa"
           name="company_name"
           value={formData.company_name}
+          placeholder='Ej. Beiplas S.A.S'
           onChange={handleInputChange}
           onBlur={handleInputBlur}
           required={true}
@@ -376,6 +388,7 @@ export default function CustomersPage() {
         label="Contacto"
         name="contact"
         value={formData.contact}
+        placeholder='Ej. Pepito Pérez'
         onChange={handleInputChange}
       />
     ),
@@ -385,6 +398,7 @@ export default function CustomersPage() {
           label="Email de Contacto"
           name="contact_email"
           value={formData.contact_email}
+          placeholder='Ej. pepitoperez@beiplas.com'
           onChange={handleInputChange}
           onBlur={handleInputBlur}
         />
@@ -395,12 +409,25 @@ export default function CustomersPage() {
     ),
     contact_phone_number: (
       <div>
-        <TextInput
-          label="Teléfono de Contacto"
-          name="contact_phone_number"
+        <label htmlFor="contact_phone_number" className="block mb-1 font-medium text-gray-700 dark:text-gray-300">
+          Teléfono de Contacto {touchedFields.contact_phone_number && formErrors.contact_phone_number && <span className="text-red-500">*</span>}
+        </label>
+        <PhoneInput
+          country={'co'}
           value={formData.contact_phone_number}
-          onChange={handleInputChange}
-          onBlur={handleInputBlur}
+          onChange={handlePhoneChange}
+          inputProps={{
+            name: 'contact_phone_number',
+            required: true,
+            className: 'w-full p-2 pl-12 rounded-md border border-gray-300 bg-white text-gray-900 shadow-sm focus:border-sky-500 focus:ring-sky-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-sky-400 dark:focus:ring-sky-400',
+          }}
+          containerClass="phone-input-container"
+          dropdownClass="phone-input-dropdown"
+          searchClass="phone-input-search"
+          buttonClass="phone-input-button"
+          enableSearch={true}
+          disableSearchIcon={true}
+          searchPlaceholder="Buscar país..."
         />
         {touchedFields.contact_phone_number && formErrors.contact_phone_number && (
           <p className="text-red-500 ml-1">{formErrors.contact_phone_number}</p>
@@ -413,6 +440,7 @@ export default function CustomersPage() {
           label="Ubicación"
           name="location"
           value={formData.location}
+          placeholder='Ej. Carrera 43A # 61Sur 152 INT. 227 Sabaneta'
           onChange={handleInputChange}
           onBlur={handleInputBlur}
           required={true}
@@ -476,8 +504,8 @@ export default function CustomersPage() {
                   <TableCell className={customer.is_active ? '' : 'opacity-40'}>
                     <button
                       className={`${customer.is_active
-                          ? 'text-blue-500 hover:text-blue-700'
-                          : 'text-gray-400'
+                        ? 'text-blue-500 hover:text-blue-700'
+                        : 'text-gray-400'
                         } flex items-center gap-2 transition-colors`}
                       onClick={() => handleViewReferences(customer.id)}
                       disabled={!customer.is_active}
@@ -541,6 +569,81 @@ export default function CustomersPage() {
           onClose={() => setViewModalOpen(false)}
         />
       )}
+
+      <style jsx global>{`
+        .phone-input-container {
+          width: 100%;
+        }
+        .phone-input-container .react-tel-input .form-control {
+          width: 100%;
+          height: 38px;
+          padding: 0.5rem 0.75rem 0.5rem 3rem;
+          border-radius: 0.375rem;
+          border: 1px solid #d1d5db;
+          background-color: #ffffff;
+          color: #111827;
+          font-size: 0.875rem;
+          line-height: 1.25rem;
+        }
+        .dark .phone-input-container .react-tel-input .form-control {
+          background-color: #374151;
+          border-color: #4b5563;
+          color: #ffffff;
+        }
+        .phone-input-container .react-tel-input .flag-dropdown {
+          background-color: #ffffff;
+          border: 1px solid #d1d5db;
+          border-radius: 0.375rem 0 0 0.375rem;
+        }
+        .dark .phone-input-container .react-tel-input .flag-dropdown {
+          background-color: #374151;
+          border-color: #4b5563;
+        }
+        .phone-input-dropdown {
+          background-color: #ffffff;
+          color: #111827;
+        }
+        .dark .phone-input-dropdown {
+          background-color: #1f2937;
+          color: #ffffff;
+        }
+        .phone-input-search {
+          background-color: #ffffff;
+          color: #111827;
+        }
+        .dark .phone-input-search {
+          background-color: #374151;
+          color: #ffffff;
+        }
+        .phone-input-button {
+          background-color: #ffffff;
+          border: 1px solid #d1d5db;
+        }
+        .dark .phone-input-button {
+          background-color: #374151;
+          border-color: #4b5563;
+        }
+        .phone-input-container .react-tel-input .country-list {
+          background-color: #ffffff;
+          color: #111827;
+        }
+        .dark .phone-input-container .react-tel-input .country-list {
+          background-color: #1f2937;
+          color: #ffffff;
+        }
+        .phone-input-container .react-tel-input .country-list .country:hover {
+          background-color: #f3f4f6;
+        }
+        .dark .phone-input-container .react-tel-input .country-list .country:hover {
+          background-color: #374151;
+        }
+        .phone-input-container .react-tel-input .country-list .country.highlight {
+          background-color: #e5e7eb;
+        }
+        .dark .phone-input-container .react-tel-input .country-list .country.highlight {
+          background-color: #4b5563;
+        }
+      `}</style>
     </div>
   );
 }
