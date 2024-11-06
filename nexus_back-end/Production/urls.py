@@ -1,5 +1,5 @@
 from rest_framework import routers
-from .api import SupplierViewSet, RawMaterialViewSet, MachineViewSet, WorkOrderViewSet, ExtrusionViewSet, R_RawMaterial_ExtrusionViewSet, PrintingViewSet, SealingViewSet, HandicrafViewSet, TouchViewSet, TouchDetailsViewSet
+from .api import SupplierViewSet, RawMaterialViewSet, MachineViewSet, WorkOrderViewSet, ExtrusionViewSet, R_RawMaterial_ExtrusionViewSet, PrintingViewSet, SealingViewSet, HandicrafViewSet, WOChangeLogViewSet, TouchViewSet, TouchDetailsViewSet
 
 router = routers.DefaultRouter()
 
@@ -12,6 +12,7 @@ router.register('meQuantity', R_RawMaterial_ExtrusionViewSet, 'meQuantity')
 router.register('printings', PrintingViewSet, 'printings')
 router.register('sealings', SealingViewSet, 'sealings')
 router.register('handicrafts', HandicrafViewSet, 'handicrafts')
+router.register('woChangeLogs', WOChangeLogViewSet, 'woChangeLogs')
 router.register('touchs', TouchViewSet, 'touchs')
 router.register('touchDetails', TouchDetailsViewSet, 'touchDetails')
 

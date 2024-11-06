@@ -8,16 +8,18 @@ export interface PurchaseOrder {
     observations: string;
     delivery_date: Date;
     subtotal: number;
+    has_iva: boolean;
     iva?: number;
     total?: number;
+    was_annulled?: boolean;
 }
 
 export interface Payment {
     id?: number;
     purchase_order: number;
     payment_method: number;
-    payment_term: number | null;
-    advance: number | null;
+    payment_term: number;
+    advance: number;
 }
 
 export interface PODetail {
@@ -62,7 +64,7 @@ export interface PurchaseOrderForm extends PurchaseOrder {
 }
 
 export interface PODetailForm extends PODetail {
-    has_print?: boolean;
+    has_print: boolean;
 }
 
 // Interfaces para errores

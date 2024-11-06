@@ -122,7 +122,7 @@ export default function ProductsPage() {
         </motion.div>
 
         {/* Corn Products Carousel */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, x: 100 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 1 }}
@@ -178,8 +178,8 @@ export default function ProductsPage() {
               </Swiper>
             </div>
             <p className="text-center text-sm text-gray-500 dark:text-gray-400 pt-10">
-                Productos compostables y biodegradables
-              </p>
+              Productos compostables y biodegradables
+            </p>
           </div>
         </motion.div>
 

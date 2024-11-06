@@ -1,7 +1,7 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
-from .models import Supplier, RawMaterial, Machine, WorkOrder, Extrusion, R_RawMaterial_Extrusion, Printing, Sealing, Handicraf, Touch, TouchDetails
-from .serializers import SupplierSerializer, RawMaterialSerializer, MachineSerializer, WorkOrderSerializer, ExtrusionSerializer, R_RawMaterial_ExtrusionSerializer, PrintingSerializer, SealingSerializer, HandicrafSerializer, TouchSerializer, TouchDetailsSerializer
+from .models import Supplier, RawMaterial, Machine, WorkOrder, Extrusion, R_RawMaterial_Extrusion, Printing, Sealing, Handicraf, WOChangeLog, Touch, TouchDetails
+from .serializers import SupplierSerializer, RawMaterialSerializer, MachineSerializer, WorkOrderSerializer, ExtrusionSerializer, R_RawMaterial_ExtrusionSerializer, PrintingSerializer, SealingSerializer, HandicrafSerializer, WOChangeLogSerializer, TouchSerializer, TouchDetailsSerializer
 import re
 
 class BaseViewSet(viewsets.ModelViewSet):
@@ -93,6 +93,10 @@ class SealingViewSet(BaseViewSet):
 class HandicrafViewSet(BaseViewSet):
     queryset = Handicraf.objects.all()
     serializer_class = HandicrafSerializer
+
+class WOChangeLogViewSet(BaseViewSet):
+    queryset = WOChangeLog.objects.all()
+    serializer_class = WOChangeLogSerializer
 
 class TouchViewSet(BaseViewSet):
     queryset = Touch.objects.all()

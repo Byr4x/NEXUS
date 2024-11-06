@@ -87,6 +87,22 @@ const getMinDeliveryDate = (): Date => {
     return minDate;
 };
 
+// Añade estas funciones de utilidad cerca del inicio del componente
+const calculateTotals = (allPODetails: PODetailForm[], hasIva: boolean, advance: number = 0) => {
+    const subtotal = allPODetails.reduce((acc, detail) =>
+        acc + (detail.kilograms * detail.kilogram_price + detail.units * detail.unit_price), 0);
+    const iva = hasIva ? subtotal * 0.19 : 0;
+    const total = subtotal + iva;
+    const debtTotal = total - (advance || 0);
+
+    return {
+        subtotal,
+        iva,
+        total,
+        debtTotal
+    };
+};
+
 export default function ReferencesPage() {
     const defaultPurchaseOrder: PurchaseOrderForm = {
         id: 0,
@@ -98,17 +114,19 @@ export default function ReferencesPage() {
         observations: '',
         delivery_date: getMinDeliveryDate(),
         subtotal: 0,
+        has_iva: true,
         iva: 0,
         total: 0,
         ordered_quantity: 1,
+        was_annulled: false,
     };
 
     const defaultPayment: Payment = {
         id: 0,
         purchase_order: 0,
         payment_method: 0,
-        payment_term: null,
-        advance: null,
+        payment_term: 0,
+        advance: 0,
     };
 
     const defaultPODetail: PODetailForm = {
@@ -217,7 +235,7 @@ export default function ReferencesPage() {
                         'pod_units',
                         'pod_kilogram_price',
                         'pod_unit_price',
-                        'pod_delivery_location'
+                        'pod_delivery_location',
                     ];
 
                     const errors: PODErrors = {};
@@ -235,7 +253,7 @@ export default function ReferencesPage() {
                 const paymentFieldsToValidate = [
                     'payment_payment_method',
                     'payment_payment_term',
-                    'payment_advance'
+                    'payment_advance',
                 ];
 
                 const errors: PaymentErrors = {};
@@ -247,10 +265,24 @@ export default function ReferencesPage() {
                     }
                 });
                 setPaymentErrors(errors);
+
+                const poFieldsToValidate = [
+                    'po_delivery_date'
+                ];
+
+                const poErrors: POErrors = {};
+                poFieldsToValidate.forEach(field => {
+                    const fieldName = field.replace('po_', '');
+                    const error = validateField(field, formDataPO[fieldName as keyof PurchaseOrderForm]);
+                    if (error) {
+                        poErrors[fieldName as keyof POErrors] = error;
+                    }
+                });
+                setPOErrors(poErrors);
             }
             setStepChanged(false);
         }
-    }, [currentStep, formDataPOD, formDataPayment, stepChanged]);
+    }, [currentStep, formDataPOD, formDataPayment, formDataPO, stepChanged]);
 
     const fetchPOs = async () => {
         try {
@@ -302,7 +334,7 @@ export default function ReferencesPage() {
         }
     };
 
-    // Función de validación
+    // Función de validacin
     const validateField = (name: string, value: any): string => {
         const validations: { [key: string]: () => string } = {
             // Validaciones para PO
@@ -424,7 +456,7 @@ export default function ReferencesPage() {
             },
             'payment_payment_term': () => {
                 if (formDataPayment.payment_method === 1) {
-                    if (!value) return 'El término de pago es requerido para crédito';
+                    if (!value) return 'El término de pago es requerido para cr��dito';
                     if (value < 0) return 'El término debe ser mayor o igual a 0';
                 }
                 return '';
@@ -434,7 +466,6 @@ export default function ReferencesPage() {
                 return '';
             },
             'po_delivery_date': () => {
-                if (!value) return 'La fecha de entrega es requerida';
                 const minDate = getMinDeliveryDate();
                 if (new Date(value) < minDate) {
                     return `La fecha de entrega debe ser posterior al ${minDate.toLocaleDateString('es-CO', {
@@ -522,7 +553,7 @@ export default function ReferencesPage() {
                         setReferences(customer?.references);
                         setAllPODetails([]);
                     }
-
+                    console.log(poErrors);
                     return newState;
                 });
                 setPOErrors(prev => ({ ...prev, [fieldName]: error }));
@@ -591,7 +622,7 @@ export default function ReferencesPage() {
                 if (fieldName === 'payment_method') {
                     if (Number(value) === 0) setPaymentErrors(prev => ({ ...prev, payment_term: '' }));
                 }
-                
+
                 setFormDataPayment(prev => ({ ...prev, [fieldName]: value }));
                 setPaymentErrors(prev => ({ ...prev, [fieldName]: error }));
                 break;
@@ -620,7 +651,7 @@ export default function ReferencesPage() {
         const finalStepErrors: { [key: string]: string } = {};
         paymentFieldsToValidate.forEach(field => {
             const fieldName = field.replace('payment_', '').replace('po_', '');
-            const value = field.startsWith('payment_') 
+            const value = field.startsWith('payment_')
                 ? formDataPayment[fieldName as keyof Payment]
                 : formDataPO[fieldName as keyof PurchaseOrderForm];
             const error = validateField(field, value);
@@ -649,6 +680,7 @@ export default function ReferencesPage() {
                 order_date: formDataPO.order_date instanceof Date
                     ? formDataPO.order_date.toISOString().split('T')[0]
                     : formDataPO.order_date,
+                has_iva: formDataPO.has_iva,
                 subtotal: allPODetails.reduce((acc, detail) =>
                     acc + (detail.kilograms * detail.kilogram_price + detail.units * detail.unit_price), 0)
             };
@@ -710,1269 +742,1373 @@ export default function ReferencesPage() {
     };
 
 
-    const handleEdit = (PurchaseOrder: PurchaseOrder, payment: Payment, PODetail: PODetail) => {
-        setCurrentPO(PurchaseOrder);
-        setCurrentPayment(payment);
-        setCurrentPOD(PODetail);
-        setAdditiveCount(PODetail.additive.length);
-        setFormDataPO(PurchaseOrder);
-        setFormDataPayment(payment);
-        setFormDataPOD(PODetail);
-        setFormModalOpen(true);
-    };
-
-    const handleDelete = async (id: number) => {
+    const handleEdit = async (PurchaseOrder: PurchaseOrder) => {
         showAlert(
             {
-                title: '¿Estás seguro de eliminar esta referencia?',
-                text: 'No podrás revertir esta acción',
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonText: 'Eliminar',
-                cancelButtonText: 'Cancelar'
+                title: 'Edición de una Orden de Compra',
+                html: 'Al editar una orden de compra, los parametros de las OTs asociadas deben ser verificados según los cambios.<br><br>Esta acción dejará un registro con tu información de usuario.',
+                icon: 'warning',
+                confirmButtonText: 'Editar',
             },
             async () => {
                 try {
-                    const response = await axios.delete(`http://127.0.0.1:8000/beiplas/business/purchaseOrders/${id}/`);
-                    if (response.status === 204) {
-                        showToast('Orden de Compra eliminada correctamente', 'success');
-                        fetchPOs();
-                    } else {
-                        showToast('Error al eliminar la Orden de Compra', 'error');
+                    setCurrentPO(PurchaseOrder);
+
+                    // 1. Cargar las referencias del cliente
+                    const customer = customers.find(c => c.id === PurchaseOrder.customer);
+                    setReferences(customer?.references || []);
+
+                    // 2. Establecer los datos de la orden de compra
+                    setFormDataPO({
+                        id: PurchaseOrder.id,
+                        customer: PurchaseOrder.customer,
+                        employee: PurchaseOrder.employee,
+                        observations: PurchaseOrder.observations,
+                        delivery_date: new Date(PurchaseOrder.delivery_date),
+                        order_date: new Date(PurchaseOrder.order_date),
+                        subtotal: PurchaseOrder.subtotal,
+                        iva: PurchaseOrder.iva,
+                        has_iva: PurchaseOrder.has_iva,
+                        total: PurchaseOrder.total,
+                        ordered_quantity: PurchaseOrder.details?.length || 0,
+                        details: PurchaseOrder.details,
+                        payments: PurchaseOrder.payments
+                    });
+
+                    // 3. Establecer los datos del pago (tomando el primer y único pago)
+                    if (PurchaseOrder.payments && PurchaseOrder.payments.length > 0) {
+                        const payment = PurchaseOrder.payments[0];
+                        setFormDataPayment({
+                            id: payment.id,
+                            purchase_order: payment.purchase_order,
+                            payment_method: payment.payment_method,
+                            payment_term: payment.payment_term,
+                            advance: payment.advance
+                        });
                     }
+
+                    // 4. Establecer los detalles en allPODetails
+                    if (PurchaseOrder.details && PurchaseOrder.details.length > 0) {
+                        setAllPODetails(PurchaseOrder.details.map(detail => ({
+                            id: detail.id,
+                            purchase_order: detail.purchase_order,
+                            reference: detail.reference,
+                            product_type: detail.product_type,
+                            material: detail.material,
+                            reference_internal: detail.reference_internal,
+                            film_color: detail.film_color,
+                            measure_unit: detail.measure_unit,
+                            width: detail.width,
+                            length: detail.length,
+                            gussets_type: detail.gussets_type,
+                            first_gusset: detail.first_gusset,
+                            second_gusset: detail.second_gusset,
+                            flap_type: detail.flap_type,
+                            flap_size: detail.flap_size,
+                            tape: detail.tape,
+                            die_cut_type: detail.die_cut_type,
+                            sealing_type: detail.sealing_type,
+                            caliber: detail.caliber,
+                            roller_size: detail.roller_size,
+                            additive: detail.additive,
+                            has_print: detail.pantones_quantity > 0,
+                            dynas_treaty_faces: detail.dynas_treaty_faces,
+                            is_new_sketch: detail.is_new_sketch,
+                            sketch_url: detail.sketch_url,
+                            pantones_quantity: detail.pantones_quantity,
+                            pantones_codes: detail.pantones_codes,
+                            kilograms: detail.kilograms,
+                            units: detail.units,
+                            kilogram_price: detail.kilogram_price,
+                            unit_price: detail.unit_price,
+                            production_observations: detail.production_observations,
+                            delivery_location: detail.delivery_location,
+                            is_updated: detail.is_updated,
+                            wo_number: detail.wo_number
+                        })));
+                        // 5. Establecer el primer detalle como el actual
+                        setFormDataPOD({
+                            ...PurchaseOrder.details[0],
+                            has_print: PurchaseOrder.details[0].pantones_quantity > 0
+                        });
+                        setAdditiveCount(PurchaseOrder.details[0].additive.length);
+                    }
+
+                    // 6. Configurar el número total de pasos y el paso actual
+                    setTotalSteps((PurchaseOrder.details?.length || 0) + 2);
+                    setCurrentStep(1);
+
+                    // 7. Abrir el modal
+                    setFormModalOpen(true);
+
                 } catch (error) {
-                    if (axios.isAxiosError(error) && error.response) {
-                        showToast(error.response.data.message || 'Error al eliminar la referencia', 'error');
-                    } else {
-                        showToast('An unexpected error occurred', 'error');
-                    }
+                    console.error('Error loading purchase order details:', error);
+                    showToast('Error al cargar los detalles de la orden de compra', 'error');
                 }
-            },
-            () => {
-                showToast('Eliminación cancelada', 'info');
             }
         );
-    };
+    }
 
-    const handleCancel = () => {
-        setIsReferenceEditable(false);
-        setCurrentPO(null);
-        setCurrentPayment(null);
-        setCurrentPOD(null);
-        setAdditiveCount(0);
-        setPOErrors({});
-        setPODErrors({});
-        setPaymentErrors({});
-        setFormDataPO(defaultPurchaseOrder);
-        setFormDataPayment(defaultPayment);
-        setFormDataPOD(defaultPODetail);
-        setAllPODetails([]);
-        setCurrentStep(1);
-        setTotalSteps(3);
-        setFormModalOpen(false);
-        showToast('Acción cancelada', 'info');
-    };
-
-    const scrollableRef = useRef(null);
-
-    const scrollToTop = () => {
-        if (scrollableRef.current) {
-            (scrollableRef.current as HTMLElement).scrollTo({
-                top: 0,
-                behavior: 'smooth'
-            });
-        }
-    };
-
-    const handleNext = () => {
-        if (currentStep === 1) {
-            const poFieldsToValidate = [
-                'po_employee',
-                'po_customer',
-                'po_ordered_quantity'
-            ];
-
-            const errors: POErrors = {};
-            poFieldsToValidate.forEach(field => {
-                const fieldName = field.replace('po_', '');
-                const error = validateField(field, formDataPO[fieldName as keyof PurchaseOrderForm]);
-                if (error) {
-                    errors[fieldName as keyof POErrors] = error;
+        const handleDelete = async (id: number) => {
+            showAlert(
+                {
+                    title: '¿Estás seguro de eliminar esta referencia?',
+                    text: 'No podrás revertir esta acción',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Eliminar',
+                    cancelButtonText: 'Cancelar'
+                },
+                async () => {
+                    try {
+                        const response = await axios.delete(`http://127.0.0.1:8000/beiplas/business/purchaseOrders/${id}/`);
+                        if (response.status === 204) {
+                            showToast('Orden de Compra eliminada correctamente', 'success');
+                            fetchPOs();
+                        } else {
+                            showToast('Error al eliminar la Orden de Compra', 'error');
+                        }
+                    } catch (error) {
+                        if (axios.isAxiosError(error) && error.response) {
+                            showToast(error.response.data.message || 'Error al eliminar la referencia', 'error');
+                        } else {
+                            showToast('An unexpected error occurred', 'error');
+                        }
+                    }
+                },
+                () => {
+                    showToast('Eliminación cancelada', 'info');
                 }
-            });
+            );
+        };
 
-            if (Object.keys(errors).length > 0) {
-                setPOErrors(errors);
-                return;
-            }
-        } else if (currentStep < totalSteps) {
+        const handleCancel = () => {
+            setIsReferenceEditable(false);
+            setCurrentPO(null);
+            setCurrentPayment(null);
+            setCurrentPOD(null);
+            setAdditiveCount(0);
+            setPOErrors({});
+            setPODErrors({});
+            setPaymentErrors({});
+            setFormDataPO(defaultPurchaseOrder);
+            setFormDataPayment(defaultPayment);
+            setFormDataPOD(defaultPODetail);
+            setAllPODetails([]);
+            setCurrentStep(1);
+            setTotalSteps(3);
+            setFormModalOpen(false);
+            showToast('Acción cancelada', 'info');
+        };
 
-            if (formDataPOD.reference === 0 || formDataPOD.reference === null || formDataPOD.reference === undefined) {
-                setPODErrors({
-                    reference: 'La referencia es requerida'
+        const scrollableRef = useRef(null);
+
+        const scrollToTop = () => {
+            if (scrollableRef.current) {
+                (scrollableRef.current as HTMLElement).scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
                 });
-                return;
             }
-            if (formDataPOD.reference) {
-                const fieldsToValidate = [
-                    'pod_reference_internal',
-                    'pod_width',
-                    'pod_length',
-                    'pod_first_gusset',
-                    'pod_flap_size',
-                    'pod_caliber',
-                    'pod_roller_size',
-                    'pod_pantones_quantity',
-                    'pod_pantones_codes',
-                    'pod_kilograms',
-                    'pod_units',
-                    'pod_kilogram_price',
-                    'pod_unit_price',
-                    'pod_delivery_location'
+        };
+
+        const handleNext = () => {
+            if (currentStep === 1) {
+                const poFieldsToValidate = [
+                    'po_employee',
+                    'po_customer',
+                    'po_ordered_quantity'
                 ];
 
-                const errors: PODErrors = {};
-                fieldsToValidate.forEach(field => {
-                    const fieldName = field.replace('pod_', '');
-                    const error = validateField(field, formDataPOD[fieldName as keyof PODetailForm]);
+                const errors: POErrors = {};
+                poFieldsToValidate.forEach(field => {
+                    const fieldName = field.replace('po_', '');
+                    const error = validateField(field, formDataPO[fieldName as keyof PurchaseOrderForm]);
                     if (error) {
-                        errors[fieldName as keyof PODErrors] = error;
+                        errors[fieldName as keyof POErrors] = error;
                     }
                 });
 
                 if (Object.keys(errors).length > 0) {
-                    setPODErrors(errors);
+                    setPOErrors(errors);
                     return;
                 }
-            }
-        }
+            } else if (currentStep < totalSteps) {
 
-        // 2. Si pasa las validaciones, guardar el estado actual
-        if (currentStep > 1 && currentStep < totalSteps) {
-            setAllPODetails(prev => {
-                const newDetails = [...prev];
-                newDetails[currentStep - 2] = formDataPOD;
-                return newDetails;
-            });
-        }
+                if (formDataPOD.reference === 0 || formDataPOD.reference === null || formDataPOD.reference === undefined) {
+                    setPODErrors({
+                        reference: 'La referencia es requerida'
+                    });
+                    return;
+                }
+                if (formDataPOD.reference) {
+                    const fieldsToValidate = [
+                        'pod_reference_internal',
+                        'pod_width',
+                        'pod_length',
+                        'pod_first_gusset',
+                        'pod_flap_size',
+                        'pod_caliber',
+                        'pod_roller_size',
+                        'pod_pantones_quantity',
+                        'pod_pantones_codes',
+                        'pod_kilograms',
+                        'pod_units',
+                        'pod_kilogram_price',
+                        'pod_unit_price',
+                        'pod_delivery_location'
+                    ];
 
-        // 3. Avanzar al siguiente paso y cargar datos
-        const nextStep = Math.min(currentStep + 1, totalSteps);
-        setCurrentStep(nextStep);
-
-        if (nextStep > 1 && nextStep < totalSteps) {
-            const nextStepIndex = nextStep - 2;
-            const nextDetail = allPODetails[nextStepIndex];
-
-            if (nextDetail) {
-                setFormDataPOD(nextDetail);
-                setAdditiveCount(nextDetail.additive.length);
-            } else {
-                setFormDataPOD(defaultPODetail);
-                setAdditiveCount(0);
-            }
-        }
-
-        // 4. Marcar que el paso ha cambiado para activar la validación en useEffect
-        setStepChanged(true);
-        scrollToTop();
-    };
-
-    const handlePrevious = () => {
-        // Guardar el estado actual en allPODetails sin validación
-        if (currentStep > 1 && currentStep < totalSteps) {
-            setAllPODetails(prev => {
-                const newDetails = [...prev];
-                newDetails[currentStep - 2] = formDataPOD;
-                return newDetails;
-            });
-        }
-
-        // Retroceder al paso anterior
-        const prevStep = currentStep - 1;
-        setCurrentStep(prevStep);
-
-        // Cargar el detalle anterior
-        if (prevStep > 1) {
-            const prevStepIndex = prevStep - 2;
-            setFormDataPOD(allPODetails[prevStepIndex]);
-            setAdditiveCount(allPODetails[prevStepIndex].additive.length);
-        }
-
-        // Limpiar errores al cambiar de paso
-        setPOErrors({});
-        setPODErrors({});
-        setPaymentErrors({});
-
-        scrollToTop();
-    };
-
-    const inputs = {
-        employee: (
-            <div>
-                <SelectInput
-                    label="Empleado"
-                    name="po_employee"
-                    value={{ value: formDataPO.employee, label: employees.find(e => e.id === formDataPO.employee)?.first_name || '' }}
-                    onChange={(option) => handleInputChange({ target: { name: 'po_employee', value: option?.value || 0 } } as any)}
-                    options={employees.map(employee => ({
-                        value: employee.id,
-                        label: employee.first_name + ' ' + employee.last_name
-                    }))}
-                    isClearable
-                    required
-                />
-                {poErrors.employee && (
-                    <p className="text-md text-red-500 mt-1 pl-1">{poErrors.employee}</p>
-                )}
-            </div>
-        ),
-        order_date: (
-            <DateInput
-                name="po_order_date"
-                label="Fecha de Orden"
-                selectedDate={new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Bogota' }))}
-                onChange={() => { }}
-                required
-                disabled={true}
-            />
-        ),
-        customer: (
-            <div>
-                <SelectInput
-                    label="Cliente"
-                    name="po_customer"
-                    value={{ value: formDataPO.customer, label: customers.find(c => c.id === formDataPO.customer)?.company_name }}
-                    onChange={(option) => handleInputChange({ target: { name: 'po_customer', value: option?.value || 0 } } as any)}
-                    options={customers.map(customer => ({
-                        value: customer.id,
-                        label: customer.company_name
-                    }))}
-                    isClearable
-                    required
-                />
-                {poErrors.customer && (
-                    <p className="text-md text-red-500 mt-1 pl-1">{poErrors.customer}</p>
-                )}
-            </div>
-        ),
-        ordered_quantity: (
-            <div>
-                <NumberInput
-                    label="Cantidad de productos"
-                    name="po_ordered_quantity"
-                    value={formDataPO.ordered_quantity || 0}
-                    min={1}
-                    onChange={handleInputChange}
-                    required
-                />
-                {poErrors.ordered_quantity && (
-                    <p className="text-sm text-red-500 mt-1">{poErrors.ordered_quantity}</p>
-                )}
-            </div>
-        ),
-        //STEP 2 OF ordered_quantity (THIS SECTION IS REPEATED ordered_quantity times)
-        reference: (
-            <div>
-                <SelectInput
-                    label="Referencia"
-                    name="pod_reference"
-                    value={{ value: formDataPOD.reference, label: references?.find(reference => reference.id === formDataPOD.reference)?.reference }}
-                    onChange={(option) => {
-                        const selectedReference = references?.find(reference => reference.id === option?.value);
-                        if (selectedReference) {
-                            setFormDataPOD(prevState => ({
-                                ...prevState,
-                                reference: option?.value,
-                                product_type: selectedReference.product_type,
-                                material: selectedReference.material,
-                                film_color: selectedReference.film_color,
-                                measure_unit: selectedReference.measure_unit,
-                                width: selectedReference.width,
-                                length: selectedReference.length,
-                                gussets_type: selectedReference.gussets_type,
-                                first_gusset: selectedReference.first_gusset,
-                                second_gusset: selectedReference.second_gusset,
-                                flap_type: selectedReference.flap_type,
-                                flap_size: selectedReference.flap_size,
-                                tape: selectedReference.tape,
-                                die_cut_type: selectedReference.die_cut_type,
-                                sealing_type: selectedReference.sealing_type,
-                                caliber: selectedReference.caliber,
-                                roller_size: selectedReference.roller_size,
-                                additive: selectedReference.additive,
-                                dynas_treaty_faces: selectedReference.dynas_treaty_faces,
-                                pantones_quantity: selectedReference.pantones_quantity,
-                                pantones_codes: selectedReference.pantones_codes,
-                                sketch_url: selectedReference.sketch_url,
-                            }));
-                            setAdditiveCount(selectedReference.additive.length)
+                    const errors: PODErrors = {};
+                    fieldsToValidate.forEach(field => {
+                        const fieldName = field.replace('pod_', '');
+                        const error = validateField(field, formDataPOD[fieldName as keyof PODetailForm]);
+                        if (error) {
+                            errors[fieldName as keyof PODErrors] = error;
                         }
-                        handleInputChange({ target: { name: 'pod_reference', value: option?.value } } as any);
-                    }}
-                    options={references?.map(reference => ({
-                        value: reference.id,
-                        label: reference.reference
-                    }))}
-                    isClearable
-                    required
-                />
-                {podErrors.reference && (
-                    <p className="text-md text-red-500 mt-1 pl-1">{podErrors.reference}</p>
-                )}
-            </div>
-        ),
-        product_type: (
-            <SelectInput
-                label="Tipo de Producto"
-                name="pod_product_type"
-                value={{ value: formDataPOD.product_type, label: productTypes.find(pt => pt.id === formDataPOD.product_type)?.name }}
-                onChange={(option) => handleInputChange({ target: { name: 'pod_product_type', value: option?.value || 0 } } as any)}
-                options={productTypes.map(type => ({
-                    value: type.id,
-                    label: type.name
-                }))}
-                required
-                disabled
-            />
-        ),
-        material: (
-            <SelectInput
-                label="Material"
-                name="pod_material"
-                value={{ value: formDataPOD.material, label: materials.find(m => m.id === formDataPOD.material)?.name }}
-                onChange={(option) => handleInputChange({ target: { name: 'pod_material', value: option?.value || 0 } } as any)}
-                options={materials.map(material => ({
-                    value: material.id,
-                    label: material.name
-                }))}
-                required
-            />
-        ),
-        reference_internal: (
-            <div>
-                <div className="relative">
-                    <TextInput
-                        label="Referencia de compra"
-                        name="pod_reference_internal"
-                        value={formDataPOD.reference_internal}
-                        onChange={handleInputChange}
-                        disabled={!isReferenceEditable}
-                        required
-                    />
-                    <button
-                        type="button"
-                        onClick={() => setIsReferenceEditable(!isReferenceEditable)}
-                        className="absolute right-2 top-9 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                    >
-                        <LuPenLine size={18} />
-                    </button>
-                </div>
-                {podErrors.reference_internal && (
-                    <p className="text-md text-red-500 mt-1 pl-1">{podErrors.reference_internal}</p>
-                )}
-            </div>
-        ),
-        film_color: (
-            <TextInput
-                label="Color de Película"
-                name="pod_film_color"
-                value={materials.find(m => m.id === formDataPOD.material)?.name === 'Maíz' ? 'SIN COLOR' : formDataPOD.film_color}
-                onChange={handleInputChange}
-                disabled={materials.find(m => m.id === formDataPOD.material)?.name === 'Maíz'}
-            />
-        ),
-        measure_unit: (
-            <SelectInput
-                label="Unidad de Medida"
-                name="pod_measure_unit"
-                value={{ value: formDataPOD.measure_unit, label: measureUnitChoices[formDataPOD.measure_unit as keyof typeof measureUnitChoices] }}
-                onChange={(option) => handleInputChange({ target: { name: 'pod_measure_unit', value: option?.value || 0 } } as any)}
-                options={Object.entries(measureUnitChoices).map(([key, value]) => ({
-                    value: Number(key),
-                    label: value
-                }))}
-            />
-        ),
-        width: (
-            <div>
-                <NumberInput
-                    label="Ancho"
-                    name="pod_width"
-                    value={formDataPOD.width}
-                    onChange={handleInputChange}
-                    required
-                    min={0}
-                    step={0.01}
-                />
-                {podErrors.width && (
-                    <p className="text-md text-red-500 mt-1 pl-1">{podErrors.width}</p>
-                )}
-            </div>
-        ),
-        length: ['Lamina', 'Bolsa'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name) && (
-            <div>
-                <NumberInput
-                    label="Largo"
-                    name="pod_length"
-                    value={formDataPOD.length}
-                    onChange={handleInputChange}
-                    required
-                    min={0}
-                    step={0.01}
-                />
-                {podErrors.length && (
-                    <p className="text-md text-red-500 mt-1 pl-1">{podErrors.length}</p>
-                )}
-            </div>
-        ),
-        gussets_type: ['Bolsa'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name) && (
-            <SelectInput
-                label="Tipo de Fuelle"
-                name="pod_gussets_type"
-                value={{ value: formDataPOD.gussets_type, label: gussetsTypeChoices[formDataPOD.gussets_type as keyof typeof gussetsTypeChoices] }}
-                onChange={(option) => handleInputChange({ target: { name: 'pod_gussets_type', value: option?.value || 0 } } as any)}
-                options={Object.entries(gussetsTypeChoices).map(([key, value]) => ({
-                    value: Number(key),
-                    label: value
-                }))}
-            />
-        ),
-        first_gusset: ['Bolsa'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name) && formDataPOD.gussets_type !== 0 && (
-            <div>
-                <NumberInput
-                    label="Tamaño de Fuelle"
-                    name="pod_first_gusset"
-                    value={formDataPOD.first_gusset || 0}
-                    onChange={handleInputChange}
-                    min={0}
-                    step={0.01}
-                    required
-                />
-                {podErrors.first_gusset && (
-                    <p className="text-md text-red-500 mt-1 pl-1">{podErrors.first_gusset}</p>
-                )}
-            </div>
-        ),
-        flap_type: ['Bolsa'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name) && formDataPOD.gussets_type !== 1 && (
-            <SelectInput
-                label="Tipo de Solapa"
-                name="pod_flap_type"
-                value={{ value: formDataPOD.flap_type, label: flapTypeChoices[formDataPOD.flap_type as keyof typeof flapTypeChoices] }}
-                onChange={(option) => handleInputChange({ target: { name: 'pod_flap_type', value: option?.value || 0 } } as any)}
-                options={Object.entries(flapTypeChoices).map(([key, value]) => ({
-                    value: Number(key),
-                    label: value
-                }))}
-            />
-        ),
-        flap_size: ['Bolsa'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name) &&
-            formDataPOD.gussets_type !== 1 &&
-            formDataPOD.flap_type !== 0 && (
+                    });
+
+                    if (Object.keys(errors).length > 0) {
+                        setPODErrors(errors);
+                        return;
+                    }
+                }
+            }
+
+            // 2. Si pasa las validaciones, guardar el estado actual
+            if (currentStep > 1 && currentStep < totalSteps) {
+                setAllPODetails(prev => {
+                    const newDetails = [...prev];
+                    newDetails[currentStep - 2] = formDataPOD;
+                    return newDetails;
+                });
+            }
+
+            // 3. Avanzar al siguiente paso y cargar datos
+            const nextStep = Math.min(currentStep + 1, totalSteps);
+            setCurrentStep(nextStep);
+
+            if (nextStep > 1 && nextStep < totalSteps) {
+                const nextStepIndex = nextStep - 2;
+                const nextDetail = allPODetails[nextStepIndex];
+
+                if (nextDetail) {
+                    setFormDataPOD(nextDetail);
+                    setAdditiveCount(nextDetail.additive.length);
+                } else {
+                    setFormDataPOD(defaultPODetail);
+                    setAdditiveCount(0);
+                }
+            }
+
+            // 4. Marcar que el paso ha cambiado para activar la validación en useEffect
+            setStepChanged(true);
+            scrollToTop();
+        };
+
+        const handlePrevious = () => {
+            // Guardar el estado actual en allPODetails sin validación
+            if (currentStep > 1 && currentStep < totalSteps) {
+                setAllPODetails(prev => {
+                    const newDetails = [...prev];
+                    newDetails[currentStep - 2] = formDataPOD;
+                    return newDetails;
+                });
+            }
+
+            // Retroceder al paso anterior
+            const prevStep = currentStep - 1;
+            setCurrentStep(prevStep);
+
+            // Cargar el detalle anterior
+            if (prevStep > 1) {
+                const prevStepIndex = prevStep - 2;
+                setFormDataPOD(allPODetails[prevStepIndex]);
+                setAdditiveCount(allPODetails[prevStepIndex].additive.length);
+            }
+
+            // Limpiar errores al cambiar de paso
+            setPOErrors({});
+            setPODErrors({});
+            setPaymentErrors({});
+
+            scrollToTop();
+        };
+
+        const inputs = {
+            employee: (
                 <div>
-                    <NumberInput
-                        label="Tamaño de Solapa"
-                        name="pod_flap_size"
-                        value={formDataPOD.flap_size || 0}
-                        onChange={handleInputChange}
-                        min={0}
-                        step={0.01}
+                    <SelectInput
+                        label="Empleado"
+                        name="po_employee"
+                        value={{ value: formDataPO.employee, label: employees.find(e => e.id === formDataPO.employee)?.first_name || '' }}
+                        onChange={(option) => handleInputChange({ target: { name: 'po_employee', value: option?.value || 0 } } as any)}
+                        options={employees.map(employee => ({
+                            value: employee.id,
+                            label: employee.first_name + ' ' + employee.last_name
+                        }))}
+                        isClearable
                         required
                     />
-                    {podErrors.flap_size && (
-                        <p className="text-md text-red-500 mt-1 pl-1">{podErrors.flap_size}</p>
+                    {poErrors.employee && (
+                        <p className="text-md text-red-500 mt-1 pl-1">{poErrors.employee}</p>
                     )}
                 </div>
             ),
-        tape: ['Bolsa'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name) &&
-            formDataPOD.flap_type === 4 && (
+            order_date: (
+                <DateInput
+                    name="po_order_date"
+                    label="Fecha de Orden"
+                    selectedDate={new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Bogota' }))}
+                    onChange={() => { }}
+                    required
+                    disabled={true}
+                />
+            ),
+            customer: (
+                <div>
+                    <SelectInput
+                        label="Cliente"
+                        name="po_customer"
+                        value={{ value: formDataPO.customer, label: customers.find(c => c.id === formDataPO.customer)?.company_name }}
+                        onChange={(option) => handleInputChange({ target: { name: 'po_customer', value: option?.value || 0 } } as any)}
+                        options={customers.map(customer => ({
+                            value: customer.id,
+                            label: customer.company_name
+                        }))}
+                        isClearable
+                        required
+                    />
+                    {poErrors.customer && (
+                        <p className="text-md text-red-500 mt-1 pl-1">{poErrors.customer}</p>
+                    )}
+                </div>
+            ),
+            ordered_quantity: (
+                <div>
+                    <NumberInput
+                        label="Cantidad de productos"
+                        name="po_ordered_quantity"
+                        value={formDataPO.ordered_quantity || 0}
+                        min={1}
+                        onChange={handleInputChange}
+                        required
+                    />
+                    {poErrors.ordered_quantity && (
+                        <p className="text-sm text-red-500 mt-1">{poErrors.ordered_quantity}</p>
+                    )}
+                </div>
+            ),
+            //STEP 2 OF ordered_quantity (THIS SECTION IS REPEATED ordered_quantity times)
+            reference: (
+                <div>
+                    <SelectInput
+                        label="Referencia"
+                        name="pod_reference"
+                        value={{ value: formDataPOD.reference, label: references?.find(reference => reference.id === formDataPOD.reference)?.reference }}
+                        onChange={(option) => {
+                            const selectedReference = references?.find(reference => reference.id === option?.value);
+                            if (selectedReference) {
+                                setFormDataPOD(prevState => ({
+                                    ...prevState,
+                                    reference: option?.value,
+                                    product_type: selectedReference.product_type,
+                                    material: selectedReference.material,
+                                    film_color: selectedReference.film_color,
+                                    measure_unit: selectedReference.measure_unit,
+                                    width: selectedReference.width,
+                                    length: selectedReference.length,
+                                    gussets_type: selectedReference.gussets_type,
+                                    first_gusset: selectedReference.first_gusset,
+                                    second_gusset: selectedReference.second_gusset,
+                                    flap_type: selectedReference.flap_type,
+                                    flap_size: selectedReference.flap_size,
+                                    tape: selectedReference.tape,
+                                    die_cut_type: selectedReference.die_cut_type,
+                                    sealing_type: selectedReference.sealing_type,
+                                    caliber: selectedReference.caliber,
+                                    roller_size: selectedReference.roller_size,
+                                    additive: selectedReference.additive,
+                                    dynas_treaty_faces: selectedReference.dynas_treaty_faces,
+                                    pantones_quantity: selectedReference.pantones_quantity,
+                                    pantones_codes: selectedReference.pantones_codes,
+                                    sketch_url: selectedReference.sketch_url,
+                                }));
+                                setAdditiveCount(selectedReference.additive.length)
+                            }
+                            handleInputChange({ target: { name: 'pod_reference', value: option?.value } } as any);
+                        }}
+                        options={references?.map(reference => ({
+                            value: reference.id,
+                            label: reference.reference
+                        }))}
+                        isClearable
+                        required
+                    />
+                    {podErrors.reference && (
+                        <p className="text-md text-red-500 mt-1 pl-1">{podErrors.reference}</p>
+                    )}
+                </div>
+            ),
+            product_type: (
                 <SelectInput
-                    label="Tipo de Cinta"
-                    name="pod_tape"
-                    value={{ value: formDataPOD.tape, label: tapeChoices[formDataPOD.tape as keyof typeof tapeChoices] }}
-                    onChange={(option) => handleInputChange({ target: { name: 'pod_tape', value: option?.value || 0 } } as any)}
-                    options={Object.entries(tapeChoices).map(([key, value]) => ({
+                    label="Tipo de Producto"
+                    name="pod_product_type"
+                    value={{ value: formDataPOD.product_type, label: productTypes.find(pt => pt.id === formDataPOD.product_type)?.name }}
+                    onChange={(option) => handleInputChange({ target: { name: 'pod_product_type', value: option?.value || 0 } } as any)}
+                    options={productTypes.map(type => ({
+                        value: type.id,
+                        label: type.name
+                    }))}
+                    required
+                    disabled
+                />
+            ),
+            material: (
+                <SelectInput
+                    label="Material"
+                    name="pod_material"
+                    value={{ value: formDataPOD.material, label: materials.find(m => m.id === formDataPOD.material)?.name }}
+                    onChange={(option) => handleInputChange({ target: { name: 'pod_material', value: option?.value || 0 } } as any)}
+                    options={materials.map(material => ({
+                        value: material.id,
+                        label: material.name
+                    }))}
+                    required
+                />
+            ),
+            reference_internal: (
+                <div>
+                    <div className="relative">
+                        <TextInput
+                            label="Referencia de compra"
+                            name="pod_reference_internal"
+                            value={formDataPOD.reference_internal}
+                            onChange={handleInputChange}
+                            disabled={!isReferenceEditable}
+                            required
+                        />
+                        <button
+                            type="button"
+                            onClick={() => setIsReferenceEditable(!isReferenceEditable)}
+                            className="absolute right-2 top-9 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                        >
+                            <LuPenLine size={18} />
+                        </button>
+                    </div>
+                    {podErrors.reference_internal && (
+                        <p className="text-md text-red-500 mt-1 pl-1">{podErrors.reference_internal}</p>
+                    )}
+                </div>
+            ),
+            film_color: (
+                <TextInput
+                    label="Color de Película"
+                    name="pod_film_color"
+                    value={materials.find(m => m.id === formDataPOD.material)?.name === 'Maíz' ? 'SIN COLOR' : formDataPOD.film_color}
+                    onChange={handleInputChange}
+                    disabled={materials.find(m => m.id === formDataPOD.material)?.name === 'Maíz'}
+                />
+            ),
+            measure_unit: (
+                <SelectInput
+                    label="Unidad de Medida"
+                    name="pod_measure_unit"
+                    value={{ value: formDataPOD.measure_unit, label: measureUnitChoices[formDataPOD.measure_unit as keyof typeof measureUnitChoices] }}
+                    onChange={(option) => handleInputChange({ target: { name: 'pod_measure_unit', value: option?.value || 0 } } as any)}
+                    options={Object.entries(measureUnitChoices).map(([key, value]) => ({
                         value: Number(key),
                         label: value
                     }))}
                 />
             ),
-        die_cut_type: ['Bolsa'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name) &&
-            formDataPOD.flap_type !== 4 && (
+            width: (
                 <div>
-                    <SelectInput
-                        label="Tipo de Troquel"
-                        name="pod_die_cut_type"
-                        value={{
-                            value: formDataPOD.die_cut_type,
-                            label: dieCutTypeChoices[formDataPOD.die_cut_type as keyof typeof dieCutTypeChoices]
-                        }}
-                        onChange={(option) => handleInputChange({
-                            target: { name: 'pod_die_cut_type', value: option?.value || 0 }
-                        } as any)}
-                        options={Object.entries(dieCutTypeChoices)
-                            .filter(([key, _]) => {
-                                if (formDataPOD.gussets_type === 1) {
-                                    return Number(key) === 2;
-                                }
-                                return Number(key) !== 2;
-                            })
-                            .map(([key, value]) => ({
-                                value: Number(key),
-                                label: value
-                            }))}
-                        disabled={formDataPOD.gussets_type === 1}
+                    <NumberInput
+                        label="Ancho"
+                        name="pod_width"
+                        value={formDataPOD.width}
+                        onChange={handleInputChange}
+                        required
+                        min={0}
+                        step={0.01}
                     />
-                    {formDataPOD.gussets_type === 1 && (
-                        <p className="text-sm text-gray-500 mt-1 italic">
-                            El troquel se establece automáticamente como camiseta para bolsas con fuelle lateral
-                        </p>
+                    {podErrors.width && (
+                        <p className="text-md text-red-500 mt-1 pl-1">{podErrors.width}</p>
                     )}
                 </div>
             ),
-        sealing_type: ['Bolsa'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name) && (
-            <SelectInput
-                label="Tipo de Sellado"
-                name="pod_sealing_type"
-                value={{ value: formDataPOD.sealing_type, label: sealingTypeChoices[formDataPOD.sealing_type as keyof typeof sealingTypeChoices] }}
-                onChange={(option) => handleInputChange({ target: { name: 'pod_sealing_type', value: option?.value || 0 } } as any)}
-                options={Object.entries(sealingTypeChoices).map(([key, value]) => ({
-                    value: Number(key),
-                    label: value
-                }))}
-            />
-        ),
-        caliber: (
-            <div>
-                <NumberInput
-                    label="Calibre"
-                    name="pod_caliber"
-                    value={formDataPOD.caliber}
-                    onChange={handleInputChange}
-                    required
-                    min={0}
-                    step={0.01}
+            length: ['Lamina', 'Bolsa'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name) && (
+                <div>
+                    <NumberInput
+                        label="Largo"
+                        name="pod_length"
+                        value={formDataPOD.length}
+                        onChange={handleInputChange}
+                        required
+                        min={0}
+                        step={0.01}
+                    />
+                    {podErrors.length && (
+                        <p className="text-md text-red-500 mt-1 pl-1">{podErrors.length}</p>
+                    )}
+                </div>
+            ),
+            gussets_type: ['Bolsa'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name) && (
+                <SelectInput
+                    label="Tipo de Fuelle"
+                    name="pod_gussets_type"
+                    value={{ value: formDataPOD.gussets_type, label: gussetsTypeChoices[formDataPOD.gussets_type as keyof typeof gussetsTypeChoices] }}
+                    onChange={(option) => handleInputChange({ target: { name: 'pod_gussets_type', value: option?.value || 0 } } as any)}
+                    options={Object.entries(gussetsTypeChoices).map(([key, value]) => ({
+                        value: Number(key),
+                        label: value
+                    }))}
                 />
-                {podErrors.caliber && (
-                    <p className="text-md text-red-500 mt-1 pl-1">{podErrors.caliber}</p>
-                )}
-            </div>
-        ),
-        roller_size: (
-            <div>
-                <NumberInput
-                    label="Rodillo"
-                    name="pod_roller_size"
-                    value={formDataPOD.roller_size}
-                    onChange={handleInputChange}
-                    required
-                    min={0}
-                    step={0.01}
-                />
-                {podErrors.roller_size && (
-                    <p className="text-md text-red-500 mt-1 pl-1">{podErrors.roller_size}</p>
-                )}
-            </div>
-        ),
-        additive_count: (
-            <SelectInput
-                label="Cantidad de Aditivos"
-                name="pod_additive_count"
-                value={{
-                    value: additiveCount,
-                    label: additiveCount.toString()
-                }}
-                onChange={(option) => {
-                    const value = option?.value || 0;
-                    setAdditiveCount(value);
-                    setFormDataPOD(prev => ({
-                        ...prev,
-                        additive: Array(value).fill('')
-                    }));
-                }}
-                options={[1, 2, 3, 4].map(num => ({
-                    value: num,
-                    label: num.toString()
-                }))}
-            />
-        ),
-        additive: additiveCount > 0 && (
-            <div className="space-y-2">
-                {Array.from({ length: Math.min(additiveCount, 4) }).map((_, index) => (
-                    <TextInput
-                        key={index}
-                        label={`Aditivo ${index + 1}`}
-                        name={`pod_additive_${index}`}
-                        value={formDataPOD.additive[index] || ''}
-                        onChange={(e) => {
-                            const newAdditives = [...formDataPOD.additive];
-                            newAdditives[index] = e.target.value;
-                            setFormDataPOD(prev => ({
-                                ...prev,
-                                additive: newAdditives
-                            }));
-                        }}
+            ),
+            first_gusset: ['Bolsa'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name) && formDataPOD.gussets_type !== 0 && (
+                <div>
+                    <NumberInput
+                        label="Tamaño de Fuelle"
+                        name="pod_first_gusset"
+                        value={formDataPOD.first_gusset || 0}
+                        onChange={handleInputChange}
+                        min={0}
+                        step={0.01}
                         required
                     />
-                ))}
-            </div>
-        ),
-        has_print: (
-            <div className="flex items-center space-x-2">
-                <label htmlFor="has_print" className="text-sm font-medium">
-                    ¿Lleva impresión?
-                </label>
-                <Switch
-                    id="has_print"
-                    checked={formDataPOD.has_print || false}
-                    onCheckedChange={(checked) => {
-                        setFormDataPOD(prev => ({
-                            ...prev,
-                            has_print: checked,
-                            dynas_treaty_faces: checked ? prev.dynas_treaty_faces : 0,
-                            pantones_quantity: checked ? prev.pantones_quantity : 0,
-                            pantones_codes: checked ? prev.pantones_codes : []
-                        }));
-                        setPODErrors(prev => ({
-                            ...prev,
-                            pantones_quantity: '',
-                            pantones_codes: ''
-                        }));
-                    }}
-                />
-            </div>
-        ),
-        dynas_treaty_faces: formDataPOD.has_print && (
-            <SelectInput
-                label="Caras Tratadas"
-                name="pod_dynas_treaty_faces"
-                value={{
-                    value: formDataPOD.dynas_treaty_faces,
-                    label: dynasTreatyFacesChoices[formDataPOD.dynas_treaty_faces as keyof typeof dynasTreatyFacesChoices]
-                }}
-                onChange={(option) => handleInputChange({
-                    target: { name: 'pod_dynas_treaty_faces', value: option?.value || 0 }
-                } as any)}
-                options={Object.entries(dynasTreatyFacesChoices).map(([key, value]) => ({
-                    value: Number(key),
-                    label: value
-                }))}
-                required
-            />
-        ),
-        is_new_sketch: (
-            <div className="flex items-center space-x-2">
-                <label htmlFor="is_new_sketch" className="text-sm font-medium">
-                    ¿El arte es nuevo?
-                </label>
-                <Switch
-                    id="is_new_sketch"
-                    checked={formDataPOD.is_new_sketch || false}
-                    onCheckedChange={(checked) => {
-                        setFormDataPOD(prev => ({
-                            ...prev,
-                            is_new_sketch: checked
-                        }));
-                    }}
-                />
-            </div>
-        ),
-        pantones_quantity: formDataPOD.has_print && (
-            <div>
+                    {podErrors.first_gusset && (
+                        <p className="text-md text-red-500 mt-1 pl-1">{podErrors.first_gusset}</p>
+                    )}
+                </div>
+            ),
+            flap_type: ['Bolsa'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name) && formDataPOD.gussets_type !== 1 && (
                 <SelectInput
-                    label="Cantidad de Pantones"
-                    name="pod_pantones_quantity"
+                    label="Tipo de Solapa"
+                    name="pod_flap_type"
+                    value={{ value: formDataPOD.flap_type, label: flapTypeChoices[formDataPOD.flap_type as keyof typeof flapTypeChoices] }}
+                    onChange={(option) => handleInputChange({ target: { name: 'pod_flap_type', value: option?.value || 0 } } as any)}
+                    options={Object.entries(flapTypeChoices).map(([key, value]) => ({
+                        value: Number(key),
+                        label: value
+                    }))}
+                />
+            ),
+            flap_size: ['Bolsa'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name) &&
+                formDataPOD.gussets_type !== 1 &&
+                formDataPOD.flap_type !== 0 && (
+                    <div>
+                        <NumberInput
+                            label="Tamaño de Solapa"
+                            name="pod_flap_size"
+                            value={formDataPOD.flap_size || 0}
+                            onChange={handleInputChange}
+                            min={0}
+                            step={0.01}
+                            required
+                        />
+                        {podErrors.flap_size && (
+                            <p className="text-md text-red-500 mt-1 pl-1">{podErrors.flap_size}</p>
+                        )}
+                    </div>
+                ),
+            tape: ['Bolsa'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name) &&
+                formDataPOD.flap_type === 4 && (
+                    <SelectInput
+                        label="Tipo de Cinta"
+                        name="pod_tape"
+                        value={{ value: formDataPOD.tape, label: tapeChoices[formDataPOD.tape as keyof typeof tapeChoices] }}
+                        onChange={(option) => handleInputChange({ target: { name: 'pod_tape', value: option?.value || 0 } } as any)}
+                        options={Object.entries(tapeChoices).map(([key, value]) => ({
+                            value: Number(key),
+                            label: value
+                        }))}
+                    />
+                ),
+            die_cut_type: ['Bolsa'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name) &&
+                formDataPOD.flap_type !== 4 && (
+                    <div>
+                        <SelectInput
+                            label="Tipo de Troquel"
+                            name="pod_die_cut_type"
+                            value={{
+                                value: formDataPOD.die_cut_type,
+                                label: dieCutTypeChoices[formDataPOD.die_cut_type as keyof typeof dieCutTypeChoices]
+                            }}
+                            onChange={(option) => handleInputChange({
+                                target: { name: 'pod_die_cut_type', value: option?.value || 0 }
+                            } as any)}
+                            options={Object.entries(dieCutTypeChoices)
+                                .filter(([key, _]) => {
+                                    if (formDataPOD.gussets_type === 1) {
+                                        return Number(key) === 2;
+                                    }
+                                    return Number(key) !== 2;
+                                })
+                                .map(([key, value]) => ({
+                                    value: Number(key),
+                                    label: value
+                                }))}
+                            disabled={formDataPOD.gussets_type === 1}
+                        />
+                        {formDataPOD.gussets_type === 1 && (
+                            <p className="text-sm text-gray-500 mt-1 italic">
+                                El troquel se establece automáticamente como camiseta para bolsas con fuelle lateral
+                            </p>
+                        )}
+                    </div>
+                ),
+            sealing_type: ['Bolsa'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name) && (
+                <SelectInput
+                    label="Tipo de Sellado"
+                    name="pod_sealing_type"
+                    value={{ value: formDataPOD.sealing_type, label: sealingTypeChoices[formDataPOD.sealing_type as keyof typeof sealingTypeChoices] }}
+                    onChange={(option) => handleInputChange({ target: { name: 'pod_sealing_type', value: option?.value || 0 } } as any)}
+                    options={Object.entries(sealingTypeChoices).map(([key, value]) => ({
+                        value: Number(key),
+                        label: value
+                    }))}
+                />
+            ),
+            caliber: (
+                <div>
+                    <NumberInput
+                        label="Calibre"
+                        name="pod_caliber"
+                        value={formDataPOD.caliber}
+                        onChange={handleInputChange}
+                        required
+                        min={0}
+                        step={0.01}
+                    />
+                    {podErrors.caliber && (
+                        <p className="text-md text-red-500 mt-1 pl-1">{podErrors.caliber}</p>
+                    )}
+                </div>
+            ),
+            roller_size: (
+                <div>
+                    <NumberInput
+                        label="Rodillo"
+                        name="pod_roller_size"
+                        value={formDataPOD.roller_size}
+                        onChange={handleInputChange}
+                        required
+                        min={0}
+                        step={0.01}
+                    />
+                    {podErrors.roller_size && (
+                        <p className="text-md text-red-500 mt-1 pl-1">{podErrors.roller_size}</p>
+                    )}
+                </div>
+            ),
+            additive_count: (
+                <SelectInput
+                    label="Cantidad de Aditivos"
+                    name="pod_additive_count"
                     value={{
-                        value: formDataPOD.pantones_quantity,
-                        label: formDataPOD.pantones_quantity.toString()
+                        value: additiveCount,
+                        label: additiveCount.toString()
                     }}
                     onChange={(option) => {
                         const value = option?.value || 0;
+                        setAdditiveCount(value);
                         setFormDataPOD(prev => ({
                             ...prev,
-                            pantones_quantity: value,
-                            pantones_codes: Array(value).fill('').slice(0, 4)
+                            additive: Array(value).fill('')
                         }));
                     }}
                     options={[1, 2, 3, 4].map(num => ({
                         value: num,
                         label: num.toString()
                     }))}
-                    required
                 />
-                {podErrors.pantones_quantity && (
-                    <p className="text-md text-red-500 mt-1 pl-1">{podErrors.pantones_quantity}</p>
-                )}
-            </div>
-        ),
-        pantones_codes: formDataPOD.has_print && formDataPOD.pantones_quantity > 0 && (
-            <div>
+            ),
+            additive: additiveCount > 0 && (
                 <div className="space-y-2">
-                    {Array.from({ length: Math.min(formDataPOD.pantones_quantity, 4) }).map((_, index) => (
+                    {Array.from({ length: Math.min(additiveCount, 4) }).map((_, index) => (
                         <TextInput
                             key={index}
-                            label={`Pantone ${index + 1}`}
-                            name={`pod_pantone_${index}`}
-                            value={formDataPOD.pantones_codes[index] || ''}
+                            label={`Aditivo ${index + 1}`}
+                            name={`pod_additive_${index}`}
+                            value={formDataPOD.additive[index] || ''}
                             onChange={(e) => {
-                                const newPantoneCodes = [...formDataPOD.pantones_codes];
-                                newPantoneCodes[index] = e.target.value;
+                                const newAdditives = [...formDataPOD.additive];
+                                newAdditives[index] = e.target.value;
                                 setFormDataPOD(prev => ({
                                     ...prev,
-                                    pantones_codes: newPantoneCodes
+                                    additive: newAdditives
                                 }));
                             }}
                             required
                         />
                     ))}
                 </div>
-                {podErrors.pantones_codes && (
-                    <p className="text-md text-red-500 mt-1 pl-1">{podErrors.pantones_codes}</p>
-                )}
-            </div>
-        ),
-        kilograms: (
-            <div>
+            ),
+            has_print: (
+                <div className="flex items-center space-x-2">
+                    <label htmlFor="has_print" className="text-sm font-medium">
+                        ¿Lleva impresión?
+                    </label>
+                    <Switch
+                        id="has_print"
+                        checked={formDataPOD.has_print || false}
+                        onCheckedChange={(checked) => {
+                            setFormDataPOD(prev => ({
+                                ...prev,
+                                has_print: checked,
+                                dynas_treaty_faces: checked ? prev.dynas_treaty_faces : 0,
+                                pantones_quantity: checked ? prev.pantones_quantity : 0,
+                                pantones_codes: checked ? prev.pantones_codes : []
+                            }));
+                            setPODErrors(prev => ({
+                                ...prev,
+                                pantones_quantity: '',
+                                pantones_codes: ''
+                            }));
+                        }}
+                    />
+                </div>
+            ),
+            dynas_treaty_faces: formDataPOD.has_print && (
+                <SelectInput
+                    label="Caras Tratadas"
+                    name="pod_dynas_treaty_faces"
+                    value={{
+                        value: formDataPOD.dynas_treaty_faces,
+                        label: dynasTreatyFacesChoices[formDataPOD.dynas_treaty_faces as keyof typeof dynasTreatyFacesChoices]
+                    }}
+                    onChange={(option) => handleInputChange({
+                        target: { name: 'pod_dynas_treaty_faces', value: option?.value || 0 }
+                    } as any)}
+                    options={Object.entries(dynasTreatyFacesChoices).map(([key, value]) => ({
+                        value: Number(key),
+                        label: value
+                    }))}
+                    required
+                />
+            ),
+            is_new_sketch: (
+                <div className="flex items-center space-x-2">
+                    <label htmlFor="is_new_sketch" className="text-sm font-medium">
+                        ¿El arte es nuevo?
+                    </label>
+                    <Switch
+                        id="is_new_sketch"
+                        checked={formDataPOD.is_new_sketch || false}
+                        onCheckedChange={(checked) => {
+                            setFormDataPOD(prev => ({
+                                ...prev,
+                                is_new_sketch: checked
+                            }));
+                        }}
+                    />
+                </div>
+            ),
+            pantones_quantity: formDataPOD.has_print && (
+                <div>
+                    <SelectInput
+                        label="Cantidad de Pantones"
+                        name="pod_pantones_quantity"
+                        value={{
+                            value: formDataPOD.pantones_quantity,
+                            label: formDataPOD.pantones_quantity.toString()
+                        }}
+                        onChange={(option) => {
+                            const value = option?.value || 0;
+                            setFormDataPOD(prev => ({
+                                ...prev,
+                                pantones_quantity: value,
+                                pantones_codes: Array(value).fill('').slice(0, 4)
+                            }));
+                            value > 0 && setPODErrors(prev => ({
+                                ...prev,
+                                pantones_quantity: ''
+                            }));
+                        }}
+                        options={[1, 2, 3, 4].map(num => ({
+                            value: num,
+                            label: num.toString()
+                        }))}
+                        required
+                    />
+                    {podErrors.pantones_quantity && (
+                        <p className="text-md text-red-500 mt-1 pl-1">{podErrors.pantones_quantity}</p>
+                    )}
+                </div>
+            ),
+            pantones_codes: formDataPOD.has_print && formDataPOD.pantones_quantity > 0 && (
+                <div>
+                    <div className="space-y-2">
+                        {Array.from({ length: Math.min(formDataPOD.pantones_quantity, 4) }).map((_, index) => (
+                            <TextInput
+                                key={index}
+                                label={`Pantone ${index + 1}`}
+                                name={`pod_pantone_${index}`}
+                                value={formDataPOD.pantones_codes[index] || ''}
+                                onChange={(e) => {
+                                    const newPantoneCodes = [...formDataPOD.pantones_codes];
+                                    newPantoneCodes[index] = e.target.value;
+
+                                    // Actualizar formDataPOD con los nuevos códigos
+                                    setFormDataPOD(prev => ({
+                                        ...prev,
+                                        pantones_codes: newPantoneCodes
+                                    }));
+
+                                    // Validar si todos los códigos requeridos están llenos
+                                    const hasEmptyRequiredPantone = newPantoneCodes
+                                        .slice(0, formDataPOD.pantones_quantity)
+                                        .some(code => !code || code.trim() === '');
+
+                                    // Actualizar errores
+                                    setPODErrors(prev => ({
+                                        ...prev,
+                                        pantones_codes: hasEmptyRequiredPantone ?
+                                            'Todos los códigos Pantone son requeridos' :
+                                            ''
+                                    }));
+                                }}
+                                required
+                                placeholder={`Ingrese el código Pantone ${index + 1}`}
+                            />
+                        ))}
+                    </div>
+                    {podErrors.pantones_codes && (
+                        <p className="text-md text-red-500 mt-1 pl-1">{podErrors.pantones_codes}</p>
+                    )}
+                </div>
+            ),
+            kilograms: (
+                <div>
+                    <NumberInput
+                        label="Kilogramos"
+                        name="pod_kilograms"
+                        value={formDataPOD.kilograms}
+                        onChange={handleInputChange}
+                        required
+                        min={0}
+                        step={0.01}
+                        placeholder={formDataPOD.kilograms === 0 ? '0.00 kg' : undefined}
+                        formatter={(value) => `${Number(value).toLocaleString('es-CO', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2
+                        })} kg`}
+                    />
+                    {podErrors.kilograms && (
+                        <p className="text-md text-red-500 mt-1 pl-1">{podErrors.kilograms}</p>
+                    )}
+                </div>
+            ),
+            units: (
+                <div>
+                    <NumberInput
+                        label="Unidades"
+                        name="pod_units"
+                        value={formDataPOD.units}
+                        onChange={handleInputChange}
+                        required
+                        min={0}
+                        step={1}
+                        placeholder={formDataPOD.units === 0 ? '0 uds' : undefined}
+                        formatter={(value) => `${Number(value).toLocaleString('es-CO')} uds`}
+                    />
+                    {podErrors.units && (
+                        <p className="text-md text-red-500 mt-1 pl-1">{podErrors.units}</p>
+                    )}
+                </div>
+            ),
+            kilogram_price: (
+                <div>
+                    <NumberInput
+                        label="Precio por Kilogramo"
+                        name="pod_kilogram_price"
+                        value={formDataPOD.kilogram_price}
+                        onChange={handleInputChange}
+                        required
+                        min={0}
+                        step={0.01}
+                        placeholder={formDataPOD.kilogram_price === 0 ? '$ 0' : undefined}
+                        formatter={(value) => `$ ${Number(value).toLocaleString('es-CO', {
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0
+                        })}`}
+                    />
+                    {podErrors.kilogram_price && (
+                        <p className="text-md text-red-500 mt-1 pl-1">{podErrors.kilogram_price}</p>
+                    )}
+                </div>
+            ),
+            unit_price: (
+                <div>
+                    <NumberInput
+                        label="Precio por Unidad"
+                        name="pod_unit_price"
+                        value={formDataPOD.unit_price}
+                        onChange={handleInputChange}
+                        required
+                        min={0}
+                        step={0.01}
+                        placeholder={formDataPOD.unit_price === 0 ? '$ 0' : undefined}
+                        formatter={(value) => `$ ${Number(value).toLocaleString('es-CO', {
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0
+                        })}`}
+                    />
+                    {podErrors.unit_price && (
+                        <p className="text-md text-red-500 mt-1 pl-1">{podErrors.unit_price}</p>
+                    )}
+                </div>
+            ),
+            production_observations: (
+                <TextArea
+                    label="Observaciones de Producción"
+                    name="pod_production_observations"
+                    value={formDataPOD.production_observations}
+                    onChange={handleInputChange}
+                />
+            ),
+            delivery_location: (
+                <div>
+                    <TextInput
+                        label="Lugar de Entrega"
+                        name="pod_delivery_location"
+                        value={formDataPOD.delivery_location}
+                        onChange={handleInputChange}
+                        required
+                    />
+                    {podErrors.delivery_location && (
+                        <p className="text-md text-red-500 mt-1 pl-1">{podErrors.delivery_location}</p>
+                    )}
+                </div>
+            ),
+            //STEP 3 AFTER DETAILS
+            payment_method: (
+                <SelectInput
+                    label="Método de Pago"
+                    name="payment_payment_method"
+                    value={{ value: formDataPayment.payment_method, label: paymentMethodChoices[formDataPayment.payment_method as keyof typeof paymentMethodChoices] }}
+                    onChange={(option) => handleInputChange({ target: { name: 'payment_payment_method', value: option?.value || 0 } } as any)}
+                    options={Object.entries(paymentMethodChoices).map(([key, value]) => ({
+                        value: Number(key),
+                        label: value
+                    }))}
+                />
+            ),
+            payment_term: (
+                <div>
+                    <NumberInput
+                        label="Término de pago"
+                        name="payment_payment_term"
+                        value={formDataPayment.payment_term}
+                        onChange={handleInputChange}
+                        required={formDataPayment.payment_method === 1}
+                        placeholder={formDataPayment.payment_term === 0 ? '0 días' : undefined}
+                        formatter={(value) => `${Number(value).toLocaleString('es-CO')} días`}
+                    />
+                    {paymentErrors.payment_term && (
+                        <p className="text-md text-red-500 mt-1 pl-1">{paymentErrors.payment_term}</p>
+                    )}
+                </div>
+            ),
+            advance: (
                 <NumberInput
-                    label="Kilogramos"
-                    name="pod_kilograms"
-                    value={formDataPOD.kilograms}
+                    label="Anticipo"
+                    name="payment_advance"
+                    placeholder={formDataPayment.advance === 0 ? '$ 0' : undefined}
+                    formatter={(value) => `$ ${Number(value).toLocaleString('es-CO', {
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 0
+                    })}`}
+                    value={formDataPayment.advance}
                     onChange={handleInputChange}
-                    required
-                    min={0}
-                    step={0.01}
                 />
-                {podErrors.kilograms && (
-                    <p className="text-md text-red-500 mt-1 pl-1">{podErrors.kilograms}</p>
-                )}
-            </div>
-        ),
-        units: (
-            <div>
-                <NumberInput
-                    label="Unidades"
-                    name="pod_units"
-                    value={formDataPOD.units}
+            ),
+            delivery_date: (
+                <div>
+                    <DateInput
+                        name="po_delivery_date"
+                        label="Fecha de Entrega"
+                        minDate={getMinDeliveryDate()}
+                        selectedDate={formDataPO.delivery_date}
+
+                        onChange={(date) => {
+                            handleInputChange({
+                                target: {
+                                    name: 'po_delivery_date',
+                                    value: date ? getColombiaDate(date) : null
+                                }
+                            });
+                            if (date && getColombiaDate(date) >= getMinDeliveryDate()) {
+                                setPOErrors(prev => ({ ...prev, delivery_date: '' }));
+                            }
+                        }}
+                        required
+                        disabled={false}
+                    />
+                    {poErrors.delivery_date && (
+                        <p className="text-md text-red-500 mt-1 pl-1">{poErrors.delivery_date}</p>
+                    )}
+                </div>
+            ),
+            observations: (
+                <TextArea
+                    label="Observaciones"
+                    name="po_observations"
+                    value={formDataPO.observations}
                     onChange={handleInputChange}
-                    required
-                    min={0}
-                    step={1}
                 />
-                {podErrors.units && (
-                    <p className="text-md text-red-500 mt-1 pl-1">{podErrors.units}</p>
-                )}
-            </div>
-        ),
-        kilogram_price: (
-            <div>
-                <NumberInput
-                    label="Precio por Kilogramo"
-                    name="pod_kilogram_price"
-                    value={formDataPOD.kilogram_price}
-                    onChange={handleInputChange}
-                    required
-                    min={0}
-                    step={0.01}
-                />
-                {podErrors.kilogram_price && (
-                    <p className="text-md text-red-500 mt-1 pl-1">{podErrors.kilogram_price}</p>
-                )}
-            </div>
-        ),
-        unit_price: (
-            <div>
-                <NumberInput
-                    label="Precio por Unidad"
-                    name="pod_unit_price"
-                    value={formDataPOD.unit_price}
-                    onChange={handleInputChange}
-                    required
-                    min={0}
-                    step={0.01}
-                />
-                {podErrors.unit_price && (
-                    <p className="text-md text-red-500 mt-1 pl-1">{podErrors.unit_price}</p>
-                )}
-            </div>
-        ),
-        production_observations: (
-            <TextArea
-                label="Observaciones de Producción"
-                name="pod_production_observations"
-                value={formDataPOD.production_observations}
-                onChange={handleInputChange}
-            />
-        ),
-        delivery_location: (
-            <div>
-                <TextInput
-                    label="Lugar de Entrega"
-                    name="pod_delivery_location"
-                    value={formDataPOD.delivery_location}
-                    onChange={handleInputChange}
-                    required
-                />
-                {podErrors.delivery_location && (
-                    <p className="text-md text-red-500 mt-1 pl-1">{podErrors.delivery_location}</p>
-                )}
-            </div>
-        ),
-        //STEP 3 AFTER DETAILS
-        payment_method: (
-            <SelectInput
-                label="Método de Pago"
-                name="payment_payment_method"
-                value={{ value: formDataPayment.payment_method, label: paymentMethodChoices[formDataPayment.payment_method as keyof typeof paymentMethodChoices] }}
-                onChange={(option) => handleInputChange({ target: { name: 'payment_payment_method', value: option?.value || 0 } } as any)}
-                options={Object.entries(paymentMethodChoices).map(([key, value]) => ({
-                    value: Number(key),
-                    label: value
-                }))}
-            />
-        ),
-        payment_term: (
-            <div>
-                <NumberInput
-                    label="Término de pago"
-                    name="payment_payment_term"
-                    placeholder="Días"
-                    value={formDataPayment.payment_term || 0}
-                    onChange={handleInputChange}
-                    required={formDataPayment.payment_method === 1}
-                />
-                {paymentErrors.payment_term && (
-                    <p className="text-md text-red-500 mt-1 pl-1">{paymentErrors.payment_term}</p>
-                )}
-            </div>
-        ),
-        advance: (
-            <NumberInput
-                label="Anticipo"
-                name="payment_advance"
-                placeholder="$"
-                value={formDataPayment.advance || 0}
-                onChange={handleInputChange}
-            />
-        ),
-        delivery_date: (
-            <div>
-                <DateInput
-                    name="po_delivery_date"
-                    label="Fecha de Entrega"
-                    minDate={getMinDeliveryDate()}
-                    selectedDate={formDataPO.delivery_date}
-                    onChange={(date) => handleInputChange({
-                        target: { 
-                            name: 'po_delivery_date', 
-                            value: date ? getColombiaDate(date) : null 
-                        }
-                    })}
-                    required
-                    disabled={false}
-                />
-                {poErrors.delivery_date && (
-                    <p className="text-md text-red-500 mt-1 pl-1">{poErrors.delivery_date}</p>
-                )}
-            </div>
-        ),
-        observations: (
-            <TextArea
-                label="Observaciones"
-                name="po_observations"
-                value={formDataPO.observations}
-                onChange={handleInputChange}
-            />
-        ),
-        line: (
-            <div>
-                <hr className="my-5 border-small border-gray-500 border-dashed" />
-            </div>
-        )
-    };
-
-    const orderFields = ['order_date', 'employee', 'customer', 'ordered_quantity'];
-
-    const getDetailsLayout = () => {
-        const commonFields = ['product_type', 'material'];
-        const dimensionFields = ['measure_unit', 'width'];
-        const has_print = ['has_print'];
-        const printFields = formDataPOD.has_print
-            ? ['dynas_treaty_faces', 'pantones_quantity', 'pantones_codes']
-            : [];
-
-        const line = ['line'];
-
-        if (['Tubular', 'Semi-tubular'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name)) {
-
-            if (formDataPOD.has_print) {
-                has_print.push('is_new_sketch');
-            }
-
-            return [
-                ['reference'],
-                commonFields,
-                ['reference_internal'],
-                line,
-                ['film_color', ...dimensionFields],
-                ['caliber', 'roller_size'],
-                line,
-                ['additive_count', 'additive'],
-                line,
-                has_print,
-                printFields,
-                line,
-                ['kilograms', 'kilogram_price'],
-                line,
-                ['delivery_location', 'production_observations']
-            ].filter(row => row.length > 0);
-        } else if (['Lamina'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name)) {
-
-            if (formDataPOD.has_print) {
-                has_print.push('is_new_sketch');
-            }
-
-            return [
-                ['reference'],
-                commonFields,
-                ['reference_internal'],
-                line,
-                ['film_color', ...dimensionFields, 'length'],
-                ['caliber', 'roller_size'],
-                line,
-                ['additive_count', 'additive'],
-                line,
-                has_print,
-                printFields,
-                line,
-                ['units', 'unit_price'],
-                ['delivery_location', 'production_observations']
-            ].filter(row => row.length > 0);
-        } else if (['Bolsa'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name)) {
-            const bagFields1 = ['gussets_type'];
-            if (formDataPOD.gussets_type !== 0) {
-                bagFields1.push('first_gusset');
-            }
-            if (formDataPOD.gussets_type !== 1) {
-                bagFields1.push('flap_type');
-                if (formDataPOD.flap_type !== 0) {
-                    bagFields1.push('flap_size');
-                    if (formDataPOD.flap_type === 4) {
-                        bagFields1.push('tape');
-                    }
-                }
-            }
-
-            const bagFields2 = [];
-            if (formDataPOD.flap_type !== 4) {
-                bagFields2.push('die_cut_type');
-            }
-            bagFields2.push('sealing_type', 'caliber', 'roller_size');
-
-            if (formDataPOD.has_print) {
-                has_print.push('is_new_sketch');
-            }
-
-            return [
-                ['reference'],
-                commonFields,
-                ['reference_internal'],
-                line,
-                ['film_color', ...dimensionFields, 'length'],
-                bagFields1,
-                bagFields2,
-                line,
-                ['additive_count', 'additive'],
-                line,
-                has_print,
-                printFields,
-                line,
-                ['units', 'unit_price'],
-                ['delivery_location', 'production_observations']
-            ].filter(row => row.length > 0);
-        }
-
-        return [['reference']];
-    };
-
-    /*const viewContent = {
-        customer: (
-            <div>
-                <strong className="block mb-1">Cliente</strong>
-                <p className="dark:text-gray-300">
-                    {customers.find(c => c.id === currentReference?.customer)?.company_name || 'N/A'}
-                </p>
-            </div>
-        ),
-        reference: (
-            <div>
-                <strong className="block mb-1">Referencia</strong>
-                <p className="dark:text-gray-300">{currentReference?.reference}</p>
-            </div>
-        ),
-        product_type: (
-            <div>
-                <strong className="block mb-1">Tipo de Producto</strong>
-                <p className="dark:text-gray-300">
-                    {productTypes.find(pt => pt.id === currentReference?.product_type)?.name || 'N/A'}
-                </p>
-            </div>
-        ),
-        material: (
-            <div>
-                <strong className="block mb-1">Material</strong>
-                <p className="dark:text-gray-300">
-                    {materials.find(m => m.id === currentReference?.material)?.name || 'N/A'}
-                </p>
-            </div>
-        ),
-        dimensions: (
-            <div>
-                <strong className="block mb-1">Dimensiones</strong>
-                <p className="dark:text-gray-300">
-                    {`${currentReference?.width} x ${currentReference?.length} ${measureUnitChoices[currentReference?.measure_unit as keyof typeof measureUnitChoices
-                        ]}`}
-                </p>
-            </div>
-        ),
-        caliber: (
-            <div>
-                <strong className="block mb-1">Calibre</strong>
-                <p className="dark:text-gray-300">{currentReference?.caliber}</p>
-            </div>
-        ),
-        film_color: (
-            <div>
-                <strong className="block mb-1">Color de Película</strong>
-                <p className="dark:text-gray-300">{currentReference?.film_color}</p>
-            </div>
-        ),
-        sealing_type: (
-            <div>
-                <strong className="block mb-1">Tipo de Sellado</strong>
-                <p className="dark:text-gray-300">
-                    {sealingTypeChoices[currentReference?.sealing_type as keyof typeof sealingTypeChoices]}
-                </p>
-            </div>
-        ),
-        flap_details: (
-            <div>
-                <strong className="block mb-1">Detalles de Solapa</strong>
-                <p className="dark:text-gray-300">
-                    {`${flapTypeChoices[currentReference?.flap_type as keyof typeof flapTypeChoices]}${currentReference?.flap_size ? ` - ${currentReference.flap_size}` : ''
-                        }`}
-                </p>
-            </div>
-        ),
-        gussets_details: (
-            <div>
-                <strong className="block mb-1">Detalles de Fuelles</strong>
-                <p className="dark:text-gray-300">
-                    {`${gussetsTypeChoices[currentReference?.gussets_type as keyof typeof gussetsTypeChoices]}${currentReference?.first_gusset ? ` - Primero: ${currentReference.first_gusset}` : ''
-                        }${currentReference?.second_gusset ? ` - Segundo: ${currentReference.second_gusset}` : ''
-                        }`}
-                </p>
-            </div>
-        ),
-        tape: (
-            <div>
-                <strong className="block mb-1">Cinta</strong>
-                <p className="dark:text-gray-300">
-                    {tapeChoices[currentReference?.tape as keyof typeof tapeChoices]}
-                </p>
-            </div>
-        ),
-        die_cut_type: (
-            <div>
-                <strong className="block mb-1">Tipo de Troquel</strong>
-                <p className="dark:text-gray-300">
-                    {dieCutTypeChoices[currentReference?.die_cut_type as keyof typeof dieCutTypeChoices]}
-                </p>
-            </div>
-        ),
-        roller_size: (
-            <div>
-                <strong className="block mb-1">Tamaño del Rodillo</strong>
-                <p className="dark:text-gray-300">{currentReference?.roller_size}</p>
-            </div>
-        ),
-        pantones_quantity: (
-            <div>
-                <strong className="block mb-1">Cantidad de Pantones</strong>
-                <p className="dark:text-gray-300">{currentReference?.pantones_quantity}</p>
-            </div>
-        ),
-        is_active: (
-            <div>
-                <strong className="block mb-1">Estado</strong>
-                <p className={`inline-block py-1 px-2 rounded-lg font-semibold w-36 text-center ${currentReference?.is_active ? 'text-green-500 bg-green-500/10' : 'text-red-500 bg-red-500/10'
-                    }`}>
-                    {currentReference?.is_active ? 'Activo' : 'Inactivo'}
-                </p>
-            </div>
-        )
-    }; */
-
-    // Función auxiliar para obtener los errores del paso actual
-    const getCurrentStepErrors = () => {
-        switch (currentStep) {
-            case 1:
-                // Errores del primer paso (PO)
-                return Object.entries(poErrors).reduce((acc, [key, value]) => {
-                    if (value) acc[`Empleado - ${key}`] = value;
-                    return acc;
-                }, {} as Record<string, string>);
-
-            case totalSteps:
-                // Errores del último paso (Payment)
-                return Object.entries(paymentErrors).reduce((acc, [key, value]) => {
-                    if (value) acc[`Pago - ${key}`] = value;
-                    return acc;
-                }, {} as Record<string, string>);
-
-            default:
-                // Errores de los pasos intermedios (PODetails)
-                return Object.entries(podErrors).reduce((acc, [key, value]) => {
-                    if (value) acc[`Detalle - ${key}`] = value;
-                    return acc;
-                }, {} as Record<string, string>);
-        }
-    };
-
-    // Función para verificar si hay errores en un paso específico
-    const hasStepErrors = (step: number): boolean => {
-        switch (step) {
-            case 1:
-                return Object.values(poErrors).some(error => error !== '');
-            case totalSteps:
-                return Object.values(paymentErrors).some(error => error !== '');
-            default:
-                return Object.values(podErrors).some(error => error !== '');
-        }
-    };
-
-    // Crear un objeto dinámico de stepErrors basado en totalSteps
-    const getStepErrors = () => {
-        const errors: { [key: number]: boolean } = {
-            1: hasStepErrors(1), // Primer paso (PO)
-            [totalSteps]: hasStepErrors(totalSteps), // Último paso (Payment)
+            ),
+            line: (
+                <div>
+                    <hr className="my-5 border-small border-gray-500 border-dashed" />
+                </div>
+            ),
+            financial_summary: (
+                <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <h3 className="font-semibold text-lg mb-3">Resumen Financiero</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Subtotal:</p>
+                            <p className="text-lg font-medium">
+                                {new Intl.NumberFormat('es-CO', {
+                                    style: 'currency',
+                                    currency: 'COP',
+                                    minimumFractionDigits: 0,
+                                    maximumFractionDigits: 0
+                                }).format(calculateTotals(allPODetails, formDataPO.has_iva).subtotal)}
+                            </p>
+                        </div>
+                        <div>
+                            <div className="flex items-center space-x-2">
+                                <div className="mr-5">
+                                    <p className="text-sm text-gray-500 dark:text-gray-400">IVA (19%):</p>
+                                    <p className="text-lg font-medium">
+                                        {new Intl.NumberFormat('es-CO', {
+                                            style: 'currency',
+                                            currency: 'COP',
+                                            minimumFractionDigits: 0,
+                                            maximumFractionDigits: 0
+                                        }).format(calculateTotals(allPODetails, formDataPO.has_iva).iva)}
+                                    </p>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                    <label htmlFor="has_iva" className="text-sm font-medium">¿Lleva IVA?</label>
+                                    <Switch id="has_iva" checked={formDataPO.has_iva || false} onCheckedChange={(checked) => {
+                                        setFormDataPO(prev => ({ ...prev, has_iva: checked }));
+                                    }} />
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Total:</p>
+                            <p className="text-lg font-semibold">
+                                {new Intl.NumberFormat('es-CO', {
+                                    style: 'currency',
+                                    currency: 'COP',
+                                    minimumFractionDigits: 0,
+                                    maximumFractionDigits: 0
+                                }).format(calculateTotals(allPODetails, formDataPO.has_iva).total)}
+                            </p>
+                        </div>
+                        <div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Deuda Total:</p>
+                            <p className="text-lg font-semibold text-red-600 dark:text-red-400">
+                                {new Intl.NumberFormat('es-CO', {
+                                    style: 'currency',
+                                    currency: 'COP',
+                                    minimumFractionDigits: 0,
+                                    maximumFractionDigits: 0
+                                }).format(calculateTotals(allPODetails, formDataPO.has_iva, formDataPayment.advance).debtTotal)}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            ),
         };
 
-        // Agregar errores para los pasos intermedios (PODetails)
-        for (let i = 2; i < totalSteps; i++) {
-            errors[i] = hasStepErrors(i);
-        }
+        const orderFields = ['order_date', 'employee', 'customer', 'ordered_quantity'];
 
-        return errors;
-    };
+        const getDetailsLayout = () => {
+            const commonFields = ['product_type', 'material'];
+            const dimensionFields = ['measure_unit', 'width'];
+            const has_print = ['has_print'];
+            const printFields = formDataPOD.has_print
+                ? ['dynas_treaty_faces', 'pantones_quantity', 'pantones_codes']
+                : [];
 
-    return (
-        <div className="container">
-            <TopTableElements
-                onAdd={() => setFormModalOpen(true)}
-                onSearch={(term) => setSearchTerm(term)}
-                onFilter={() => { }} // Implementar si es necesario
-                filterOptions={[]} // Implementar si es necesario
-            />
+            const line = ['line'];
 
-            <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-            >
-                {POs.length === 0 ? (
-                    <div className="flex justify-center items-center h-full pt-20">
-                        <p className="text-gray-600 dark:text-gray-400">No hay referencias disponibles</p>
-                    </div>
-                ) : (
-                    <Table>
-                        <TableHeader>
-                            <TableHead>Cliente</TableHead>
-                            <TableHead>O.T. - Ficha</TableHead>
-                            <TableHead>Fecha de Solicitud</TableHead>
-                            <TableHead>Fecha de Remisión</TableHead>
-                            <TableHead>Total</TableHead>
-                            <TableHead>Acciones</TableHead>
-                        </TableHeader>
-                        <TableBody>
-                            {POs
-                                .filter(po =>
-                                    customers.find(c => c.id === po.customer)?.company_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                    po.details?.find(detail => detail.reference.toString().toLowerCase().includes(searchTerm.toLowerCase())) ||
-                                    po.details?.find(detail => detail.wo_number?.toString().toLowerCase().includes(searchTerm.toLowerCase())) ||
-                                    po.order_date.toString().toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                    po.delivery_date.toString().toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                    po.total?.toString().toLowerCase().includes(searchTerm.toLowerCase())
-                                )
-                                .map((po) => (
-                                    <TableRow key={po.id}>
-                                        <TableCell>
-                                            {customers.find(c => c.id === po.customer)?.company_name}
-                                        </TableCell>
-                                        <TableCell>
-                                            {po.details?.map((detail, index) => (
-                                                <div key={detail.id}>
-                                                    O.T. {detail.wo_number} - Ficha {detail.reference}
-                                                </div>
-                                            ))}
-                                        </TableCell>
-                                        <TableCell>
-                                            {new Date(po.order_date).toLocaleDateString()}
-                                        </TableCell>
-                                        <TableCell>
-                                            {new Date(po.delivery_date).toLocaleDateString()}
-                                        </TableCell>
-                                        <TableCell>
-                                            {po.total}
-                                        </TableCell>
-                                        <TableCell>
-                                            {/*<button
-                                                className="text-sky-500 hover:text-sky-700 mr-3 transition-colors"
-                                                onClick={() => handleView(po, po.payments[0], po.details[0])}
-                                            >
-                                                <LuView size={20} />
-                                            </button>
-                                            <button
-                                                className={`text-orange-500 hover:text-orange-700 mr-3 transition-colors`}
-                                                onClick={() => handleEdit(po, po.payments[0], po.details[0])}
-                                            >
-                                                <LuClipboardEdit size={20} />
-                                            </button>*/}
-                                            <button
-                                                className="text-red-500 hover:text-red-700 mr-3 transition-colors"
-                                                onClick={() => handleDelete(po.id || 0)}
-                                            >
-                                                <LuTrash2 size={20} />
-                                            </button>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                        </TableBody>
-                    </Table>
-                )}
-            </motion.div>
+            if (['Tubular', 'Semi-tubular'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name)) {
 
-            {isFormModalOpen && (
-                <FormModal
-                    title={currentPO ? 'Editar Orden de Compra' : 'Agregar Orden de Compra'}
-                    layout={currentStep === 1 ? [orderFields] :
-                        currentStep === totalSteps ? [['payment_method', 'payment_term', 'advance', 'delivery_date'], ['observations']] :
-                            getDetailsLayout()}
-                    inputs={inputs}
-                    onSubmit={handleFormSubmit}
-                    onCancel={handleCancel}
-                    submitLabel={currentPO ? 'Actualizar' : 'Crear'}
-                    width='max-w-[70%]'
-                    currentStep={currentStep}
-                    totalSteps={totalSteps}
-                    onNext={handleNext}
-                    onPrevious={handlePrevious}
-                    isLastStep={currentStep === totalSteps}
-                    errors={getCurrentStepErrors()}
-                    stepErrors={getStepErrors()}
-                    scrollableRef={scrollableRef}
+                if (formDataPOD.has_print) {
+                    has_print.push('is_new_sketch');
+                }
+
+                return [
+                    ['reference'],
+                    commonFields,
+                    ['reference_internal'],
+                    line,
+                    ['film_color', ...dimensionFields],
+                    ['caliber', 'roller_size'],
+                    line,
+                    ['additive_count', 'additive'],
+                    line,
+                    has_print,
+                    printFields,
+                    line,
+                    ['kilograms', 'kilogram_price'],
+                    line,
+                    ['delivery_location', 'production_observations']
+                ].filter(row => row.length > 0);
+            } else if (['Lamina'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name)) {
+
+                if (formDataPOD.has_print) {
+                    has_print.push('is_new_sketch');
+                }
+
+                return [
+                    ['reference'],
+                    commonFields,
+                    ['reference_internal'],
+                    line,
+                    ['film_color', ...dimensionFields, 'length'],
+                    ['caliber', 'roller_size'],
+                    line,
+                    ['additive_count', 'additive'],
+                    line,
+                    has_print,
+                    printFields,
+                    line,
+                    ['units', 'unit_price'],
+                    ['delivery_location', 'production_observations']
+                ].filter(row => row.length > 0);
+            } else if (['Bolsa'].includes(productTypes.find(pt => pt.id === formDataPOD.product_type)?.name)) {
+                const bagFields1 = ['gussets_type'];
+                if (formDataPOD.gussets_type !== 0) {
+                    bagFields1.push('first_gusset');
+                }
+                if (formDataPOD.gussets_type !== 1) {
+                    bagFields1.push('flap_type');
+                    if (formDataPOD.flap_type !== 0) {
+                        bagFields1.push('flap_size');
+                        if (formDataPOD.flap_type === 4) {
+                            bagFields1.push('tape');
+                        }
+                    }
+                }
+
+                const bagFields2 = [];
+                if (formDataPOD.flap_type !== 4) {
+                    bagFields2.push('die_cut_type');
+                }
+                bagFields2.push('sealing_type', 'caliber', 'roller_size');
+
+                if (formDataPOD.has_print) {
+                    has_print.push('is_new_sketch');
+                }
+
+                return [
+                    ['reference'],
+                    commonFields,
+                    ['reference_internal'],
+                    line,
+                    ['film_color', ...dimensionFields, 'length'],
+                    bagFields1,
+                    bagFields2,
+                    line,
+                    ['additive_count', 'additive'],
+                    line,
+                    has_print,
+                    printFields,
+                    line,
+                    ['units', 'unit_price'],
+                    ['delivery_location', 'production_observations']
+                ].filter(row => row.length > 0);
+            }
+
+            return [['reference']];
+        };
+
+        // Función auxiliar para obtener los errores del paso actual
+        const getCurrentStepErrors = () => {
+            switch (currentStep) {
+                case 1:
+                    // Errores del primer paso (PO)
+                    return Object.entries(poErrors).reduce((acc, [key, value]) => {
+                        if (value && key !== 'delivery_date') acc[`Empleado - ${key}`] = value;
+                        return acc;
+                    }, {} as Record<string, string>);
+
+                case totalSteps:
+                    // Errores del último paso (Payment + delivery_date from PO)
+                    const lastStepErrors = {
+                        ...Object.entries(paymentErrors).reduce((acc, [key, value]) => {
+                            if (value) acc[`Pago - ${key}`] = value;
+                            return acc;
+                        }, {} as Record<string, string>),
+                        ...Object.entries(poErrors).reduce((acc, [key, value]) => {
+                            if (key === 'delivery_date' && value) {
+                                acc[`Entrega - ${key}`] = value;
+                            }
+                            return acc;
+                        }, {} as Record<string, string>)
+                    };
+                    return lastStepErrors;
+
+                default:
+                    // Errores de los pasos intermedios (PODetails)
+                    return Object.entries(podErrors).reduce((acc, [key, value]) => {
+                        if (value) acc[`Detalle - ${key}`] = value;
+                        return acc;
+                    }, {} as Record<string, string>);
+            }
+        };
+
+        // Función para verificar si hay errores en un paso específico
+        const hasStepErrors = (step: number): boolean => {
+            switch (step) {
+                case 1:
+                    // Check PO errors excluding delivery_date
+                    return Object.entries(poErrors).some(([key, error]) =>
+                        key !== 'delivery_date' && error !== ''
+                    );
+                case totalSteps:
+                    // Check both payment errors and delivery_date from PO errors
+                    return Object.values(paymentErrors).some(error => error !== '') ||
+                        (poErrors.delivery_date ? poErrors.delivery_date !== '' : false);
+                default:
+                    return Object.values(podErrors).some(error => error !== '');
+            }
+        };
+
+        // Crear un objeto dinámico de stepErrors basado en totalSteps
+        const getStepErrors = () => {
+            const errors: { [key: number]: boolean } = {
+                1: hasStepErrors(1), // Primer paso (PO)
+                [totalSteps]: hasStepErrors(totalSteps), // Último paso (Payment)
+            };
+
+            // Agregar errores para los pasos intermedios (PODetails)
+            for (let i = 2; i < totalSteps; i++) {
+                errors[i] = hasStepErrors(i);
+            }
+
+            return errors;
+        };
+
+        return (
+            <div className="container">
+                <TopTableElements
+                    onAdd={() => setFormModalOpen(true)}
+                    onSearch={(term) => setSearchTerm(term)}
+                    onFilter={() => { }} // Implementar si es necesario
+                    filterOptions={[]} // Implementar si es necesario
                 />
-            )}
 
-            {/*{isViewModalOpen && currentPO && (
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                >
+                    {POs.length === 0 ? (
+                        <div className="flex justify-center items-center h-full pt-20">
+                            <p className="text-gray-600 dark:text-gray-400">No hay referencias disponibles</p>
+                        </div>
+                    ) : (
+                        <Table>
+                            <TableHeader>
+                                <TableHead>Cliente</TableHead>
+                                <TableHead>O.T. - Ficha</TableHead>
+                                <TableHead>Fecha de Solicitud</TableHead>
+                                <TableHead>Fecha de Remisión</TableHead>
+                                <TableHead>Total</TableHead>
+                                <TableHead>Acciones</TableHead>
+                            </TableHeader>
+                            <TableBody>
+                                {POs
+                                    .filter(po =>
+                                        customers.find(c => c.id === po.customer)?.company_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                        po.details?.find(detail => detail.reference.toString().toLowerCase().includes(searchTerm.toLowerCase())) ||
+                                        po.details?.find(detail => detail.wo_number?.toString().toLowerCase().includes(searchTerm.toLowerCase())) ||
+                                        po.order_date.toString().toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                        po.delivery_date.toString().toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                        po.total?.toString().toLowerCase().includes(searchTerm.toLowerCase())
+                                    )
+                                    .map((po) => (
+                                        <TableRow key={po.id}>
+                                            <TableCell>
+                                                {customers.find(c => c.id === po.customer)?.company_name}
+                                            </TableCell>
+                                            <TableCell>
+                                                {po.details?.map((detail, index) => (
+                                                    <div key={detail.id}>
+                                                        O.T. {detail.wo_number} - Ficha {detail.reference}
+                                                    </div>
+                                                ))}
+                                            </TableCell>
+                                            <TableCell>
+                                                {new Date(po.order_date).toLocaleDateString()}
+                                            </TableCell>
+                                            <TableCell>
+                                                {new Date(po.delivery_date).toLocaleDateString()}
+                                            </TableCell>
+                                            <TableCell>
+                                                {new Intl.NumberFormat('es-CO', {
+                                                    style: 'currency',
+                                                    currency: 'COP',
+                                                    minimumFractionDigits: 0,
+                                                    maximumFractionDigits: 0
+                                                }).format(po.total ?? 0)}
+                                            </TableCell>
+                                            <TableCell>
+                                                <button
+                                                    className={`text-orange-500 hover:text-orange-700 mr-3 transition-colors`}
+                                                    onClick={() => handleEdit(po)}
+                                                >
+                                                    <LuClipboardEdit size={20} />
+                                                </button>
+                                                <button
+                                                    className="text-red-500 hover:text-red-700 mr-3 transition-colors"
+                                                    onClick={() => handleDelete(po.id || 0)}
+                                                >
+                                                    <LuTrash2 size={20} />
+                                                </button>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                            </TableBody>
+                        </Table>
+                    )}
+                </motion.div>
+
+                {isFormModalOpen && (
+                    <FormModal
+                        title={currentPO ? 'Editar Orden de Compra' : 'Agregar Orden de Compra'}
+                        layout={currentStep === 1 ? [orderFields] :
+                            currentStep === totalSteps ? [
+                                ['payment_method', ...(formDataPayment.payment_method === 1 ? ['payment_term'] : []), 'advance', 'delivery_date'],
+                                ['financial_summary'],
+                                ['observations']
+                            ] :
+                                getDetailsLayout()}
+                        inputs={inputs}
+                        onSubmit={handleFormSubmit}
+                        onCancel={handleCancel}
+                        submitLabel={currentPO ? 'Actualizar' : 'Crear'}
+                        width='max-w-[70%]'
+                        currentStep={currentStep}
+                        totalSteps={totalSteps}
+                        onNext={handleNext}
+                        onPrevious={handlePrevious}
+                        isLastStep={currentStep === totalSteps}
+                        errors={getCurrentStepErrors()}
+                        stepErrors={getStepErrors()}
+                        scrollableRef={scrollableRef}
+                    />
+                )}
+
+                {/*{isViewModalOpen && currentPO && (
                 <ViewModal
                     title="Detalles de la Orden de Compra"
                     layout={[
@@ -1989,6 +2125,6 @@ export default function ReferencesPage() {
                     onClose={() => setViewModalOpen(false)}
                 />
             )}*/}
-        </div>
-    );
-}
+            </div>
+        );
+    }

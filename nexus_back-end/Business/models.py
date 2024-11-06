@@ -156,6 +156,7 @@ class PurchaseOrder(models.Model):
     employee = models.ForeignKey(Employee, on_delete=models.PROTECT, related_name='purchase_orders', related_query_name='purchase_order')
     observations = models.TextField(null=True, blank=True)
     subtotal = models.DecimalField(max_digits=10, decimal_places=2)
+    has_iva = models.BooleanField(default=True)
     iva = models.DecimalField(max_digits=10, decimal_places=2, editable=False, null=True, blank=True)
     total = models.DecimalField(max_digits=10, decimal_places=2, editable=False, null=True, blank=True)
     delivery_date = models.DateField()
@@ -163,7 +164,10 @@ class PurchaseOrder(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def save(self, *args, **kwargs):
-        self.iva = self.subtotal * Decimal('0.19')
+        if self.has_iva:
+            self.iva = self.subtotal * Decimal('0.19')
+        else:
+            self.iva = Decimal('0')
         self.total = self.subtotal + self.iva
         super().save(*args, **kwargs)
 
@@ -171,7 +175,7 @@ class PurchaseOrder(models.Model):
         return f'Orden de Compra #{self.id} - {self.order_date} - {self.customer.company_name}'
 
 class Payment(models.Model):
-    purchase_order = models.ForeignKey(PurchaseOrder, on_delete=models.CASCADE, related_name='payments', related_query_name='payment')
+    purchase_order = models.OneToOneField(PurchaseOrder, on_delete=models.CASCADE, related_name='payment')
     method_choices = {
         0: 'CONTADO',
         1: 'CRÉDITO'
@@ -263,7 +267,7 @@ class PODetail(models.Model):
     delivery_location = models.CharField(max_length=150)
     is_new_sketch = models.BooleanField(default=False)
     sketch_url = models.URLField(default='https://res.cloudinary.com/db5lqptwu/image/upload/v1728476524/sketches/hlmgblou2onqaf0efh6b.webp')
-    is_updated = models.BooleanField(default=False)
+    was_annulled = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     wo_number = models.PositiveBigIntegerField(unique=True, editable=False, null=True)
@@ -283,15 +287,3 @@ class PODetail(models.Model):
             after_return += f' | Peso: {self.kilograms}Kg'
 
         return f'{self.reference_internal}{after_return}'
-
-class PODetailChangeLog(models.Model):
-    po_detail = models.ForeignKey(PODetail, on_delete=models.CASCADE, related_name='change_logs', related_query_name='change_log')
-    previous_data = models.JSONField()
-    changed_fields = models.JSONField()
-    created_at = models.DateTimeField(auto_now_add=True)
-    
-    def __str__(self):
-        return f'Change log for PODetail #{self.po_detail.id} at {self.created_at}'
-
-    class Meta:
-        ordering = ['-created_at']

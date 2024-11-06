@@ -157,6 +157,18 @@ class Handicraf(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+class WOChangeLog(models.Model):
+    work_order = models.ForeignKey(WorkOrder, on_delete=models.CASCADE, related_name='change_logs', related_query_name='change_log')
+    previous_data = models.JSONField()
+    changed_fields = models.JSONField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f'Change log for WorkOrder #{self.work_order.id} at {self.created_at}'
+
+    class Meta:
+        ordering = ['-created_at']
+
 class Touch(models.Model):
     work_order = models.ForeignKey(WorkOrder, on_delete=models.CASCADE, related_name='touch', related_query_name='touch_query')
     area_choices = {

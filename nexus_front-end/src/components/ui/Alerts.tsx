@@ -7,6 +7,7 @@ interface AlertOptions {
   title: string;
   icon: 'success' | 'error' | 'warning' | 'info' | 'question';
   text?: string;
+  html?: string;
   showCancelButton?: boolean;
   confirmButtonText?: string;
   cancelButtonText?: string;
@@ -21,13 +22,14 @@ export const showAlert = (
     title: options.title,
     icon: options.icon,
     text: options.text,
+    html: options.html,
     showCancelButton: options.showCancelButton,
     confirmButtonText: options.confirmButtonText,
     cancelButtonText: options.cancelButtonText,
     customClass: {
       popup: 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-2xl',
       title: 'text-2xl font-bold text-gray-900 dark:text-gray-100',
-      htmlContainer: 'text-lg text-gray-700',
+      htmlContainer: 'text-lg text-gray-700 dark:text-gray-300',
       confirmButton: 'bg-green-500 hover:bg-green-600 text-white text-lg rounded-xl m-1 px-6 py-3',
       cancelButton: 'bg-red-500 hover:bg-red-600 text-white text-lg rounded-xl m-1 px-6 py-3',
     },

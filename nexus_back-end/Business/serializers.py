@@ -1,14 +1,10 @@
 from rest_framework import serializers
-from .models import Customer, Position, Employee, ProductType, Material, Product, Reference, PurchaseOrder, Payment, PODetail, PODetailChangeLog 
-
-class PODetailChangeLogSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = PODetailChangeLog
-        fields = '__all__'
+from .models import Customer, Position, Employee, ProductType, Material, Product, Reference, PurchaseOrder, Payment, PODetail 
+from Production.serializers import WorkOrderSerializer
 
 class PODetailSerializer(serializers.ModelSerializer):  
-    change_logs = PODetailChangeLogSerializer(many=True, read_only=True)
     wo_number = serializers.IntegerField(read_only=True)
+    work_order = WorkOrderSerializer(many=False, read_only=True)
 
     class Meta:
         model = PODetail
@@ -36,7 +32,7 @@ class PaymentSerializer(serializers.ModelSerializer):
 
 class PurchaseOrderSerializer(serializers.ModelSerializer):
     details = PODetailSerializer(many=True, read_only=True)
-    payments = PaymentSerializer(many=True, read_only=True)
+    payment = PaymentSerializer(many=False, read_only=True)
 
     class Meta:
         model = PurchaseOrder
@@ -79,6 +75,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
 
 class PositionSerializer(serializers.ModelSerializer):
     employees = EmployeeSerializer(many=True, read_only=True)
+    
     class Meta:
         model = Position
         fields = '__all__'

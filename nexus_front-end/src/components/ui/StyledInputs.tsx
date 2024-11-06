@@ -45,26 +45,59 @@ interface NumberInputProps {
   min?: number;
   step?: number;
   disabled?: boolean;
+  formatter?: (value: number) => string;
 }
 
-export const NumberInput: React.FC<NumberInputProps> = ({ label, name, value, onChange, placeholder, onBlur, required, min, step, disabled }) => (
-  <div>
-    <label htmlFor={name} className="block mb-1 font-medium text-gray-700 dark:text-gray-300">{label} {required && <span className="text-red-500">*</span>}</label>
-    <input
-      type="number"
-      id={name}
-      name={name}
-      value={value ? value : ''}
-      onChange={onChange}
-      placeholder={placeholder}
-      className="w-full p-2 rounded-md border border-gray-300 bg-white text-gray-900 shadow-sm focus:border-sky-500 focus:ring-sky-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-sky-400 dark:focus:ring-sky-400"
-      onBlur={onBlur}
-      min={min}
-      step={step}
-      disabled={disabled}
-    />
-  </div>
-);
+export const NumberInput: React.FC<NumberInputProps> = ({ 
+  label, 
+  name, 
+  value, 
+  onChange, 
+  placeholder, 
+  onBlur, 
+  required, 
+  min, 
+  step, 
+  disabled,
+  formatter 
+}) => {
+  const [isFocused, setIsFocused] = React.useState(false);
+
+  const handleFocus = () => setIsFocused(true);
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    setIsFocused(false);
+    onBlur?.(e);
+  };
+
+  return (
+    <div>
+      <label htmlFor={name} className="block mb-1 font-medium text-gray-700 dark:text-gray-300">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      <div className="relative">
+        <input
+          type="number"
+          id={name}
+          name={name}
+          value={formatter ? (isFocused ? value || '' : '') : value}
+          onChange={onChange}
+          placeholder={placeholder}
+          className="w-full p-2 rounded-md border border-gray-300 bg-white text-gray-900 shadow-sm focus:border-sky-500 focus:ring-sky-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-sky-400 dark:focus:ring-sky-400"
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          min={min}
+          step={step}
+          disabled={disabled}
+        />
+        {!isFocused && formatter && (
+          <div className="absolute inset-y-0 left-0 flex items-center px-2 pointer-events-none w-full text-gray-900 dark:text-white">
+            {value ? formatter(value) : placeholder}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 // SelectInput Component
 interface SelectInputProps {

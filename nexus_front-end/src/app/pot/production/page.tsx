@@ -81,7 +81,7 @@ export default function ProductionPage() {
               <div className="flex justify-between items-start">
                 <div>
                   <h3 className="font-medium">{detail.product}</h3>
-                  <p>WO: {detail.wo_number}</p>
+                  <p>OT: {detail.wo_number}</p>
                   <p>Cantidad: {detail.quantity}</p>
                   <Badge status="processing" text={detail.status} />
                 </div>
@@ -107,7 +107,7 @@ export default function ProductionPage() {
           className="shadow-md"
           itemLayout="horizontal"
           dataSource={workOrders}
-          renderItem={wo => (
+          renderItem={(wo: WorkOrder) => (
             <List.Item
               actions={[
                 <Button key="edit" type="link">Editar</Button>,
