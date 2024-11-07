@@ -1,7 +1,7 @@
 export interface PurchaseOrder {
     id?: number;
     details?: PODetail[];
-    payments?: Payment[];
+    payment?: Payment;
     employee: number;
     order_date: Date;
     customer: number;
@@ -57,6 +57,7 @@ export interface PODetail {
     delivery_location: string;
     is_updated: boolean;
     wo_number?: number;
+    was_annulled?: boolean;
 }
 
 export interface PurchaseOrderForm extends PurchaseOrder {
