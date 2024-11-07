@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { LuPlus, LuSearch, LuFilter, LuArrowDownWideNarrow, LuArrowUpWideNarrow, LuArrowLeft } from 'react-icons/lu';
+import { LuPlus, LuSearch, LuFilter, LuArrowDownWideNarrow, LuArrowUpWideNarrow, LuArrowLeft, LuArchive } from 'react-icons/lu';
 
 interface FilterOption {
   key: string;
@@ -14,9 +14,12 @@ interface TopTableElementsProps {
   filterOptions: FilterOption[];
   showBackButton?: boolean;
   onBack?: () => void;
+  showAnnulledButton?: boolean;
+  showAnnulled?: boolean;
+  onToggleAnnulled?: () => void;
 }
 
-const TopTableElements: React.FC<TopTableElementsProps> = ({ onAdd, onSearch, onFilter, filterOptions, showBackButton, onBack }) => {
+const TopTableElements: React.FC<TopTableElementsProps> = ({ onAdd, onSearch, onFilter, filterOptions, showBackButton, onBack, showAnnulledButton, showAnnulled, onToggleAnnulled }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [currentField, setCurrentField] = useState<string | null>(null);
@@ -44,7 +47,7 @@ const TopTableElements: React.FC<TopTableElementsProps> = ({ onAdd, onSearch, on
 
   return (
     <div className="flex flex-wrap justify-between items-center mb-1 gap-2">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1">
         {showBackButton && (
           <button
             className="rounded-lg text-black dark:text-white bg-white dark:bg-gray-700 px-4 py-2 flex items-center hover:bg-gray-200 dark:hover:bg-gray-800 border dark:border-gray-600"
@@ -53,17 +56,28 @@ const TopTableElements: React.FC<TopTableElementsProps> = ({ onAdd, onSearch, on
             <LuArrowLeft className="mr-2" /> Volver
           </button>
         )}
+        {showAnnulledButton && (
+          <motion.button
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={`rounded-lg px-4 py-2 flex items-center bg-white text-black dark:bg-gray-700 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-800 border dark:border-gray-600`}
+            onClick={onToggleAnnulled}
+          >
+            <LuArchive className="mr-2" />
+            Archivo de anuladas
+          </motion.button>
+        )}
         <motion.button
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-green-500 dark:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-green-600 dark:hover:bg-green-700 transition-colors"
+          className="bg-green-500 dark:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-green-600 dark:hover:bg-green-700 transition-colors border dark:border-green-800"
           onClick={onAdd}
         >
           <LuPlus className="mr-2" /> Agregar
         </motion.button>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1">
         <div className="relative">
           <input
             type="text"

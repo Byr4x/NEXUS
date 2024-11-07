@@ -191,6 +191,7 @@ export default function ReferencesPage() {
     const [podErrors, setPODErrors] = useState<PODErrors>({});
     const [paymentErrors, setPaymentErrors] = useState<PaymentErrors>({});
     const [stepChanged, setStepChanged] = useState(false);
+    const [showAnnulled, setShowAnnulled] = useState(false);
 
     useEffect(() => {
         fetchPOs();
@@ -2057,11 +2058,24 @@ export default function ReferencesPage() {
 
     return (
         <div className="container">
+            {showAnnulled && (
+                <div className="mb-2 pl-2">
+                    <p className="text-gray-600 dark:text-gray-400">
+                        Archivo de anuladas
+                    </p>
+                </div>
+            )}
+
             <TopTableElements
                 onAdd={() => setFormModalOpen(true)}
                 onSearch={(term) => setSearchTerm(term)}
-                onFilter={() => { }} // Implementar si es necesario
-                filterOptions={[]} // Implementar si es necesario
+                onFilter={() => { }}
+                filterOptions={[]}
+                showAnnulledButton={!showAnnulled}
+                showAnnulled={showAnnulled}
+                onToggleAnnulled={() => setShowAnnulled(!showAnnulled)}
+                showBackButton={showAnnulled}
+                onBack={() => setShowAnnulled(false)}
             />
 
             <motion.div
@@ -2070,7 +2084,9 @@ export default function ReferencesPage() {
             >
                 {POs.length === 0 ? (
                     <div className="flex justify-center items-center h-full pt-20">
-                        <p className="text-gray-600 dark:text-gray-400">No hay referencias disponibles</p>
+                        <p className="text-gray-600 dark:text-gray-400">
+                            {showAnnulled ? 'No hay ordenes de compra anuladas' : 'No hay ordenes de compra disponibles'}
+                        </p>
                     </div>
                 ) : (
                     <Table>
@@ -2085,32 +2101,34 @@ export default function ReferencesPage() {
                         <TableBody>
                             {POs
                                 .filter(po =>
-                                    customers.find(c => c.id === po.customer)?.company_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                    po.details?.find(detail => detail.reference.toString().toLowerCase().includes(searchTerm.toLowerCase())) ||
-                                    po.details?.find(detail => detail.wo_number?.toString().toLowerCase().includes(searchTerm.toLowerCase())) ||
-                                    po.order_date.toString().toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                    po.delivery_date.toString().toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                    po.total?.toString().toLowerCase().includes(searchTerm.toLowerCase())
+                                    // Filtrar por órdenes anuladas según el estado
+                                    po.was_annulled === showAnnulled &&
+                                    (customers.find(c => c.id === po.customer)?.company_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                        po.details?.find(detail => detail.reference.toString().toLowerCase().includes(searchTerm.toLowerCase())) ||
+                                        po.details?.find(detail => detail.wo_number?.toString().toLowerCase().includes(searchTerm.toLowerCase())) ||
+                                        po.order_date.toString().toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                        po.delivery_date.toString().toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                        po.total?.toString().toLowerCase().includes(searchTerm.toLowerCase()))
                                 )
                                 .map((po) => (
                                     <TableRow key={po.id}>
-                                        <TableCell className={po.was_annulled ? 'opacity-40' : ''}>
+                                        <TableCell className={showAnnulled ? 'bg-red-300 dark:bg-red-500/70' : ''}>
                                             {customers.find(c => c.id === po.customer)?.company_name}
                                         </TableCell>
-                                        <TableCell className={po.was_annulled ? 'opacity-40' : ''}>
+                                        <TableCell className={showAnnulled ? 'bg-red-300 dark:bg-red-500/70' : ''}>
                                             {po.details?.map((detail, index) => (
                                                 <div key={detail.id}>
                                                     OT {detail.wo_number} - Ficha {detail.reference}
                                                 </div>
                                             ))}
                                         </TableCell>
-                                        <TableCell className={po.was_annulled ? 'opacity-40' : ''}>
+                                        <TableCell className={showAnnulled ? 'bg-red-300 dark:bg-red-500/70' : ''}>
                                             {new Date(po.order_date).toLocaleDateString()}
                                         </TableCell>
-                                        <TableCell className={po.was_annulled ? 'opacity-40' : ''}>
+                                        <TableCell className={showAnnulled ? 'bg-red-300 dark:bg-red-500/70' : ''}>
                                             {new Date(po.delivery_date).toLocaleDateString()}
                                         </TableCell>
-                                        <TableCell className={po.was_annulled ? 'opacity-40' : ''}>
+                                        <TableCell className={showAnnulled ? 'bg-red-300 dark:bg-red-500/70' : ''}>
                                             {new Intl.NumberFormat('es-CO', {
                                                 style: 'currency',
                                                 currency: 'COP',
@@ -2118,21 +2136,25 @@ export default function ReferencesPage() {
                                                 maximumFractionDigits: 0
                                             }).format(po.total ?? 0)}
                                         </TableCell>
-                                        <TableCell className={po.was_annulled ? 'bg-white/40 dark:bg-gray-800/40' : ''}>
-                                            <button
-                                                className={`${po.was_annulled ? 'text-gray-400 opacity-40' : 'text-orange-500 hover:text-orange-700'} mr-3 transition-colors`}
-                                                onClick={() => handleEdit(po)}
-                                                disabled={po.was_annulled}
-                                            >
-                                                <LuClipboardEdit size={20} />
-                                            </button>
-                                            <button
-                                                className={`${po.was_annulled ? 'text-gray-400 opacity-40' : 'text-red-500 hover:text-red-700'} mr-3 transition-colors`}
-                                                onClick={() => handleCancelPO(po.id || 0)}
-                                                disabled={po.was_annulled}
-                                            >
-                                                <LuBan size={20} />
-                                            </button>
+                                        <TableCell className={showAnnulled ? 'bg-red-300 dark:bg-red-500/70' : ''}>
+                                            {!showAnnulled && (
+                                                <>
+                                                    <button
+                                                        className={`${po.was_annulled ? 'text-gray-400 opacity-40' : 'text-orange-500 hover:text-orange-700'} mr-3 transition-colors`}
+                                                        onClick={() => handleEdit(po)}
+                                                        disabled={po.was_annulled}
+                                                    >
+                                                        <LuClipboardEdit size={20} />
+                                                    </button>
+                                                    <button
+                                                        className={`${po.was_annulled ? 'text-gray-400 opacity-40' : 'text-red-500 hover:text-red-700'} mr-3 transition-colors`}
+                                                        onClick={() => handleCancelPO(po.id || 0)}
+                                                        disabled={po.was_annulled}
+                                                    >
+                                                        <LuBan size={20} />
+                                                    </button>
+                                                </>
+                                            )}
                                         </TableCell>
                                     </TableRow>
                                 ))}

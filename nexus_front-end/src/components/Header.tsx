@@ -24,6 +24,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar, isSidebarOpen, isMinimiz
   const getPageName = (path: string) => {
     const routes: { [key: string]: string } = {
       '/pot': 'Dashboard',
+      '/pot/purchase-orders': 'Ordenes de Compra',
       '/pot/customers': 'Clientes',
       '/pot/customers/references': 'Referencias',
       '/pot/employees': 'Empleados',
