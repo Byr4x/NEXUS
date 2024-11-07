@@ -99,3 +99,9 @@ export interface PaymentErrors {
     payment_term?: string;
     advance?: string;
 }
+
+export interface WorkOrder {
+    id: number;
+    wo_number: string;
+    status: string;
+}

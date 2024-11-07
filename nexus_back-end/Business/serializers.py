@@ -1,6 +1,11 @@
 from rest_framework import serializers
-from .models import Customer, Position, Employee, ProductType, Material, Product, Reference, PurchaseOrder, Payment, PODetail 
+from .models import Customer, Position, Employee, ProductType, Material, Product, Reference, PurchaseOrder, Payment, PODetail, POChangeLog
 from Production.serializers import WorkOrderSerializer
+
+class POChangeLogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = POChangeLog
+        fields = '__all__'
 
 class PODetailSerializer(serializers.ModelSerializer):  
     wo_number = serializers.IntegerField(read_only=True)

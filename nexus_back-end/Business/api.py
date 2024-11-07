@@ -1,7 +1,7 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
-from .models import Customer, Position, Employee, ProductType, Material, Product, Reference, PurchaseOrder, Payment, PODetail
-from .serializers import CustomerSerializer, PositionSerializer, EmployeeSerializer, ProductTypeSerializer, MaterialSerializer, ProductSerializer, ReferenceSerializer, PurchaseOrderSerializer, PaymentSerializer, PODetailSerializer
+from .models import Customer, Position, Employee, ProductType, Material, Product, Reference, PurchaseOrder, Payment, PODetail, POChangeLog
+from .serializers import CustomerSerializer, PositionSerializer, EmployeeSerializer, ProductTypeSerializer, MaterialSerializer, ProductSerializer, ReferenceSerializer, PurchaseOrderSerializer, PaymentSerializer, PODetailSerializer, POChangeLogSerializer
 import re
 
 class BaseViewSet(viewsets.ModelViewSet):
@@ -97,6 +97,17 @@ class PurchaseOrderViewSet(BaseViewSet):
             "errors": serializer.errors,
             "message": f"Failed to create {(self.format_model_name()).lower()}."
         }, status=status.HTTP_400_BAD_REQUEST)
+    
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        # Update all related PODetails to mark them as annulled
+        instance.was_annulled = True
+        instance.details.all().update(was_annulled=True)
+        instance.save()
+        return Response({
+            "status": "success",
+            "message": f"{self.format_model_name()} annulled successfully."
+        }, status=status.HTTP_200_OK)
 
 class PaymentViewSet(BaseViewSet):
     queryset = Payment.objects.all()
@@ -118,3 +129,7 @@ class PODetailViewSet(BaseViewSet):
             }, status=status.HTTP_400_BAD_REQUEST)
 
         return super().create(request, *args, **kwargs)
+    
+class POChangeLogViewSet(BaseViewSet):
+    queryset = POChangeLog.objects.all()
+    serializer_class = POChangeLogSerializer

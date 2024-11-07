@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, Reference, useRef } from 'react';
 import { motion } from 'framer-motion';
 import axios from 'axios';
-import { LuView, LuClipboardEdit, LuTrash2, LuPenLine, LuBan } from 'react-icons/lu';
+import { LuView, LuClipboardEdit, LuPenLine, LuBan } from 'react-icons/lu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table';
 import { Switch } from '@/components/ui/Switch';
 import { TextInput, TextArea, NumberInput, SelectInput, DateInput } from '@/components/ui/StyledInputs';
@@ -11,7 +11,7 @@ import FormModal from '@/components/modals/FormModal';
 import ViewModal from '@/components/modals/ViewModal';
 import TopTableElements from '@/components/ui/TopTableElements';
 import { showAlert, showToast } from '@/components/ui/Alerts';
-import { PurchaseOrder, PurchaseOrderForm, Payment, PODetail, PODetailForm, POErrors, PODErrors, PaymentErrors } from './interfaces';
+import { PurchaseOrder, PurchaseOrderForm, Payment, PODetail, PODetailForm, POErrors, PODErrors, PaymentErrors } from '@/components/interfaces';
 
 // Choice Objects
 const measureUnitChoices = {
@@ -788,13 +788,10 @@ export default function ReferencesPage() {
         }
     };
 
-    const handleView = (PurchaseOrder: PurchaseOrder, payment: Payment, PODetail: PODetail) => {
+    const handleView = (PurchaseOrder: PurchaseOrder) => {
         setCurrentPO(PurchaseOrder);
-        setCurrentPayment(payment);
-        setCurrentPOD(PODetail);
         setViewModalOpen(true);
     };
-
 
     const handleEdit = async (PurchaseOrder: PurchaseOrder) => {
         showAlert(
@@ -1107,6 +1104,7 @@ export default function ReferencesPage() {
                     }))}
                     isClearable
                     required
+                    disabled={currentPO ? true : false}
                 />
                 {poErrors.employee && (
                     <p className="text-md text-red-500 mt-1 pl-1">{poErrors.employee}</p>
@@ -1117,10 +1115,10 @@ export default function ReferencesPage() {
             <DateInput
                 name="po_order_date"
                 label="Fecha de Orden"
-                selectedDate={new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Bogota' }))}
+                selectedDate={currentPO ? new Date(currentPO.order_date) : new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Bogota' }))}
                 onChange={() => { }}
                 required
-                disabled={true}
+                disabled={currentPO ? true : false}
             />
         ),
         customer: (
@@ -1130,12 +1128,13 @@ export default function ReferencesPage() {
                     name="po_customer"
                     value={{ value: formDataPO.customer, label: customers.find(c => c.id === formDataPO.customer)?.company_name }}
                     onChange={(option) => handleInputChange({ target: { name: 'po_customer', value: option?.value || 0 } } as any)}
-                    options={customers.map(customer => ({
+                    options={customers.filter(customer => customer.is_active).map(customer => ({
                         value: customer.id,
                         label: customer.company_name
                     }))}
                     isClearable
                     required
+                    disabled={currentPO ? true : false}
                 />
                 {poErrors.customer && (
                     <p className="text-md text-red-500 mt-1 pl-1">{poErrors.customer}</p>
@@ -1151,6 +1150,7 @@ export default function ReferencesPage() {
                     min={1}
                     onChange={handleInputChange}
                     required
+                    disabled={currentPO ? true : false}
                 />
                 {poErrors.ordered_quantity && (
                     <p className="text-sm text-red-500 mt-1">{poErrors.ordered_quantity}</p>
@@ -1885,6 +1885,160 @@ export default function ReferencesPage() {
         ),
     };
 
+    const viewContent = {
+        order_info: (
+            <div className="grid grid-cols-5 gap-4">
+                <div>
+                    <strong className="block mb-1">Fecha de Solicitud</strong>
+                    <p className="dark:text-gray-300">{currentPO?.order_date ? new Date(currentPO.order_date).toLocaleDateString('es-CO') : 'N/A'}</p>
+                </div>
+                <div>
+                    <strong className="block mb-1">Empleado</strong>
+                    <p className="dark:text-gray-300">{employees.find(e => e.id === currentPO?.employee)?.first_name + ' ' + employees.find(e => e.id === currentPO?.employee)?.last_name || 'N/A'}</p>
+                </div>
+                <div>
+                    <strong className="block mb-1">Cliente</strong>
+                    <p className="dark:text-gray-300">{customers.find(c => c.id === currentPO?.customer)?.company_name || 'N/A'}</p>
+                </div>
+                <div>
+                    <strong className="block mb-1">Fecha de Entrega</strong>
+                    <p className="dark:text-gray-300">{currentPO?.delivery_date ? new Date(currentPO.delivery_date).toLocaleDateString('es-CO') : 'N/A'}</p>
+                </div>
+                {currentPO?.was_annulled && (
+                    <div className="flex items-center justify-center">
+                        <div className="relative inline-block">
+                            <div className="absolute inset-0 bg-red-600 opacity-20 rounded-lg blur-sm"></div>
+                            <div
+                                className="relative px-8 py-4 border-8 border-red-600 rounded-lg transform -rotate-12"
+                                style={{
+                                    textShadow: '2px 2px 4px rgba(0,0,0,0.5)',
+                                    boxShadow: '0 4px 6px rgba(0,0,0,0.1), inset 0 0 8px rgba(0,0,0,0.1)'
+                                }}
+                            >
+                                <span className="text-xl font-extralight text-red-600 tracking-wider" style={{ fontFamily: '"Arial Black", sans-serif' }}>
+                                    ANULADA
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+        ),
+        details_table: (
+            <div className="mt-4">
+                <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                        <thead>
+                            <tr className="border border-gray-400 font-bold">
+                                <th className="px-4 py-3 text-left border-x border-gray-400">
+                                    Referencia de compra
+                                </th>
+                                <th className="px-4 py-3 text-center border-x border-gray-400">
+                                    Cantidad
+                                </th>
+                                <th className="px-4 py-3 text-center border-x border-gray-400">
+                                    Valor unitario
+                                </th>
+                                <th className="px-4 py-3 text-center border-x border-gray-400">
+                                    Subtotal
+                                </th>
+                                <th className="px-4 py-3 text-center border-x border-gray-400">
+                                    IVA
+                                </th>
+                                <th className="px-4 py-3 text-center border-x border-gray-400">
+                                    Total
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {currentPO?.details?.map((detail, index) => {
+                                const quantity = detail.kilograms > 0 ? detail.kilograms : detail.units;
+                                const unitPrice = detail.kilogram_price > 0 ? detail.kilogram_price : detail.unit_price;
+                                const subtotal = quantity * unitPrice;
+                                const iva = currentPO.has_iva ? subtotal * 0.19 : 0;
+                                const total = subtotal + iva;
+
+                                return (
+                                    <tr key={index}>
+                                        <td className="px-4 py-2 text-left border-x border-gray-400">
+                                            {detail.reference_internal}
+                                        </td>
+                                        <td className="px-4 py-2 text-center border-x border-gray-400">
+                                            {quantity.toLocaleString('es-CO')} {detail.kilograms > 0 ? 'kg' : 'uds'}
+                                        </td>
+                                        <td className="px-4 py-2 text-center border-x border-gray-400">
+                                            {new Intl.NumberFormat('es-CO', {
+                                                style: 'currency',
+                                                currency: 'COP',
+                                                minimumFractionDigits: 0,
+                                                maximumFractionDigits: 0
+                                            }).format(unitPrice)}
+                                        </td>
+                                        <td className="px-4 py-2 text-center border-x border-gray-400">
+                                            {new Intl.NumberFormat('es-CO', {
+                                                style: 'currency',
+                                                currency: 'COP',
+                                                minimumFractionDigits: 0,
+                                                maximumFractionDigits: 0
+                                            }).format(subtotal)}
+                                        </td>
+                                        <td className="px-4 py-2 text-center border-x border-gray-400">
+                                            {new Intl.NumberFormat('es-CO', {
+                                                style: 'currency',
+                                                currency: 'COP',
+                                                minimumFractionDigits: 0,
+                                                maximumFractionDigits: 0
+                                            }).format(iva)}
+                                        </td>
+                                        <td className="px-4 py-2 text-center border-x border-gray-400">
+                                            {new Intl.NumberFormat('es-CO', {
+                                                style: 'currency',
+                                                currency: 'COP',
+                                                minimumFractionDigits: 0,
+                                                maximumFractionDigits: 0
+                                            }).format(total)}
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                        <tfoot>
+                            <tr className="border-t-2 border-b border-gray-400 font-semibold">
+                                <td colSpan={3} className="px-4 py-3 text-right border-x border-gray-400">
+                                    Totales:
+                                </td>
+                                <td className="px-4 py-3 text-center border-x border-gray-400">
+                                    {new Intl.NumberFormat('es-CO', {
+                                        style: 'currency',
+                                        currency: 'COP',
+                                        minimumFractionDigits: 0,
+                                        maximumFractionDigits: 0
+                                    }).format(currentPO?.subtotal ?? 0)}
+                                </td>
+                                <td className="px-4 py-3 text-center border-x border-gray-400">
+                                    {new Intl.NumberFormat('es-CO', {
+                                        style: 'currency',
+                                        currency: 'COP',
+                                        minimumFractionDigits: 0,
+                                        maximumFractionDigits: 0
+                                    }).format(currentPO?.iva ?? 0)}
+                                </td>
+                                <td className="px-4 py-3 text-center border-x border-gray-400">
+                                    {new Intl.NumberFormat('es-CO', {
+                                        style: 'currency',
+                                        currency: 'COP',
+                                        minimumFractionDigits: 0,
+                                        maximumFractionDigits: 0
+                                    }).format(currentPO?.total ?? 0)}
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        )
+    };
+
     const orderFields = ['order_date', 'employee', 'customer', 'ordered_quantity'];
 
     const getDetailsLayout = () => {
@@ -2137,6 +2291,12 @@ export default function ReferencesPage() {
                                             }).format(po.total ?? 0)}
                                         </TableCell>
                                         <TableCell className={showAnnulled ? 'bg-red-300 dark:bg-red-500/70' : ''}>
+                                            <button
+                                                className='text-sky-500 hover:text-sky-700 mr-3 transition-colors'
+                                                onClick={() =>
+                                                    handleView(po)}>
+                                                <LuView size={20} />
+                                            </button>
                                             {!showAnnulled && (
                                                 <>
                                                     <button
@@ -2147,7 +2307,7 @@ export default function ReferencesPage() {
                                                         <LuClipboardEdit size={20} />
                                                     </button>
                                                     <button
-                                                        className={`${po.was_annulled ? 'text-gray-400 opacity-40' : 'text-red-500 hover:text-red-700'} mr-3 transition-colors`}
+                                                        className={`${po.was_annulled ? 'text-gray-400 opacity-40' : 'text-red-500 hover:text-red-700'} transition-colors`}
                                                         onClick={() => handleCancelPO(po.id || 0)}
                                                         disabled={po.was_annulled}
                                                     >
@@ -2189,23 +2349,21 @@ export default function ReferencesPage() {
                 />
             )}
 
-            {/*{isViewModalOpen && currentPO && (
+            {isViewModalOpen && currentPO && (
                 <ViewModal
                     title="Detalles de la Orden de Compra"
                     layout={[
-                        ['customer', 'reference'],
-                        ['product_type', 'material'],
-                        ['dimensions', 'caliber'],
-                        ['film_color', 'sealing_type'],
-                        ['flap_details', 'gussets_details'],
-                        ['tape', 'die_cut_type'],
-                        ['roller_size', 'pantones_quantity'],
-                        ['is_active', 'has_print']
+                        ['order_info'],
+                        ['details_table']
                     ]}
                     content={viewContent}
-                    onClose={() => setViewModalOpen(false)}
+                    width='max-w-[85%]'
+                    onClose={() => {
+                        setViewModalOpen(false)
+                        setCurrentPO(null)
+                    }}
                 />
-            )}*/}
+            )}
         </div>
     );
 }

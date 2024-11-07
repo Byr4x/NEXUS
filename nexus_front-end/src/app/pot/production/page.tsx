@@ -1,24 +1,10 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { Card, Button, Badge, List, message, Modal, Form, Input } from 'antd'
+import { Button, Badge, List, message, Modal, Form, Input } from 'antd'
+import { Card } from '@/components/ui/Card'
 import { BellOutlined, CheckCircleOutlined } from '@ant-design/icons'
+import { PODetail, WorkOrder } from '@/components/interfaces';
 import axios from 'axios'
-
-interface PODetail {
-  id: number
-  wo_number: string
-  product: string
-  quantity: number
-  status: string
-  // Agrega más campos según tu API
-}
-
-interface WorkOrder {
-  id: number
-  wo_number: string
-  status: string
-  // Agrega más campos según tu API
-}
 
 export default function ProductionPage() {
   const [poDetails, setPoDetails] = useState<PODetail[]>([])
@@ -75,27 +61,11 @@ export default function ProductionPage() {
           {poDetails.map(detail => (
             <Card 
               key={detail.id}
-              className="shadow-md hover:shadow-lg transition-shadow"
-              extra={<BellOutlined className="text-blue-500" />}
-            >
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="font-medium">{detail.product}</h3>
-                  <p>OT: {detail.wo_number}</p>
-                  <p>Cantidad: {detail.quantity}</p>
-                  <Badge status="processing" text={detail.status} />
-                </div>
-                <Button 
-                  type="primary"
-                  onClick={() => {
-                    setSelectedDetail(detail)
-                    setIsModalVisible(true)
-                  }}
-                >
-                  Crear OT
-                </Button>
-              </div>
-            </Card>
+              title={'OT: ' + detail?.wo_number?.toString() || ''}
+              description={`${detail.reference_internal}\n \nCantidad: ${detail.kilograms > 0 ? `${detail.kilograms} kg` : `${detail.units} uds`}`}
+              //onEdit={() => handleEdit(detail)}
+              //onDelete={() => handleDelete(detail)}
+            />
           ))}
         </div>
       </div>

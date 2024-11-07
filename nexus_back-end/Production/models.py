@@ -62,7 +62,9 @@ class WorkOrder(models.Model):
         3: 'En sellado',
         4: 'En manualidad',
         5: 'En bodega',
-        6: 'Terminado'
+        6: 'Terminado',
+        7: 'Cancelado',
+        8: 'Sin estado'
     }
     status = models.PositiveIntegerField(choices=status_choices, default=0)
     termination_reason = models.TextField(null=True, blank=True)

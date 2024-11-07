@@ -160,6 +160,7 @@ class PurchaseOrder(models.Model):
     iva = models.DecimalField(max_digits=10, decimal_places=2, editable=False, null=True, blank=True)
     total = models.DecimalField(max_digits=10, decimal_places=2, editable=False, null=True, blank=True)
     delivery_date = models.DateField()
+    was_annulled = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -287,3 +288,22 @@ class PODetail(models.Model):
             after_return += f' | Peso: {self.kilograms}Kg'
 
         return f'{self.reference_internal}{after_return}'
+    
+class POChangeLog(models.Model):
+    model_choices = [
+        ('PurchaseOrder', 'PurchaseOrder'),
+        ('PODetail', 'PODetail'),
+        ('Payment', 'Payment')
+    ]
+    model_name = models.CharField(max_length=50, choices=model_choices)
+    record_id = models.PositiveIntegerField()
+    field_name = models.CharField(max_length=50)
+    old_value = models.TextField(null=True, blank=True)
+    new_value = models.TextField(null=True, blank=True)
+    change_date = models.DateTimeField(auto_now_add=True)
+    #changed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.model_name} - {self.field_name} changed on {self.change_date}"
+
+

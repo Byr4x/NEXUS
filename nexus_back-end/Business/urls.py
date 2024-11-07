@@ -1,5 +1,5 @@
 from rest_framework import routers
-from .api import CustomerViewSet, PositionViewSet, EmployeeViewSet, ProductTypeViewSet, MaterialViewSet, ProductViewSet, ReferenceViewSet, PurchaseOrderViewSet, PaymentViewSet, PODetailViewSet
+from .api import CustomerViewSet, PositionViewSet, EmployeeViewSet, ProductTypeViewSet, MaterialViewSet, ProductViewSet, ReferenceViewSet, PurchaseOrderViewSet, PaymentViewSet, PODetailViewSet, POChangeLogViewSet
 
 router = routers.DefaultRouter()
 
@@ -13,5 +13,6 @@ router.register('references', ReferenceViewSet, 'references')
 router.register('purchaseOrders', PurchaseOrderViewSet, 'purchaseOrders')
 router.register('payments', PaymentViewSet, 'payments')
 router.register('poDetails', PODetailViewSet, 'poDetails')
+router.register('poChangeLogs', POChangeLogViewSet, 'poChangeLogs')
 
 urlpatterns = router.urls 
