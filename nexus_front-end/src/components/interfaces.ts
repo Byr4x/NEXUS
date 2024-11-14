@@ -11,7 +11,8 @@ export interface Customer {
 }
 
 export interface PurchaseOrder {
-    id?: number;
+    id: number;
+    order_number: string;
     details?: PODetail[];
     payment?: Payment;
     employee: number;
@@ -27,7 +28,7 @@ export interface PurchaseOrder {
 }
 
 export interface Payment {
-    id?: number;
+    id: number;
     purchase_order: number;
     payment_method: number;
     payment_term: number;
@@ -35,7 +36,7 @@ export interface Payment {
 }
 
 export interface PODetail {
-    id?: number;
+    id: number;
     purchase_order: number;
     reference: number;
     product_type: number;
@@ -84,6 +85,7 @@ export interface PODetailForm extends PODetail {
 export interface POErrors {
     employee?: string;
     customer?: string;
+    order_number?: string;
     ordered_quantity?: string;
     delivery_date?: string;
 }
@@ -112,8 +114,88 @@ export interface PaymentErrors {
     advance?: string;
 }
 
+export interface Material {
+    id: number;
+    name: string;
+    description: string;
+    weight_constant: number;
+    is_active: boolean;
+  }
+
+export interface RawMaterial {
+    id: number;
+    name: string;
+    quantity: number;
+    raw_material_type: number;
+    is_active: boolean;
+}
+
+export interface Machine {
+    id: number;
+    name: string;
+    area: number;
+    is_active: boolean;
+}
+
 export interface WorkOrder {
     id: number;
-    wo_number: string;
-    status: string;
+    production_observations?: string;
+    surplus_percentage: number;
+    unit_weight: number;
+    surplus_weight: number;
+    wo_weight: number;
+    status: number;
+    termination_reason: string;
+    extrusion?: Extrusion;
+    printing?: Printing;
+    sealing?: Sealing;
+    handicraft?: Handicraft;
+    //touch? Touch;
+}
+
+export interface Extrusion {
+    id: number;
+    work_order: number;
+    machine: number;
+    roll_type: number;
+    rolls_quantity: number;
+    caliber: number;
+    observations: string;
+    next: number;
+}
+
+export interface R_RawMaterial_Extrusion {
+    id: number;
+    raw_material: number;
+    extrusion: number;
+    quantity: number;
+}
+
+export interface Printing {
+    id: number;
+    work_order: number;
+    machine: number;
+    is_new: boolean;
+    observations: string;
+    next: number;
+}
+
+export interface Sealing {
+    id: number;
+    work_order: number;
+    machine: number;
+    caliber: number;
+    hits: number;
+    package_units: number,
+    bundle_units: number,
+    observations: string;
+    next: number;
+}
+
+export interface Handicraft {
+    id: number;
+    work_order: number;
+    machine: number;
+    observations: string;   
+    next: number;
 }

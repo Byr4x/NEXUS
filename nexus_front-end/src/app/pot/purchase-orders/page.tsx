@@ -103,9 +103,10 @@ const calculateTotals = (allPODetails: PODetailForm[], hasIva: boolean, advance:
     };
 };
 
-export default function ReferencesPage() {
+export default function PurchaseOrdersPage() {
     const defaultPurchaseOrder: PurchaseOrderForm = {
         id: 0,
+        order_number: '',
         details: [],
         payment: undefined,
         order_date: getColombiaDate(),
@@ -339,6 +340,11 @@ export default function ReferencesPage() {
     const validateField = (name: string, value: any): string => {
         const validations: { [key: string]: () => string } = {
             // Validaciones para PO
+            'po_order_number': () => {
+                if (!value) return 'El número de orden es obligatorio';
+                if (!/^\d+(-\d+)*$/.test(value)) return 'El número de orden solo puede contener números y guiones';
+                return '';
+            },
             'po_employee': () => {
                 if (!value) return 'El empleado es requerido';
                 return '';
@@ -630,14 +636,6 @@ export default function ReferencesPage() {
         }
     };
 
-    const getCurrentDateString = (): string => {
-        const today = getColombiaDate();
-        const year = today.getFullYear();
-        const month = String(today.getMonth() + 1).padStart(2, '0');
-        const day = String(today.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    };
-
     const handleFormSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -673,6 +671,7 @@ export default function ReferencesPage() {
             if (currentPO) {
                 // 2. Actualizar Purchase Order
                 const POData = {
+                    order_number: formDataPO.order_number,
                     customer: formDataPO.customer,
                     employee: formDataPO.employee,
                     observations: formDataPO.observations,
@@ -723,6 +722,7 @@ export default function ReferencesPage() {
             } else {
                 // 2. Crear Purchase Order
                 const POData = {
+                    order_number: formDataPO.order_number,
                     customer: formDataPO.customer,
                     employee: formDataPO.employee,
                     observations: formDataPO.observations,
@@ -812,6 +812,7 @@ export default function ReferencesPage() {
                     // 2. Establecer los datos de la orden de compra
                     setFormDataPO({
                         id: PurchaseOrder.id,
+                        order_number: PurchaseOrder.order_number,
                         customer: PurchaseOrder.customer,
                         employee: PurchaseOrder.employee,
                         observations: PurchaseOrder.observations,
@@ -970,6 +971,7 @@ export default function ReferencesPage() {
     const handleNext = () => {
         if (currentStep === 1) {
             const poFieldsToValidate = [
+                'po_order_number',
                 'po_employee',
                 'po_customer',
                 'po_ordered_quantity'
@@ -1091,6 +1093,21 @@ export default function ReferencesPage() {
     };
 
     const inputs = {
+        order_number: (
+            <div>
+                <TextInput
+                    label="Número de Orden"
+                    name="po_order_number"
+                    value={formDataPO.order_number}
+                    onChange={handleInputChange}
+                    required
+                    disabled={currentPO ? true : false}
+                />
+                {poErrors.order_number && (
+                    <p className="text-md text-red-500 mt-1 pl-1">{poErrors.order_number}</p>
+                )}
+            </div>
+        ),
         employee: (
             <div>
                 <SelectInput
@@ -2039,7 +2056,7 @@ export default function ReferencesPage() {
         )
     };
 
-    const orderFields = ['order_date', 'employee', 'customer', 'ordered_quantity'];
+    const orderFields = ['order_date', 'employee', 'customer', 'order_number', 'ordered_quantity'];
 
     const getDetailsLayout = () => {
         const commonFields = ['product_type', 'material'];
@@ -2242,17 +2259,18 @@ export default function ReferencesPage() {
                         <p className="text-gray-600 dark:text-gray-400">
                             No hay ordenes de compra disponibles
                         </p>
-                    </div>  
+                    </div>
                 ) : showAnnulled && POs.map(po => po.was_annulled).every(wasAnnulled => !wasAnnulled) ? (
                     <div className="flex justify-center items-center h-full pt-20">
                         <p className="text-gray-600 dark:text-gray-400">
-                           No hay ordenes de compra anuladas
+                            No hay ordenes de compra anuladas
                         </p>
                     </div>
                 ) : (
                     <Table>
                         <TableHeader>
                             <TableHead>Cliente</TableHead>
+                            <TableHead>Orden de compra</TableHead>
                             <TableHead>O.T. - Ficha</TableHead>
                             <TableHead>Fecha de Solicitud</TableHead>
                             <TableHead>Fecha de Remisión</TableHead>
@@ -2265,31 +2283,37 @@ export default function ReferencesPage() {
                                     // Filtrar por órdenes anuladas según el estado
                                     po.was_annulled === showAnnulled &&
                                     (customers.find(c => c.id === po.customer)?.company_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                        po.order_number.toString().toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                        `OC ${po.order_number}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
                                         po.details?.find(detail => detail.reference.toString().toLowerCase().includes(searchTerm.toLowerCase())) ||
                                         po.details?.find(detail => detail.wo_number?.toString().toLowerCase().includes(searchTerm.toLowerCase())) ||
+                                        po.details?.some(detail => `OT ${detail.wo_number}`.toLowerCase().includes(searchTerm.toLowerCase())) ||
                                         po.order_date.toString().toLowerCase().includes(searchTerm.toLowerCase()) ||
                                         po.delivery_date.toString().toLowerCase().includes(searchTerm.toLowerCase()) ||
                                         po.total?.toString().toLowerCase().includes(searchTerm.toLowerCase()))
                                 )
                                 .map((po) => (
                                     <TableRow key={po.id}>
-                                        <TableCell className={showAnnulled ? 'bg-red-300 dark:bg-red-500/70' : ''}>
+                                        <TableCell className={showAnnulled ? 'bg-red-200 dark:bg-red-500/70' : ''}>
                                             {customers.find(c => c.id === po.customer)?.company_name}
                                         </TableCell>
-                                        <TableCell className={showAnnulled ? 'bg-red-300 dark:bg-red-500/70' : ''}>
+                                        <TableCell className={showAnnulled ? 'bg-red-200 dark:bg-red-500/70' : ''}>
+                                            {po.order_number}
+                                        </TableCell>
+                                        <TableCell className={showAnnulled ? 'bg-red-200 dark:bg-red-500/70' : ''}>
                                             {po.details?.map((detail, index) => (
                                                 <div key={detail.id}>
                                                     OT {detail.wo_number} - Ficha {detail.reference}
                                                 </div>
                                             ))}
                                         </TableCell>
-                                        <TableCell className={showAnnulled ? 'bg-red-300 dark:bg-red-500/70' : ''}>
+                                        <TableCell className={showAnnulled ? 'bg-red-200 dark:bg-red-500/70' : ''}>
                                             {new Date(po.order_date).toLocaleDateString()}
                                         </TableCell>
-                                        <TableCell className={showAnnulled ? 'bg-red-300 dark:bg-red-500/70' : ''}>
+                                        <TableCell className={showAnnulled ? 'bg-red-200 dark:bg-red-500/70' : ''}>
                                             {new Date(po.delivery_date).toLocaleDateString()}
                                         </TableCell>
-                                        <TableCell className={showAnnulled ? 'bg-red-300 dark:bg-red-500/70' : ''}>
+                                        <TableCell className={showAnnulled ? 'bg-red-200 dark:bg-red-500/70' : ''}>
                                             {new Intl.NumberFormat('es-CO', {
                                                 style: 'currency',
                                                 currency: 'COP',
@@ -2297,7 +2321,7 @@ export default function ReferencesPage() {
                                                 maximumFractionDigits: 0
                                             }).format(po.total ?? 0)}
                                         </TableCell>
-                                        <TableCell className={showAnnulled ? 'bg-red-300 dark:bg-red-500/70' : ''}>
+                                        <TableCell className={showAnnulled ? 'bg-red-200 dark:bg-red-500/70' : ''}>
                                             <button
                                                 className='text-sky-500 hover:text-sky-700 mr-3 transition-colors'
                                                 onClick={() =>
@@ -2358,7 +2382,7 @@ export default function ReferencesPage() {
 
             {isViewModalOpen && currentPO && (
                 <ViewModal
-                    title="Detalles de la Orden de Compra"
+                    title={`Detalles de la Orden de Compra #${currentPO.order_number}`}
                     layout={[
                         ['order_info'],
                         ['details_table']

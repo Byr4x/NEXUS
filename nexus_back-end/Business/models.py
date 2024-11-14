@@ -153,6 +153,7 @@ class Reference(models.Model):
 class PurchaseOrder(models.Model):
     order_date = models.DateField()
     customer = models.ForeignKey(Customer, on_delete=models.PROTECT, related_name='purchase_orders', related_query_name='purchase_order')
+    order_number = models.CharField(max_length=50)
     employee = models.ForeignKey(Employee, on_delete=models.PROTECT, related_name='purchase_orders', related_query_name='purchase_order')
     observations = models.TextField(null=True, blank=True)
     subtotal = models.DecimalField(max_digits=10, decimal_places=2)

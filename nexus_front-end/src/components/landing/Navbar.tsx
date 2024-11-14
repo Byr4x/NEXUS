@@ -76,8 +76,8 @@ export default function Navbar() {
             className="md:hidden bg-white dark:bg-gray-800 overflow-hidden"
           >
             <div className="container mx-auto px-6 py-4 flex flex-col space-y-4">
-              {['Inicio', 'Productos', 'Sobre Nosotros', 'Contacto', 'POT'].map((item) => {
-                const itemPath = item === 'Inicio' ? '/' : item === 'Productos' ? '/products' : `/${item.toLowerCase().replace(' ', '-')}`
+              {['Inicio', 'Productos', 'Sobre Nosotros', 'Contáctanos', 'POT'].map((item) => {
+                const itemPath = item === 'Inicio' ? '/' : item === 'Productos' ? '/products' : item === 'Sobre Nosotros' ? '/about-us' : item === 'Contáctanos' ? '/contact-us' : `/${item.toLowerCase().replace(' ', '-')}`
                 const isActive = pathname === itemPath
                 return (
                   <a 

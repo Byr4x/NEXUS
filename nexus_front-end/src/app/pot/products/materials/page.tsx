@@ -8,14 +8,7 @@ import FormModal from '@/components/modals/FormModal'
 import { TextInput, TextArea, NumberInput } from '@/components/ui/StyledInputs'
 import { showAlert, showToast } from '@/components/ui/Alerts'
 import TopTableElements from '@/components/ui/TopTableElements'
-
-interface Material {
-  id: number
-  name: string
-  description: string
-  weight_constant: number
-  is_active: boolean
-}
+import { Material } from '@/components/interfaces'
 
 export default function MaterialsPage() {
   const [materials, setMaterials] = useState<Material[]>([])
@@ -311,23 +304,25 @@ export default function MaterialsPage() {
   return (
     <div className="container">
       <TopTableElements
+        showAddButton
         onAdd={() => setFormModalOpen(true)}
         onSearch={handleSearch}
         onFilter={handleFilter}
         filterOptions={filterOptions}
       />
 
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-      >
-        {filteredMaterials.length === 0 ? (
-          <div className="flex justify-center items-center h-full pt-20">
-            <p className="text-gray-600 dark:text-gray-400">No hay materiales disponibles</p>
-          </div>
-        ) : (
-          filteredMaterials.map((material) => (
+
+      {filteredMaterials.length === 0 ? (
+        <div className="flex justify-center items-center h-full pt-20">
+          <p className="text-gray-600 dark:text-gray-400">No hay materiales disponibles</p>
+        </div>
+      ) : (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+        >
+          {filteredMaterials.map((material) => (
             <Card
               key={material.id}
               title={material.name}
@@ -338,9 +333,11 @@ export default function MaterialsPage() {
               switchState={material.is_active}
               onSwitchChange={() => handleSwitchChange(material.id, material.is_active)}
             />
-          ))
-        )}
-      </motion.div>
+
+          ))}
+        </motion.div>
+      )}
+
 
       {isFormModalOpen && (
         <FormModal

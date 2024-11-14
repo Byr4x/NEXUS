@@ -43,7 +43,7 @@ class Machine(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
 class WorkOrder(models.Model):
-    po_detail = models.OneToOneField(
+    id = models.OneToOneField(
         PODetail,
         on_delete=models.PROTECT,
         to_field='wo_number',
@@ -107,7 +107,7 @@ next_choices = {
 }
 
 class Extrusion(models.Model):
-    work_order = models.ForeignKey(WorkOrder, on_delete=models.CASCADE, related_name='extrusion', related_query_name='extrusion_query')
+    work_order = models.OneToOneField(WorkOrder, on_delete=models.CASCADE, related_name='extrusion')
     machine = models.ForeignKey(Machine, on_delete=models.PROTECT, related_name='extrusions', related_query_name='extrusion')
     roll_type_choices = {
         0: 'Tubular',
@@ -131,7 +131,7 @@ class R_RawMaterial_Extrusion(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
 class Printing(models.Model):
-    work_order = models.ForeignKey(WorkOrder, on_delete=models.CASCADE, related_name='printing', related_query_name='printing_query')
+    work_order = models.OneToOneField(WorkOrder, on_delete=models.CASCADE, related_name='printing')
     machine = models.ForeignKey(Machine, on_delete=models.PROTECT, related_name='printings', related_query_name='printing')
     is_new = models.BooleanField()
     observations = models.TextField()
@@ -140,7 +140,7 @@ class Printing(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
 class Sealing(models.Model):
-    work_order = models.ForeignKey(WorkOrder, on_delete=models.CASCADE, related_name='sealing', related_query_name='sealing_query')
+    work_order = models.OneToOneField(WorkOrder, on_delete=models.CASCADE, related_name='sealing')
     machine = models.ForeignKey(Machine, on_delete=models.PROTECT, related_name='sealings', related_query_name='sealing')
     caliber = models.DecimalField(max_digits=10, decimal_places=2)
     hits = models.PositiveIntegerField()
@@ -152,7 +152,7 @@ class Sealing(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
 class Handicraf(models.Model):
-    work_order = models.ForeignKey(WorkOrder, on_delete=models.CASCADE, related_name='handicraft', related_query_name='handicraft_query')
+    work_order = models.OneToOneField(WorkOrder, on_delete=models.CASCADE, related_name='handicraft')
     machine = models.ForeignKey(Machine, on_delete=models.PROTECT, related_name='handicrafts', related_query_name='handicraft')
     observations = models.TextField()
     next = models.PositiveIntegerField(choices=next_choices.items(), default=0)
@@ -172,7 +172,7 @@ class WOChangeLog(models.Model):
         ordering = ['-created_at']
 
 class Touch(models.Model):
-    work_order = models.ForeignKey(WorkOrder, on_delete=models.CASCADE, related_name='touch', related_query_name='touch_query')
+    work_order = models.OneToOneField(WorkOrder, on_delete=models.CASCADE, related_name='touch')
     area_choices = {
         0: 'N/A',
         1: 'Extrusión',

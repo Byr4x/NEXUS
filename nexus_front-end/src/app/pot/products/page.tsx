@@ -419,23 +419,24 @@ export default function ProductsPage() {
   return (
     <div className="container">
       <TopTableElements
+        showAddButton
         onAdd={() => setFormModalOpen(true)}
         onSearch={handleSearch}
         onFilter={handleFilter}
         filterOptions={filterOptions}
       />
 
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
-      >
-        {filteredProducts.length === 0 ? (
-          <div className="flex justify-center items-center h-full pt-20">
-            <p className="text-gray-600 dark:text-gray-400">No hay productos disponibles</p>
-          </div>
-        ) : (
-          filteredProducts.map((product) => (
+      {filteredProducts.length === 0 ? (
+        <div className="flex justify-center items-center h-full pt-20">
+          <p className="text-gray-600 dark:text-gray-400">No hay productos disponibles</p>
+        </div>
+      ) : (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
+        >
+          {filteredProducts.map((product) => (
             <Card
               key={product.id}
               title={product.name}
@@ -447,9 +448,9 @@ export default function ProductsPage() {
               switchState={product.is_active}
               onSwitchChange={() => handleSwitchChange(product.id, product.is_active)}
             />
-          ))
-        )}
-      </motion.div>
+          ))}
+        </motion.div>
+      )}
 
       {isFormModalOpen && (
         <FormModal

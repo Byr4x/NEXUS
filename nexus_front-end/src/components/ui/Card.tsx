@@ -15,6 +15,7 @@ interface CardProps {
   onSwitchChange?: (checked: boolean) => void
   onView?: () => void
   actionButton?: React.ReactNode
+  bgColor?: string
 }
 
 export const Card: React.FC<CardProps> = ({
@@ -28,9 +29,10 @@ export const Card: React.FC<CardProps> = ({
   switchState = false,
   onSwitchChange,
   onView,
-  actionButton
+  actionButton,
+  bgColor
 }) => {
-  const cardClasses = `rounded-lg shadow overflow-hidden ${showSwitch && !switchState ? 'opacity-50 bg-white/30 dark:bg-gray-800/30' : 'bg-white dark:bg-gray-800'}`
+  const cardClasses = `rounded-lg shadow overflow-hidden ${showSwitch && !switchState ? 'opacity-50 bg-white/30 dark:bg-gray-800/30' : 'bg-white dark:bg-gray-800'} `
   const textClasses = `${showSwitch && !switchState ? 'text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-gray-100'}`
   const descriptionClasses = `${showSwitch && !switchState ? 'text-gray-400 dark:text-gray-500' : 'text-gray-600 dark:text-gray-300'}`
 
@@ -38,7 +40,7 @@ export const Card: React.FC<CardProps> = ({
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
-      className={`${cardClasses} flex flex-col h-full`}
+      className={`${cardClasses} flex flex-col h-full justify-between`}
     >
       {imageUrl && (
         <div className={`relative w-full h-48 ${switchState ? 'bg-white dark:bg-gray-800' : 'opacity-50'} rounded-md`}>
@@ -49,8 +51,9 @@ export const Card: React.FC<CardProps> = ({
           />
         </div>
       )}
-      
-        <div className={`px-4 pt-4 pb-2 flex-grow flex flex-col ${!imageUrl && !description ? 'items-center justify-center' : ''}`}>
+
+      <div className={`h-full ${bgColor ? `${bgColor}` : ''}`}>
+        <div className={`px-4 pt-4 pb-2 flex-grow flex flex-col min-h-full ${!imageUrl && !description ? 'items-center justify-center' : ''}`}>
           <h2 className={`font-semibold ${textClasses} ${!imageUrl && !description ? 'text-center text-3xl' : 'text-xl'}`}>{title}</h2>
           {description && (
             <p className={`${descriptionClasses} mt-2`}>
@@ -73,7 +76,8 @@ export const Card: React.FC<CardProps> = ({
             </p>
           )}
         </div>
-      <div className="flex justify-between space-x-2 p-4 bg-gray-200 dark:bg-gray-700">
+      </div>
+      <div className={`flex justify-between space-x-2 p-4 ${switchState ? 'bg-gray-200 dark:bg-gray-700' : 'bg-gray-200/40 dark:bg-gray-700/40'}`}>
         {actionButton && actionButton}
         {showSwitch && (
           <Switch

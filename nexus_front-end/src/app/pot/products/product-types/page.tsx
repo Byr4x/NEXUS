@@ -269,23 +269,24 @@ export default function ProductTypesPage() {
   return (
     <div className="container">
       <TopTableElements
+        showAddButton
         onAdd={() => setFormModalOpen(true)}
         onSearch={handleSearch}
         onFilter={handleFilter}
         filterOptions={filterOptions}
       />
 
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-      >
-        {filteredProductTypes.length === 0 ? (
-          <div className="flex justify-center items-center h-full pt-20">
-            <p className="text-gray-600 dark:text-gray-400">No hay tipos de productos disponibles</p>
-          </div>
-        ) : (
-          filteredProductTypes.map((productType) => (
+      {filteredProductTypes.length === 0 ? (
+        <div className="flex justify-center items-center h-full pt-20">
+          <p className="text-gray-600 dark:text-gray-400">No hay tipos de productos disponibles</p>
+        </div>
+      ) : (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+        >
+          {filteredProductTypes.map((productType) => (
             <Card
               key={productType.id}
               title={productType.name}
@@ -296,9 +297,9 @@ export default function ProductTypesPage() {
               switchState={productType.is_active}
               onSwitchChange={() => handleSwitchChange(productType.id, productType.is_active)}
             />
-          ))
-        )}
-      </motion.div>
+          ))}
+        </motion.div>
+      )}
 
       {isFormModalOpen && (
         <FormModal

@@ -276,6 +276,7 @@ export default function PositionsPage() {
   return (
     <div className="container">
       <TopTableElements
+        showAddButton
         onAdd={() => setFormModalOpen(true)}
         onSearch={handleSearch}
         onFilter={handleFilter}

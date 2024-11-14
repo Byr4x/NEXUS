@@ -477,6 +477,7 @@ export default function EmployeesPage() {
   return (
     <div className="container">
       <TopTableElements
+        showAddButton
         onAdd={() => setFormModalOpen(true)}
         onSearch={handleSearch}
         onFilter={handleFilter}

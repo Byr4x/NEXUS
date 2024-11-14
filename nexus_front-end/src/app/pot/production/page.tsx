@@ -3,14 +3,80 @@ import { useState, useEffect, Reference } from 'react'
 import { Button, Badge, List, message, Modal, Form, Input } from 'antd'
 import { Card } from '@/components/ui/Card'
 import { CheckCircleOutlined } from '@ant-design/icons'
-import { Customer, PODetail, WorkOrder } from '@/components/interfaces';
+import { Customer, PODetail, WorkOrder, Extrusion, R_RawMaterial_Extrusion, Printing, Sealing, Handicraft } from '@/components/interfaces';
 import { LuCalendarClock } from 'react-icons/lu'
 import axios from 'axios'
 
 export default function ProductionPage() {
+  const defaultWorkOrder: WorkOrder = {
+    id: 0,
+    surplus_percentage: 0,
+    unit_weight: 0,
+    surplus_weight: 0,
+    wo_weight: 0,
+    status: 0,
+    termination_reason: '',
+    extrusion: undefined,
+    printing: undefined,
+    sealing: undefined,
+    handicraft: undefined
+  }
+
+  const defaultExtrusion: Extrusion = {
+    id: 0,
+    work_order: 0,
+    machine: 0,
+    roll_type: 0,
+    rolls_quantity: 0,
+    caliber: 0,
+    observations: '',
+    next: 0
+  }
+
+  const defaultR_RawMaterial_Extrusion: R_RawMaterial_Extrusion = {
+    id: 0,
+    raw_material: 0,
+    extrusion: 0,
+    quantity: 0
+  }
+
+  const defaultPrinting: Printing = {
+    id: 0,
+    work_order: 0,
+    machine: 0,
+    is_new: false,
+    observations: '',
+    next: 0
+  }
+
+  const defaultSealing: Sealing = {
+    id: 0,
+    work_order: 0,
+    machine: 0,
+    caliber: 0,
+    hits: 0,
+    package_units: 0,
+    bundle_units: 0,
+    observations: '',
+    next: 0
+  }
+
+  const defaultHandicraft: Handicraft = {
+    id: 0,
+    work_order: 0,
+    machine: 0,
+    observations: '',
+    next: 0
+  }
+
   const [poDetails, setPoDetails] = useState<PODetail[]>([])
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([])
   const [customers, setCustomers] = useState<Customer[]>([])
+  const [extrusions, setExtrusions] = useState<Extrusion[]>([])
+  const [meQuantity, setMEQuantity] = useState<R_RawMaterial_Extrusion[]>([])
+  const [printings, setPrintings] = useState<Printing[]>([])
+  const [sealings, setSealings] = useState<Sealing[]>([])
+  const [handicrafts, setHandicrafts] = useState<Handicraft[]>([])
   const [isModalVisible, setIsModalVisible] = useState(false)
   const [selectedDetail, setSelectedDetail] = useState<PODetail | null>(null)
   const [form] = Form.useForm()
@@ -19,6 +85,11 @@ export default function ProductionPage() {
     fetchPODetails()
     fetchWorkOrders()
     fetchCustomers()
+    fetchExtrusions()
+    fetchR_RawMaterialExtrusions()
+    fetchPrintings()
+    fetchSealings()
+    fetchHandicrafts()
   }, [])
 
   const fetchCustomers = async () => {
@@ -38,7 +109,6 @@ export default function ProductionPage() {
       message.error('Error al cargar los detalles de OC')
     }
   }
-  
 
   const fetchWorkOrders = async () => {
     try {
@@ -46,6 +116,51 @@ export default function ProductionPage() {
       setWorkOrders(response.data)
     } catch (error) {
       message.error('Error al cargar las órdenes de trabajo')
+    }
+  }
+
+  const fetchExtrusions = async () => {
+    try {
+      const response = await axios.get('http://127.0.0.1:8000/beiplas/production/extrusions/')
+      setExtrusions(response.data)
+    } catch (error) {
+      message.error('Error al cargar las extrusiones')
+    }
+  }
+
+  const fetchR_RawMaterialExtrusions = async () => {
+    try {
+      const response = await axios.get('http://127.0.0.1:8000/beiplas/production/meQuantity/')
+      setMEQuantity(response.data)
+    } catch (error) {
+      message.error('Error al cargar las relaciones de materia prima con extrusión')
+    }
+  }
+
+  const fetchSealings = async () => {
+    try {
+      const response = await axios.get('http://127.0.0.1:8000/beiplas/production/sealings/')
+      setSealings(response.data)
+    } catch (error) {
+      message.error('Error al cargar los sellados')
+    }
+  }
+
+  const fetchPrintings = async () => {
+    try {
+      const response = await axios.get('http://127.0.0.1:8000/beiplas/production/printings/')
+      setPrintings(response.data)
+    } catch (error) {
+      message.error('Error al cargar las impresiones')
+    }
+  }
+
+  const fetchHandicrafts = async () => {
+    try {
+      const response = await axios.get('http://127.0.0.1:8000/beiplas/production/handicrafts/')
+      setHandicrafts(response.data)
+    } catch (error) {
+      message.error('Error al cargar las obras a mano')
     }
   }
 
@@ -77,7 +192,7 @@ export default function ProductionPage() {
               title={'OT: ' + detail?.wo_number?.toString() || 'Cargando...'}
               description={`~ ${customers.find(customer => customer.purchase_orders?.find(po => po.id === detail.purchase_order))?.company_name} ~\n ${detail.reference_internal}`}
               floorDescription={`\nCantidad: ${detail.kilograms > 0 ? `${detail.kilograms} kg` : `${detail.units} uds`}`}
-              actionButton={<button className='text-white transition-colors w-full bg-sky-500 rounded-md p-2 flex items-center justify-center gap-2 hover:bg-sky-600 font-mono text-lg' onClick={() => setSelectedDetail(detail)}> <LuCalendarClock size={22} />Programar</button>}
+              actionButton={<button className='text-white transition-colors w-full bg-green-500 rounded-md p-2 flex items-center justify-center gap-2 hover:bg-green-600 font-mono text-lg' onClick={() => setSelectedDetail(detail)}> <LuCalendarClock size={22} />Programar</button>}
             />
           ))}
         </div>
@@ -86,53 +201,8 @@ export default function ProductionPage() {
       {/* Lista de Órdenes de Trabajo */}
       <div>
         <h2 className="text-xl font-semibold mb-4">Órdenes de Trabajo</h2>
-        <List
-          className="shadow-md"
-          itemLayout="horizontal"
-          dataSource={workOrders}
-          renderItem={(wo: WorkOrder) => (
-            <List.Item
-              actions={[
-                <Button key="edit" type="link">Editar</Button>,
-                <Button key="delete" type="link" danger>Eliminar</Button>
-              ]}
-            >
-              <List.Item.Meta
-                avatar={<CheckCircleOutlined className="text-green-500" />}
-                title={`OT: ${wo.wo_number}`}
-                description={`Estado: ${wo.status}`}
-              />
-            </List.Item>
-          )}
-        />
-      </div>
 
-      {/* Modal para crear OT */}
-      <Modal
-        title="Crear Orden de Trabajo"
-        open={isModalVisible}
-        onCancel={() => setIsModalVisible(false)}
-        footer={null}
-      >
-        <Form
-          form={form}
-          onFinish={createWorkOrder}
-          layout="vertical"
-        >
-          <Form.Item
-            name="notes"
-            label="Notas"
-            rules={[{ required: true, message: 'Por favor ingrese las notas' }]}
-          >
-            <Input.TextArea />
-          </Form.Item>
-          <Form.Item>
-            <Button type="primary" htmlType="submit">
-              Crear Orden de Trabajo
-            </Button>
-          </Form.Item>
-        </Form>
-      </Modal>
+      </div>
     </div>
   )
 }
