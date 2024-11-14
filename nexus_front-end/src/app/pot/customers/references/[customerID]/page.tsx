@@ -1071,6 +1071,7 @@ export default function CustomerReferencesPage({ params }: { params: { customerI
             )}
 
             <TopTableElements
+                showAddButton
                 onAdd={() => setFormModalOpen(true)}
                 onSearch={(term) => setSearchTerm(term)}
                 onFilter={() => { }}

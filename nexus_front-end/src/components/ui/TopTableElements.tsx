@@ -8,7 +8,8 @@ interface FilterOption {
 }
 
 interface TopTableElementsProps {
-  onAdd: () => void;
+  showAddButton?: boolean;
+  onAdd?: () => void;
   onSearch: (searchTerm: string) => void;
   onFilter: (field: string | null, order: 'asc' | 'desc') => void;
   filterOptions: FilterOption[];
@@ -19,7 +20,7 @@ interface TopTableElementsProps {
   onToggleAnnulled?: () => void;
 }
 
-const TopTableElements: React.FC<TopTableElementsProps> = ({ onAdd, onSearch, onFilter, filterOptions, showBackButton, onBack, showAnnulledButton, showAnnulled, onToggleAnnulled }) => {
+const TopTableElements: React.FC<TopTableElementsProps> = ({ showAddButton, onAdd, onSearch, onFilter, filterOptions, showBackButton, onBack, showAnnulledButton, showAnnulled, onToggleAnnulled }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [currentField, setCurrentField] = useState<string | null>(null);
@@ -67,14 +68,16 @@ const TopTableElements: React.FC<TopTableElementsProps> = ({ onAdd, onSearch, on
             Archivo de anuladas
           </motion.button>
         )}
-        <motion.button
-          initial={{ opacity: 0, y: 20 }}
+        {showAddButton && (
+          <motion.button
+            initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="bg-green-500 dark:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-green-600 dark:hover:bg-green-700 transition-colors border dark:border-green-800"
           onClick={onAdd}
         >
-          <LuPlus className="mr-2" /> Agregar
-        </motion.button>
+            <LuPlus className="mr-2" /> Agregar
+          </motion.button>
+        )}
       </div>
 
       <div className="flex items-center gap-1">

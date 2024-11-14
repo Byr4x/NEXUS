@@ -1,3 +1,15 @@
+export interface Customer {
+    id: number;
+    nit: number;
+    company_name: string;
+    contact: string;
+    contact_email: string;
+    contact_phone_number: string;
+    location: string;
+    is_active: boolean;
+    purchase_orders?: PurchaseOrder[];
+}
+
 export interface PurchaseOrder {
     id?: number;
     details?: PODetail[];

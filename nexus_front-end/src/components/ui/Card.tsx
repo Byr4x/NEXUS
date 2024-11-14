@@ -6,6 +6,7 @@ import { Switch } from './Switch'
 interface CardProps {
   title: string
   description: string
+  floorDescription?: string
   imageUrl?: string
   onEdit?: () => void
   onDelete?: () => void
@@ -13,18 +14,21 @@ interface CardProps {
   switchState?: boolean
   onSwitchChange?: (checked: boolean) => void
   onView?: () => void
+  actionButton?: React.ReactNode
 }
 
 export const Card: React.FC<CardProps> = ({
   title,
   description,
+  floorDescription,
   imageUrl,
   onEdit,
   onDelete,
   showSwitch = false,
   switchState = false,
   onSwitchChange,
-  onView
+  onView,
+  actionButton
 }) => {
   const cardClasses = `rounded-lg shadow overflow-hidden ${showSwitch && !switchState ? 'opacity-50 bg-white/30 dark:bg-gray-800/30' : 'bg-white dark:bg-gray-800'}`
   const textClasses = `${showSwitch && !switchState ? 'text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-gray-100'}`
@@ -38,31 +42,43 @@ export const Card: React.FC<CardProps> = ({
     >
       {imageUrl && (
         <div className={`relative w-full h-48 ${switchState ? 'bg-white dark:bg-gray-800' : 'opacity-50'} rounded-md`}>
-          <img 
-            src={imageUrl} 
-            alt={title} 
+          <img
+            src={imageUrl}
+            alt={title}
             className="w-full h-full object-contain transition-transform duration-300 hover:scale-105 rounded-md"
           />
         </div>
       )}
-      <div className={`p-4 flex-grow ${!imageUrl && !description ? 'flex items-center justify-center' : ''}`}>
-        <h2 className={`font-semibold ${textClasses} ${!imageUrl && !description ? 'text-center text-3xl' : 'text-xl'}`}>{title}</h2>
-        {description && (
-          <p className={`${descriptionClasses} mt-2`}>
-            {description.split('\n').map((line, i) => (
-              <React.Fragment key={i}>
-                {line}
-                {i < description.split('\n').length - 1 && <br />}
-              </React.Fragment>
-            ))}
-          </p>
-        )}
-      </div>
-      <div className="flex justify-between space-x-2 p-4 bg-gray-50 dark:bg-gray-700">
+      
+        <div className={`px-4 pt-4 pb-2 flex-grow flex flex-col ${!imageUrl && !description ? 'items-center justify-center' : ''}`}>
+          <h2 className={`font-semibold ${textClasses} ${!imageUrl && !description ? 'text-center text-3xl' : 'text-xl'}`}>{title}</h2>
+          {description && (
+            <p className={`${descriptionClasses} mt-2`}>
+              {description.split('\n').map((line, i) => (
+                <React.Fragment key={i}>
+                  {line}
+                  {i < description.split('\n').length - 1 && <br />}
+                </React.Fragment>
+              ))}
+            </p>
+          )}
+          {floorDescription && (
+            <p className={`${descriptionClasses} mt-auto pt-2`}>
+              {floorDescription.split('\n').map((line, i) => (
+                <React.Fragment key={i}>
+                  {line}
+                  {i < floorDescription.split('\n').length - 1 && <br />}
+                </React.Fragment>
+              ))}
+            </p>
+          )}
+        </div>
+      <div className="flex justify-between space-x-2 p-4 bg-gray-200 dark:bg-gray-700">
+        {actionButton && actionButton}
         {showSwitch && (
           <Switch
             checked={switchState}
-            onCheckedChange={onSwitchChange || (() => {})}
+            onCheckedChange={onSwitchChange || (() => { })}
             size='sm'
           />
         )}

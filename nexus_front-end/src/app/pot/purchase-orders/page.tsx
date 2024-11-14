@@ -2221,6 +2221,7 @@ export default function ReferencesPage() {
             )}
 
             <TopTableElements
+                showAddButton={!showAnnulled}
                 onAdd={() => setFormModalOpen(true)}
                 onSearch={(term) => setSearchTerm(term)}
                 onFilter={() => { }}
@@ -2239,7 +2240,13 @@ export default function ReferencesPage() {
                 {POs.length === 0 ? (
                     <div className="flex justify-center items-center h-full pt-20">
                         <p className="text-gray-600 dark:text-gray-400">
-                            {showAnnulled ? 'No hay ordenes de compra anuladas' : 'No hay ordenes de compra disponibles'}
+                            No hay ordenes de compra disponibles
+                        </p>
+                    </div>  
+                ) : showAnnulled && POs.map(po => po.was_annulled).every(wasAnnulled => !wasAnnulled) ? (
+                    <div className="flex justify-center items-center h-full pt-20">
+                        <p className="text-gray-600 dark:text-gray-400">
+                           No hay ordenes de compra anuladas
                         </p>
                     </div>
                 ) : (

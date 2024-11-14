@@ -14,18 +14,7 @@ import { showAlert, showToast } from '@/components/ui/Alerts';
 import { useRouter } from 'next/navigation';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
-
-interface Customer {
-  id: number;
-  nit: number;
-  company_name: string;
-  contact: string;
-  contact_email: string;
-  contact_phone_number: string;
-  location: string;
-  is_active: boolean;
-}
-
+import { Customer } from '@/components/interfaces';
 interface FormErrors {
   nit: string;
   company_name: string;
@@ -335,8 +324,13 @@ export default function CustomersPage() {
       fetchCustomers();
     } else {
       const sortedCustomers = [...customers].sort((a, b) => {
-        if (a[field as keyof Customer] < b[field as keyof Customer]) return order === 'asc' ? -1 : 1;
-        if (a[field as keyof Customer] > b[field as keyof Customer]) return order === 'asc' ? 1 : -1;
+        const aValue = a[field as keyof Customer];
+        const bValue = b[field as keyof Customer];
+        
+        if (aValue === undefined || bValue === undefined) return 0;
+        
+        if (aValue < bValue) return order === 'asc' ? -1 : 1;
+        if (aValue > bValue) return order === 'asc' ? 1 : -1;
         return 0;
       });
       setCustomers(sortedCustomers);
@@ -469,6 +463,7 @@ export default function CustomersPage() {
   return (
     <div className="container">
       <TopTableElements
+        showAddButton
         onAdd={() => setFormModalOpen(true)}
         onSearch={handleSearch}
         onFilter={handleFilter}

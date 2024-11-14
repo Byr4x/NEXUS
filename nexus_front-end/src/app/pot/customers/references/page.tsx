@@ -1301,6 +1301,7 @@ export default function ReferencesPage() {
   return (
     <div className="container">
       <TopTableElements
+        showAddButton
         onAdd={() => setFormModalOpen(true)}
         onSearch={(term) => setSearchTerm(term)}
         onFilter={() => { }} // Implementar si es necesario
