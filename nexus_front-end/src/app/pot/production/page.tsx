@@ -164,6 +164,62 @@ export default function ProductionPage() {
     }
   }
 
+  const validateField = (name: string, value: any): string => {
+    const validations: { [key: string]: () => string } = {
+      'wo_surplus_percentage': () => {
+        if (!value) return 'El porcentaje de excedente es requerido'
+        if (value < 0 || value > 100) return 'El porcentaje de excedente debe estar entre 0 y 100';
+        return '';
+      },
+
+      'extr_machine': () => {
+        if (!value) return 'La maquina de extrusión es requerida'
+        return '';
+      },
+      'extr_roll_type': () => {
+        if (!value) return 'El tipo de rollo es requerido'
+        return '';
+      },
+      'extr_rolls_quantity': () => {
+        if (!value) return 'La cantidad de rollos es requerida'
+        if (value <= 0) return 'La cantidad de rollos debe ser mayor a 0'
+        return '';
+      },
+      'extr_caliber': () => {
+        if (!value) return 'El calibre es requerido'
+        if (value <= 0) return 'El calibre debe ser mayor a 0'
+        return '';
+      },
+      'extr_next': () => {
+        if (!value) return 'El destino es requerido'
+        return '';
+      },
+
+      'meQuantity_raw_material': () => {
+        if (!value) return 'La materia prima es requerida'
+        return '';
+      },
+      'meQuantity_quantity': () => {
+        if (!value) return 'La cantidad es requerida'
+        if (value <= 0) return 'La cantidad debe ser mayor a 0'
+        return '';
+      },
+
+      'prt_machine': () => {
+        if (!value) return 'La máquina de impresión es requerida'
+        return '';
+      },
+      'prt_next': () => {
+        if (!value) return 'El destino es requerido'
+        return '';
+      }
+    }
+
+    return validations[name] ? validations[name]() : '';
+  }
+
+
+
   const createWorkOrder = async (values: any) => {
     try {
       await axios.post('http://127.0.0.1:8000/beiplas/production/workOrders/', {
