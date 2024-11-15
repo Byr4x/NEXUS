@@ -117,6 +117,7 @@ class Extrusion(models.Model):
     }
     roll_type = models.PositiveIntegerField(choices=roll_type_choices, default=0)
     rolls_quantity = models.PositiveSmallIntegerField()
+    width = models.DecimalField(max_digits=10, decimal_places=2)
     caliber = models.DecimalField(max_digits=10, decimal_places=2)
     observations = models.TextField()
     next = models.PositiveIntegerField(choices=next_choices.items(), default=0)

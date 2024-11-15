@@ -153,16 +153,29 @@ export interface WorkOrder {
     //touch? Touch;
 }
 
+export interface WOErrors {
+    surplus_percentage?: string;
+}
+
 export interface Extrusion {
     id: number;
     work_order: number;
     machine: number;
     roll_type: number;
     rolls_quantity: number;
+    width: number;
     caliber: number;
     observations: string;
     next: number;
 }
+ export interface EXTRErrors {
+    machine?: string;
+    roll_type?: string;
+    rolls_quantity?: string;
+    width?: string;
+    caliber?: string;
+    next?: string;
+ }
 
 export interface R_RawMaterial_Extrusion {
     id: number;
@@ -171,6 +184,11 @@ export interface R_RawMaterial_Extrusion {
     quantity: number;
 }
 
+export interface MEQUANTITYErrors {
+    raw_material?: string;
+    quantity?: string;
+}            
+
 export interface Printing {
     id: number;
     work_order: number;
@@ -178,6 +196,11 @@ export interface Printing {
     is_new: boolean;
     observations: string;
     next: number;
+}
+
+export interface PRTErrors {
+    machine?: string;
+    next?: string;
 }
 
 export interface Sealing {
@@ -192,10 +215,24 @@ export interface Sealing {
     next: number;
 }
 
+export interface SELErrors {
+    machine?: string;
+    caliber?: string;
+    hits?: string;
+    package_units?: string;
+    bundle_units?: string;
+    next?: string;
+}
+
 export interface Handicraft {
     id: number;
     work_order: number;
     machine: number;
     observations: string;   
     next: number;
+}
+
+export interface HNDErrors {
+    observations?: string;
+    next?: string;
 }

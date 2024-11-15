@@ -3,8 +3,10 @@ import { useState, useEffect, Reference } from 'react'
 import { Button, Badge, List, message, Modal, Form, Input } from 'antd'
 import { Card } from '@/components/ui/Card'
 import { CheckCircleOutlined } from '@ant-design/icons'
-import { Customer, PODetail, WorkOrder, Extrusion, R_RawMaterial_Extrusion, Printing, Sealing, Handicraft } from '@/components/interfaces';
+import { Customer, PODetail, WorkOrder, WOErrors, Extrusion, EXTRErrors, R_RawMaterial_Extrusion, MEQUANTITYErrors, Printing, PRTErrors, Sealing, SELErrors, Handicraft, HNDErrors } from '@/components/interfaces';
 import { LuCalendarClock } from 'react-icons/lu'
+import FormModal from '@/components/modals/FormModal'
+import { TextInput, NumberInput, SelectInput, TextArea } from '@/components/ui/StyledInputs'
 import axios from 'axios'
 
 export default function ProductionPage() {
@@ -28,6 +30,7 @@ export default function ProductionPage() {
     machine: 0,
     roll_type: 0,
     rolls_quantity: 0,
+    width: 0,
     caliber: 0,
     observations: '',
     next: 0
@@ -77,9 +80,24 @@ export default function ProductionPage() {
   const [printings, setPrintings] = useState<Printing[]>([])
   const [sealings, setSealings] = useState<Sealing[]>([])
   const [handicrafts, setHandicrafts] = useState<Handicraft[]>([])
+  const [formDataWO, setFormDataWO] = useState<WorkOrder>(defaultWorkOrder)
+  const [formDataEXTR, setFormDataEXTR] = useState<Extrusion>(defaultExtrusion)
+  const [formDataMEQUANTITY, setFormDataMEQUANTITY] = useState<R_RawMaterial_Extrusion>(defaultR_RawMaterial_Extrusion)
+  const [formDataPRT, setFormDataPRT] = useState<Printing>(defaultPrinting)
+  const [formDataSEL, setFormDataSEL] = useState<Sealing>(defaultSealing)
+  const [formDataHND, setFormDataHND] = useState<Handicraft>(defaultHandicraft)
+  const [woErrors, setWOErrors] = useState<WOErrors>({})
+  const [extrErrors, setEXTRErrors] = useState<EXTRErrors>({})
+  const [meQuantityErrors, setMeQuantityErrors] = useState<MEQUANTITYErrors>({})
+  const [prtErrors, setPRTErrors] = useState<PRTErrors>({})
+  const [selErrors, setSELErrors] = useState<SELErrors>({})
+  const [hndErrors, setHNDErrors] = useState<HNDErrors>({})
   const [isModalVisible, setIsModalVisible] = useState(false)
   const [selectedDetail, setSelectedDetail] = useState<PODetail | null>(null)
-  const [form] = Form.useForm()
+  const [currentStep, setCurrentStep] = useState(1);
+  const [totalSteps, setTotalSteps] = useState(0);
+  const [formData, setFormData] = useState<any>({}); // Adjust type as necessary
+  const [isFormModalOpen, setFormModalOpen] = useState(false);
 
   useEffect(() => {
     fetchPODetails()
@@ -212,27 +230,138 @@ export default function ProductionPage() {
       'prt_next': () => {
         if (!value) return 'El destino es requerido'
         return '';
+      },
+
+      'sel_machine': () => {
+        if (!value) return 'La maquina de sellado es requerida'
+        return '';
+      },
+      'sel_caliber': () => {
+        if (!value) return 'El calibre es requerido'
+        if (value <= 0) return 'El calibre debe ser mayor a 0'
+        return '';
+      },
+      'sel_hits': () => {
+        if (!value) return 'El número de golpes es requerido'
+        if (value <= 0) return 'El número de golpes debe ser mayor a 0'
+        return '';
+      },
+      'sel_package_units': () => {
+        if (!value) return 'El número de unidades por paquete es requerido'
+        if (value <= 0) return 'El número de unidades por paquete debe ser mayor a 0'
+        return '';
+      },
+      'sel_bundle_units': () => {
+        if (!value) return 'El número de unidades por bulto es requerido'
+        if (value <= 0) return 'El número de unidades por bulto debe ser mayor a 0'
+        return '';
+      },
+      'sel_next': () => {
+        if (!value) return 'El destino es requerido'
+        return '';
+      },
+
+
+      'hnd_observations': () => {
+        if (!value) return 'Las observaciones de la manualidad es requerida'
+        return '';
+      },
+      'hnd_next': () => {
+        if (!value) return 'El destino es requerido'
+        return '';
       }
     }
 
     return validations[name] ? validations[name]() : '';
   }
 
+  const handleInputChange = (
+    e: { target: { name: string; value: string | Date | null } }
+  ) => {
+    const { name, value } = e.target;
+    const underscoreIndex = name.indexOf('_');
+    const formType = name.slice(0, underscoreIndex);
+    const fieldName = name.slice(underscoreIndex + 1);
 
+    // Validar el campo
+    const error = validateField(name, value);
 
-  const createWorkOrder = async (values: any) => {
-    try {
-      await axios.post('http://127.0.0.1:8000/beiplas/production/workOrders/', {
-        wo_number: selectedDetail?.wo_number,
-        ...values
-      })
-      message.success('Orden de trabajo creada exitosamente')
-      setIsModalVisible(false)
-      fetchWorkOrders()
-    } catch (error) {
-      message.error('Error al crear la orden de trabajo')
+    switch (formType) {
+      case 'wo':
+        setFormDataWO(prev => {
+          const newState = { ...prev, [fieldName]: value };
+          return newState;
+        })
+        setWOErrors(prev => ({ ...prev, [fieldName]: error }));
+        break;
+
+      case 'extr':
+        setFormDataEXTR(prev => {
+          const newState = { ...prev, [fieldName]: value };
+          return newState;
+        })
+        setEXTRErrors(prev => ({ ...prev, [fieldName]: error }));
+        break;
+
+      case 'meQuantity':
+        setFormDataMEQUANTITY(prev => {
+          const newState = { ...prev, [fieldName]: value };
+          return newState;
+        })
+        setMeQuantityErrors(prev => ({ ...prev, [fieldName]: error }));
+        break;
+
+      case 'prt':
+        setFormDataPRT(prev => {
+          const newState = { ...prev, [fieldName]: value };
+          return newState;
+        })
+        setPRTErrors(prev => ({ ...prev, [fieldName]: error }));
+        break;
+
+      case 'sel':
+        setFormDataSEL(prev => {
+          const newState = { ...prev, [fieldName]: value };
+          return newState;
+        })
+        setSELErrors(prev => ({ ...prev, [fieldName]: error }));
+        break;
+
+      case 'hnd':
+        setFormDataHND(prev => {
+          const newState = { ...prev, [fieldName]: value };
+          return newState;
+        })
+        setHNDErrors(prev => ({ ...prev, [fieldName]: error }));
+        break;
     }
-  }
+  };
+
+
+  // Function to handle opening the modal
+  const openModal = (workOrder: WorkOrder) => {
+    setFormData(workOrder); // Set initial data
+    setTotalSteps(5); // Total steps based on your next choices
+    setCurrentStep(1);
+    setFormModalOpen(true);
+  };
+
+  const handleNext = () => {
+    if (currentStep < totalSteps) {
+      setCurrentStep(prev => prev + 1);
+    }
+  };
+
+  const handlePrevious = () => {
+    if (currentStep > 1) {
+      setCurrentStep(prev => prev - 1);
+    }
+  };
+
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    // Handle form submission logic based on current step
+  };
 
   return (
     <div className="p-6">
@@ -259,6 +388,87 @@ export default function ProductionPage() {
         <h2 className="text-xl font-semibold mb-4">Órdenes de Trabajo</h2>
 
       </div>
+
+      {/* Modal for creating/updating production details */}
+      {isFormModalOpen && (
+        <FormModal
+          title="Crear/Actualizar Producción"
+          layout={[
+            ['work_order_info'], // Step 1: Work Order Info
+            ['extrusion_info'],   // Step 2: Extrusion Info
+            ['printing_info'],    // Step 3: Printing Info
+            ['sealing_info'],     // Step 4: Sealing Info
+            ['handicraft_info'],  // Step 5: Handicraft Info
+          ]}
+          inputs={{
+            work_order_info: (
+              <div>
+                <TextInput
+                  label="Número de Orden"
+                  name="wo_number"
+                  value={formData.wo_number}
+                  onChange={handleInputChange}
+                  required
+                />
+                {/* Add other work order fields as necessary */}
+              </div>
+            ),
+            extrusion_info: (
+              <div>
+                <NumberInput
+                  label="Cantidad de Rollos"
+                  name="rolls_quantity"
+                  value={formData.rolls_quantity}
+                  onChange={handleInputChange}
+                  required
+                />
+                {/* Add other extrusion fields as necessary */}
+              </div>
+            ),
+            printing_info: (
+              <div>
+                <TextInput
+                  label="Observaciones de Impresión"
+                  name="printing_observations"
+                  value={formData.printing_observations}
+                  onChange={handleInputChange}
+                />
+                {/* Add other printing fields as necessary */}
+              </div>
+            ),
+            sealing_info: (
+              <div>
+                <NumberInput
+                  label="Hits"
+                  name="hits"
+                  value={formData.hits}
+                  onChange={handleInputChange}
+                  required
+                />
+                {/* Add other sealing fields as necessary */}
+              </div>
+            ),
+            handicraft_info: (
+              <div>
+                <TextArea
+                  label="Observaciones de Manualidad"
+                  name="handicraft_observations"
+                  value={formData.handicraft_observations}
+                  onChange={handleInputChange}
+                />
+                {/* Add other handicraft fields as necessary */}
+              </div>
+            ),
+          }}
+          onSubmit={handleFormSubmit}
+          onCancel={() => setFormModalOpen(false)}
+          submitLabel="Guardar"
+          currentStep={currentStep}
+          totalSteps={totalSteps}
+          onNext={handleNext}
+          onPrevious={handlePrevious}
+        />
+      )}
     </div>
   )
 }
