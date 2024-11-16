@@ -3,13 +3,51 @@ import { useState, useEffect, Reference } from 'react'
 import { Button, Badge, List, message, Modal, Form, Input } from 'antd'
 import { Card } from '@/components/ui/Card'
 import { CheckCircleOutlined } from '@ant-design/icons'
-import { Customer, PODetail, WorkOrder, WOErrors, Extrusion, EXTRErrors, R_RawMaterial_Extrusion, MEQUANTITYErrors, Printing, PRTErrors, Sealing, SELErrors, Handicraft, HNDErrors } from '@/components/interfaces';
+import { Customer, PurchaseOrderForm, PODetailForm, WorkOrder, WOErrors, Extrusion, EXTRErrors, R_RawMaterial_Extrusion, MEQUANTITYErrors, Printing, PRTErrors, Sealing, SELErrors, Handicraft, HNDErrors } from '@/components/interfaces';
 import { LuCalendarClock } from 'react-icons/lu'
 import FormModal from '@/components/modals/FormModal'
 import { TextInput, NumberInput, SelectInput, TextArea } from '@/components/ui/StyledInputs'
 import axios from 'axios'
 
 export default function ProductionPage() {
+  const defaultPODetail: PODetailForm = {
+    id: 0,
+    purchase_order: 0,
+    reference: 0,
+    product_type: 0,
+    material: 0,
+    reference_internal: '',
+    film_color: '',
+    measure_unit: 0,
+    width: 0,
+    length: 0,
+    gussets_type: 0,
+    first_gusset: null,
+    second_gusset: null,
+    flap_type: 0,
+    flap_size: null,
+    tape: 0,
+    die_cut_type: 0,
+    sealing_type: 0,
+    caliber: 0,
+    roller_size: 0,
+    additive: [],
+    has_print: false,
+    dynas_treaty_faces: 0,
+    is_new_sketch: false,
+    sketch_url: '',
+    pantones_quantity: 0,
+    pantones_codes: [],
+    kilograms: 0,
+    units: 0,
+    kilogram_price: 0,
+    unit_price: 0,
+    production_observations: '',
+    delivery_location: '',
+    is_updated: false,
+    wo_number: 0,
+  };
+
   const defaultWorkOrder: WorkOrder = {
     id: 0,
     surplus_percentage: 0,
@@ -72,34 +110,36 @@ export default function ProductionPage() {
     next: 0
   }
 
-  const [poDetails, setPoDetails] = useState<PODetail[]>([])
-  const [workOrders, setWorkOrders] = useState<WorkOrder[]>([])
-  const [customers, setCustomers] = useState<Customer[]>([])
-  const [extrusions, setExtrusions] = useState<Extrusion[]>([])
-  const [meQuantity, setMEQuantity] = useState<R_RawMaterial_Extrusion[]>([])
-  const [printings, setPrintings] = useState<Printing[]>([])
-  const [sealings, setSealings] = useState<Sealing[]>([])
-  const [handicrafts, setHandicrafts] = useState<Handicraft[]>([])
-  const [formDataWO, setFormDataWO] = useState<WorkOrder>(defaultWorkOrder)
-  const [formDataEXTR, setFormDataEXTR] = useState<Extrusion>(defaultExtrusion)
-  const [formDataMEQUANTITY, setFormDataMEQUANTITY] = useState<R_RawMaterial_Extrusion>(defaultR_RawMaterial_Extrusion)
-  const [formDataPRT, setFormDataPRT] = useState<Printing>(defaultPrinting)
-  const [formDataSEL, setFormDataSEL] = useState<Sealing>(defaultSealing)
-  const [formDataHND, setFormDataHND] = useState<Handicraft>(defaultHandicraft)
-  const [woErrors, setWOErrors] = useState<WOErrors>({})
-  const [extrErrors, setEXTRErrors] = useState<EXTRErrors>({})
-  const [meQuantityErrors, setMeQuantityErrors] = useState<MEQUANTITYErrors>({})
-  const [prtErrors, setPRTErrors] = useState<PRTErrors>({})
-  const [selErrors, setSELErrors] = useState<SELErrors>({})
-  const [hndErrors, setHNDErrors] = useState<HNDErrors>({})
-  const [isModalVisible, setIsModalVisible] = useState(false)
-  const [selectedDetail, setSelectedDetail] = useState<PODetail | null>(null)
+  const [POs, setPOs] = useState<PurchaseOrderForm[]>([]);
+  const [poDetails, setPoDetails] = useState<PODetailForm[]>([]);
+  const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [extrusions, setExtrusions] = useState<Extrusion[]>([]);
+  const [meQuantity, setMEQuantity] = useState<R_RawMaterial_Extrusion[]>([]);
+  const [printings, setPrintings] = useState<Printing[]>([]);
+  const [sealings, setSealings] = useState<Sealing[]>([]);
+  const [handicrafts, setHandicrafts] = useState<Handicraft[]>([]);
+  const [formDataPOD, setFormDataPOD] = useState<PODetailForm>(defaultPODetail);
+  const [formDataWO, setFormDataWO] = useState<WorkOrder>(defaultWorkOrder);
+  const [formDataEXTR, setFormDataEXTR] = useState<Extrusion>(defaultExtrusion);
+  const [formDataMEQUANTITY, setFormDataMEQUANTITY] = useState<R_RawMaterial_Extrusion>(defaultR_RawMaterial_Extrusion);
+  const [formDataPRT, setFormDataPRT] = useState<Printing>(defaultPrinting);
+  const [formDataSEL, setFormDataSEL] = useState<Sealing>(defaultSealing);
+  const [formDataHND, setFormDataHND] = useState<Handicraft>(defaultHandicraft);
+  const [woErrors, setWOErrors] = useState<WOErrors>({});
+  const [extrErrors, setEXTRErrors] = useState<EXTRErrors>({});
+  const [meQuantityErrors, setMeQuantityErrors] = useState<MEQUANTITYErrors>({});
+  const [prtErrors, setPRTErrors] = useState<PRTErrors>({});
+  const [selErrors, setSELErrors] = useState<SELErrors>({});
+  const [hndErrors, setHNDErrors] = useState<HNDErrors>({});
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [selectedDetail, setSelectedDetail] = useState<PODetailForm | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [totalSteps, setTotalSteps] = useState(0);
-  const [formData, setFormData] = useState<any>({}); // Adjust type as necessary
   const [isFormModalOpen, setFormModalOpen] = useState(false);
 
   useEffect(() => {
+    fetchPOs()
     fetchPODetails()
     fetchWorkOrders()
     fetchCustomers()
@@ -119,9 +159,18 @@ export default function ProductionPage() {
     }
   }
 
+  const fetchPOs = async () => {
+    try {
+      const response = await axios.get('http://127.0.0.1:8000/beiplas/business/purchaseOrders/')
+      setPOs(response.data)
+    } catch (error) {
+      message.error('Error al cargar las OC')
+    }
+  }
+
   const fetchPODetails = async () => {
     try {
-      const response = await axios.get<PODetail[]>('http://127.0.0.1:8000/beiplas/business/poDetails/')
+      const response = await axios.get<PODetailForm[]>('http://127.0.0.1:8000/beiplas/business/poDetails/')
       setPoDetails(response.data.filter(detail => detail.was_annulled === false))
     } catch (error) {
       message.error('Error al cargar los detalles de OC')
@@ -339,9 +388,10 @@ export default function ProductionPage() {
 
 
   // Function to handle opening the modal
-  const openModal = (workOrder: WorkOrder) => {
-    setFormData(workOrder); // Set initial data
-    setTotalSteps(5); // Total steps based on your next choices
+  const openModal = (detail: PODetailForm) => {
+    setFormDataPOD(detail); // Set initial data
+    setSelectedDetail(detail);
+    setTotalSteps(2); // Total steps based on your next choices
     setCurrentStep(1);
     setFormModalOpen(true);
   };
@@ -363,6 +413,16 @@ export default function ProductionPage() {
     // Handle form submission logic based on current step
   };
 
+  const PODInfo: React.FC<{ data: PODetailForm }> = ({ data }) => (
+    <div>
+      <h3 className="text-lg font-semibold">Información de OC</h3>
+      <p><strong>Número de OC:</strong> {POs.find(po => po.id === data.purchase_order)?.order_number || 'Unknown'}</p>
+      <p><strong>Referencia:</strong> {data.reference_internal}</p>
+      <p><strong>Color de película:</strong> {data.film_color}</p>
+      {/* Agregar más campos según sea necesario */}
+    </div>
+  );
+
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-6">Gestión de Producción</h1>
@@ -377,7 +437,7 @@ export default function ProductionPage() {
               title={'OT: ' + detail?.wo_number?.toString() || 'Cargando...'}
               description={`~ ${customers.find(customer => customer.purchase_orders?.find(po => po.id === detail.purchase_order))?.company_name} ~\n ${detail.reference_internal}`}
               floorDescription={`\nCantidad: ${detail.kilograms > 0 ? `${detail.kilograms} kg` : `${detail.units} uds`}`}
-              actionButton={<button className='text-white transition-colors w-full bg-green-500 rounded-md p-2 flex items-center justify-center gap-2 hover:bg-green-600 font-mono text-lg' onClick={() => setSelectedDetail(detail)}> <LuCalendarClock size={22} />Programar</button>}
+              actionButton={<button className='text-white transition-colors w-full bg-green-500 rounded-md p-2 flex items-center justify-center gap-2 hover:bg-green-600 font-mono text-lg' onClick={() => openModal(detail)}> <LuCalendarClock size={22} />Programar</button>}
             />
           ))}
         </div>
@@ -388,6 +448,7 @@ export default function ProductionPage() {
         <h2 className="text-xl font-semibold mb-4">Órdenes de Trabajo</h2>
 
       </div>
+
 
       {/* Modal for creating/updating production details */}
       {isFormModalOpen && (
@@ -403,10 +464,17 @@ export default function ProductionPage() {
           inputs={{
             work_order_info: (
               <div>
-                <TextInput
-                  label="Número de Orden"
-                  name="wo_number"
-                  value={formData.wo_number}
+                <NumberInput
+                  label="Número de OT"
+                  name="id"
+                  value={formDataPOD.wo_number || 0}
+                  onChange={handleInputChange}
+                  required
+                />
+                <NumberInput
+                  label="Número de OT"
+                  name="id"
+                  value={formDataWO.id}
                   onChange={handleInputChange}
                   required
                 />
@@ -418,7 +486,7 @@ export default function ProductionPage() {
                 <NumberInput
                   label="Cantidad de Rollos"
                   name="rolls_quantity"
-                  value={formData.rolls_quantity}
+                  value={formDataEXTR.rolls_quantity}
                   onChange={handleInputChange}
                   required
                 />
@@ -430,7 +498,7 @@ export default function ProductionPage() {
                 <TextInput
                   label="Observaciones de Impresión"
                   name="printing_observations"
-                  value={formData.printing_observations}
+                  value={formDataPRT.observations}
                   onChange={handleInputChange}
                 />
                 {/* Add other printing fields as necessary */}
@@ -441,7 +509,7 @@ export default function ProductionPage() {
                 <NumberInput
                   label="Hits"
                   name="hits"
-                  value={formData.hits}
+                  value={formDataSEL.hits}
                   onChange={handleInputChange}
                   required
                 />
@@ -453,7 +521,7 @@ export default function ProductionPage() {
                 <TextArea
                   label="Observaciones de Manualidad"
                   name="handicraft_observations"
-                  value={formData.handicraft_observations}
+                  value={formDataHND.observations}
                   onChange={handleInputChange}
                 />
                 {/* Add other handicraft fields as necessary */}
@@ -467,6 +535,8 @@ export default function ProductionPage() {
           totalSteps={totalSteps}
           onNext={handleNext}
           onPrevious={handlePrevious}
+          additionalInfo={<PODInfo data={formDataPOD} />}
+          width='max-w-[75%]'
         />
       )}
     </div>

@@ -19,6 +19,7 @@ interface FormModalProps {
   isSubmitting?: boolean;
   stepErrors?: { [key: number]: boolean };
   scrollableRef?: React.RefObject<HTMLDivElement>;
+  additionalInfo?: React.ReactNode;
 }
 
 const FormModal: React.FC<FormModalProps> = ({
@@ -37,7 +38,8 @@ const FormModal: React.FC<FormModalProps> = ({
   errors = {},
   isSubmitting = false,
   stepErrors = {},
-  scrollableRef = null
+  scrollableRef = null,
+  additionalInfo
 }) => {
   const isMultiStep = currentStep !== undefined && totalSteps !== undefined && totalSteps > 1;
 
@@ -87,102 +89,109 @@ const FormModal: React.FC<FormModalProps> = ({
 
   return (
     <div className="fixed inset-0 flex bg-black bg-opacity-40 items-center justify-center z-50 overflow-y-auto py-10" ref={scrollableRef}>
-      <div className={`bg-white dark:bg-gray-800 p-6 rounded-lg w-full ${width ? width : 'max-w-[40%]'} shadow-xl my-auto`}>
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white text-center">
-            {isMultiStep ? `${title} - Paso ${currentStep} de ${totalSteps}` : title}
-          </h2>
-          <button
-            onClick={onCancel}
-            className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100 transition-colors"
-          >
-            <RiCloseLine size={24} />
-          </button>
-        </div>
+      <div className={`bg-white dark:bg-gray-800 p-6 rounded-lg w-full ${width ? width : 'max-w-[40%]'} shadow-xl my-auto flex`}>
+        {additionalInfo && (
+          <div className="w-1/3 p-4 border-r border-gray-200">
+            {additionalInfo}
+          </div>
+        )}
+        <div className="flex-1 p-4">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white text-center">
+              {isMultiStep ? `${title} - Paso ${currentStep} de ${totalSteps}` : title}
+            </h2>
+            <button
+              onClick={onCancel}
+              className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100 transition-colors"
+            >
+              <RiCloseLine size={24} />
+            </button>
+          </div>
 
-        {isMultiStep && renderStepIndicator()}
+          {isMultiStep && renderStepIndicator()}
 
-        <form onSubmit={onSubmit}>
-          {layout.map((row, rowIndex) => (
-            <div key={rowIndex} className="flex space-x-4 mb-4">
-              {row.map((key) => (
-                <div key={key} className="flex-1">
-                  {inputs[key]}
-                </div>
-              ))}
-            </div>
-          ))}
-
-          {Object.keys(errors).length > 0 && currentStep && (
-            <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">
-              <ul className="list-disc list-inside">
-                {Object.entries(errors).map(([key, value]) => (
-                  <li key={key}>{value}</li>
+          <form onSubmit={onSubmit}>
+            {layout.map((row, rowIndex) => (
+              <div key={rowIndex} className="flex space-x-4 mb-4">
+                {row.map((key) => (
+                  <div key={key} className="flex-1">
+                    {inputs[key]}
+                  </div>
                 ))}
-              </ul>
-            </div>
-          )}
+              </div>
+            ))}
 
-          <div className={`flex ${isMultiStep ? 'justify-between' : 'justify-end space-x-3'}`}>
-            {!isMultiStep && (
-              <button
-                type="button"
-                className="w-36 px-6 py-2 text-sm font-medium text-white bg-gray-500 rounded-lg shadow-lg hover:shadow-gray-500/30 hover:bg-gray-600 active:transform active:scale-95 transition-all duration-200"
-                onClick={onCancel}
-              >
-                Cancelar
-              </button>
+            {Object.keys(errors).length > 0 && currentStep && (
+              <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">
+                <ul className="list-disc list-inside">
+                  {Object.entries(errors).map(([key, value]) => (
+                    <li key={key}>{value}</li>
+                  ))}
+                </ul>
+              </div>
             )}
 
-            {isMultiStep ? (
-              <>
+            <div className={`flex ${isMultiStep ? 'justify-between' : 'justify-end space-x-3'}`}>
+              {!isMultiStep && (
                 <button
                   type="button"
-                  onClick={onPrevious}
-                  disabled={currentStep! <= 1}
-                  className={`w-36 px-6 py-2 text-sm font-medium text-white rounded-lg shadow-lg transition-all duration-200 
-                    ${currentStep! <= 1
-                      ? 'bg-gray-500 opacity-50'
-                      : 'bg-gray-500 hover:bg-gray-600 active:transform active:scale-95 hover:shadow-gray-500/30'}`}
+                  className="w-36 px-6 py-2 text-sm font-medium text-white bg-gray-500 rounded-lg shadow-lg hover:shadow-gray-500/30 hover:bg-gray-600 active:transform active:scale-95 transition-all duration-200"
+                  onClick={onCancel}
                 >
-                  ← Anterior
+                  Cancelar
                 </button>
+              )}
 
-                {!isLastStep ? (
+              {isMultiStep ? (
+                <>
                   <button
                     type="button"
-                    onClick={onNext}
-                    className={`w-36 px-6 py-2 text-sm font-medium text-white bg-blue-500 rounded-lg shadow-lg active:transform active:scale-95 transition-all duration-200
-                        ${stepErrors[currentStep!] ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-blue-500/30 hover:bg-blue-600'}`}
-                    disabled={stepErrors[currentStep!]}
+                    onClick={onPrevious}
+                    disabled={currentStep! <= 1}
+                    className={`w-36 px-6 py-2 text-sm font-medium text-white rounded-lg shadow-lg transition-all duration-200 
+                      ${currentStep! <= 1
+                        ? 'bg-gray-500 opacity-50'
+                        : 'bg-gray-500 hover:bg-gray-600 active:transform active:scale-95 hover:shadow-gray-500/30'}`}
                   >
-                    Siguiente →
+                    ← Anterior
                   </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={onSubmit}
-                    className={`w-36 px-6 py-2 text-sm font-medium text-white bg-green-500 rounded-lg shadow-lg active:transform active:scale-95 transition-all duration-200 
-                        ${stepErrors[currentStep!] ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-green-500/30 hover:bg-green-600'}`}
-                    disabled={isSubmitting || stepErrors[currentStep!]}
-                  >
-                    {isSubmitting ? 'Guardando...' : submitLabel}
-                  </button>
-                )}
-              </>
-            ) : (
-              <button
-                type="button"
-                onClick={onSubmit}
-                className={`w-36 px-6 py-2 text-sm font-medium text-white bg-green-500 rounded-lg shadow-lg active:transform active:scale-95 transition-all duration-200 
-                    ${stepErrors[currentStep!] ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-green-500/30 hover:bg-green-600'}`}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? 'Guardando...' : submitLabel}
-              </button>
-            )}
-          </div>
-        </form>
+
+                  {!isLastStep ? (
+                    <button
+                      type="button"
+                      onClick={onNext}
+                      className={`w-36 px-6 py-2 text-sm font-medium text-white bg-blue-500 rounded-lg shadow-lg active:transform active:scale-95 transition-all duration-200
+                          ${stepErrors[currentStep!] ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-blue-500/30 hover:bg-blue-600'}`}
+                      disabled={stepErrors[currentStep!]}
+                    >
+                      Siguiente →
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={onSubmit}
+                      className={`w-36 px-6 py-2 text-sm font-medium text-white bg-green-500 rounded-lg shadow-lg active:transform active:scale-95 transition-all duration-200 
+                          ${stepErrors[currentStep!] ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-green-500/30 hover:bg-green-600'}`}
+                      disabled={isSubmitting || stepErrors[currentStep!]}
+                    >
+                      {isSubmitting ? 'Guardando...' : submitLabel}
+                    </button>
+                  )}
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onSubmit}
+                  className={`w-36 px-6 py-2 text-sm font-medium text-white bg-green-500 rounded-lg shadow-lg active:transform active:scale-95 transition-all duration-200 
+                      ${stepErrors[currentStep!] ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-green-500/30 hover:bg-green-600'}`}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? 'Guardando...' : submitLabel}
+                </button>
+              )}
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );
