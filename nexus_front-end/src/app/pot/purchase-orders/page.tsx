@@ -500,8 +500,7 @@ export default function PurchaseOrdersPage() {
         let afterLength = '';
 
         if (data.gussets_type === 1) {
-            if (data.first_gusset) afterWidth += ` + F${data.first_gusset}`;
-            if (data.second_gusset) afterWidth += ` + F${data.second_gusset}`;
+            if (data.first_gusset) afterWidth += ` + F${data.first_gusset} + F${data.first_gusset}`;
         } else if (data.gussets_type === 2) {
             if (data.first_gusset) afterLength += ` + FF${data.first_gusset}`;
         }

@@ -3,7 +3,7 @@ import { useState, useEffect, Reference } from 'react'
 import { Button, Badge, List, message, Modal, Form, Input } from 'antd'
 import { Card } from '@/components/ui/Card'
 import { CheckCircleOutlined } from '@ant-design/icons'
-import { Customer, PurchaseOrderForm, PODetailForm, WorkOrder, WOErrors, Extrusion, EXTRErrors, R_RawMaterial_Extrusion, MEQUANTITYErrors, Printing, PRTErrors, Sealing, SELErrors, Handicraft, HNDErrors } from '@/components/interfaces';
+import { Customer, Employee, PurchaseOrderForm, PODetailForm, WorkOrder, WOErrors, Extrusion, EXTRErrors, R_RawMaterial_Extrusion, MEQUANTITYErrors, Printing, PRTErrors, Sealing, SELErrors, Handicraft, HNDErrors } from '@/components/interfaces';
 import { LuCalendarClock } from 'react-icons/lu'
 import FormModal from '@/components/modals/FormModal'
 import { TextInput, NumberInput, SelectInput, TextArea } from '@/components/ui/StyledInputs'
@@ -114,6 +114,7 @@ export default function ProductionPage() {
   const [poDetails, setPoDetails] = useState<PODetailForm[]>([]);
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]); 
   const [extrusions, setExtrusions] = useState<Extrusion[]>([]);
   const [meQuantity, setMEQuantity] = useState<R_RawMaterial_Extrusion[]>([]);
   const [printings, setPrintings] = useState<Printing[]>([]);
@@ -142,6 +143,7 @@ export default function ProductionPage() {
     fetchPOs()
     fetchPODetails()
     fetchWorkOrders()
+    fetchEmployees()
     fetchCustomers()
     fetchExtrusions()
     fetchR_RawMaterialExtrusions()
@@ -156,6 +158,15 @@ export default function ProductionPage() {
       setCustomers(response.data)
     } catch (error) {
       message.error('Error al cargar los clientes')
+    }
+  }
+
+  const fetchEmployees = async () => {
+    try {
+      const response = await axios.get('http://127.0.0.1:8000/beiplas/business/employees/')
+      setEmployees(response.data)
+    } catch (error) {
+      message.error('Error al cargar los empleados')
     }
   }
 
@@ -413,13 +424,16 @@ export default function ProductionPage() {
     // Handle form submission logic based on current step
   };
 
-  const PODInfo: React.FC<{ data: PODetailForm }> = ({ data }) => (
-    <div>
-      <h3 className="text-lg font-semibold">Información de OC</h3>
-      <p><strong>Número de OC:</strong> {POs.find(po => po.id === data.purchase_order)?.order_number || 'Unknown'}</p>
-      <p><strong>Referencia:</strong> {data.reference_internal}</p>
-      <p><strong>Color de película:</strong> {data.film_color}</p>
-      {/* Agregar más campos según sea necesario */}
+  const PODInfo: React.FC<{ data: PODetailForm }> = ({data}) => (
+    <div className="bg-gray-200 dark:bg-gray-700 shadow-md rounded-lg p-4">
+      <h5 className="text-2xl text-gray-900 dark:text-white"><strong>{customers.find(c => c.id === (POs.find(po => po.id === data.purchase_order)?.customer))?.company_name}</strong></h5>
+      <h5 className="text-xl text-gray-900 dark:text-white"><strong>Orden de compra:</strong> {POs.find(po => po.id === data.purchase_order)?.order_number || 'Unknown'}</h5>
+      <h5 className="text-md border-b border-black dark:border-white pb-2 mb-1 text-gray-900 dark:text-white"><strong>Asesor:</strong> {employees.find(e => e.id === (POs.find(po => po.id === data.purchase_order)?.employee))?.first_name} {employees.find(e => e.id === (POs.find(po => po.id === data.purchase_order)?.employee))?.last_name}</h5>
+      <h5 className="text-md mb-4 text-gray-900 dark:text-white"><strong>Información del pedido</strong></h5>
+      <p className="text-gray-700 dark:text-white"><strong>O.T. {data.wo_number}</strong></p>
+      <p className="text-gray-700 dark:text-white"><strong>Referencia:</strong> {data.reference_internal}</p>
+      <p className="text-gray-700 dark:text-white"><strong>Color de película:</strong> {data.film_color}</p>
+      <p className="text-gray-700 dark:text-white"><strong>Color de película:</strong> {data.film_color}</p>
     </div>
   );
 

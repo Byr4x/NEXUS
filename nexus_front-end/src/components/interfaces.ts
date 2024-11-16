@@ -10,6 +10,17 @@ export interface Customer {
     purchase_orders?: PurchaseOrder[];
 }
 
+export interface Employee {
+    id: number;
+    first_name: string;
+    last_name: string;
+    phone_number: string;
+    email: string;
+    entity: string;
+    position: number;
+    is_active: boolean;
+  }
+
 export interface PurchaseOrder {
     id: number;
     order_number: string;

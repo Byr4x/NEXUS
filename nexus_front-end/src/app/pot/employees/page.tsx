@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import axios from 'axios';
+import { Employee } from '@/components/interfaces'
 import { LuView, LuClipboardEdit, LuTrash2 } from 'react-icons/lu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table';
 import { Switch } from '@/components/ui/Switch';
@@ -13,17 +14,6 @@ import TopTableElements from '@/components/ui/TopTableElements';
 import { showAlert, showToast } from '@/components/ui/Alerts';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
-
-interface Employee {
-  id: number;
-  first_name: string;
-  last_name: string;
-  phone_number: string;
-  email: string;
-  entity: string;
-  position: number;
-  is_active: boolean;
-}
 
 interface Position {
   id: number;
