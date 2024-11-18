@@ -91,7 +91,7 @@ const FormModal: React.FC<FormModalProps> = ({
     <div className="fixed inset-0 flex bg-black bg-opacity-40 items-center justify-center z-50 overflow-y-auto py-10" ref={scrollableRef}>
       <div className={`bg-white dark:bg-gray-800 p-6 rounded-lg w-full ${width ? width : 'max-w-[40%]'} shadow-xl my-auto flex`}>
         {additionalInfo && (
-          <div className="w-1/3 p-4 border-r border-gray-200">
+          <div className="w-1/3 p-4 ">
             {additionalInfo}
           </div>
         )}

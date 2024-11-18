@@ -154,14 +154,14 @@ export default function ReferencesPage() {
     if (materials.find(m => m.id === formData.material)?.name.toUpperCase() === ('MAÍZ' || 'MAIZ')) {
         setFormData(prev => ({
             ...prev,
-            film_color: 'SIN COLOR'
+            film_color: 'BEIGE'
         }));
     }
 
     if (materials.find(m => m.id === formData.material)?.name.toUpperCase() !== ('MAÍZ' || 'MAIZ')) {
         setFormData(prev => ({
             ...prev,
-            film_color: formData.film_color === 'SIN COLOR' ? 'TRANSPARENTE' : formData.film_color
+            film_color: formData.film_color === 'TRANSPARENTE' ? 'TRANSPARENTE' : formData.film_color
         }));
     }
   }, [formData.material]);
@@ -217,14 +217,14 @@ export default function ReferencesPage() {
     let afterLength = '';
 
     if (data.gussets_type === 1) {
-      if (data.first_gusset) afterWidth += ` + F${data.first_gusset}`;
-      if (data.second_gusset) afterWidth += ` + F${data.second_gusset}`;
+      if (data.first_gusset) afterWidth += ` + FL${Number(data.first_gusset).toFixed(2).replace(/([0-9]+(\.[0-9]+[1-9])?)(\.?0+$)/,'$1')}`;
+      if (data.second_gusset) afterWidth += ` + FL${Number(data.first_gusset).toFixed(2).replace(/([0-9]+(\.[0-9]+[1-9])?)(\.?0+$)/,'$1')}`;
     } else if (data.gussets_type === 2) {
-      if (data.first_gusset) afterLength += ` + FF${data.first_gusset}`;
+      if (data.first_gusset) afterLength += ` + FF${Number(data.first_gusset).toFixed(2).replace(/([0-9]+(\.[0-9]+[1-9])?)(\.?0+$)/,'$1')}`;
     }
 
     if (data.flap_type !== 0 && data.flap_size) {
-      afterLength += ` + S${data.flap_size}`;
+      afterLength += ` + S${Number(data.flap_size).toFixed(2).replace(/([0-9]+(\.[0-9]+[1-9])?)(\.?0+$)/,'$1')}`;
     }
 
     afterLength += data.measure_unit === 0 ? ' CM' : ' PULG';
@@ -240,13 +240,13 @@ export default function ReferencesPage() {
     if (data.product_type === productTypes.find(pt => pt.name === 'Tubular')?.id || data.product_type === productTypes.find(pt => pt.name === 'Semi-tubular')?.id) {
       dataLenght = '';
     } else {
-      dataLenght = ` x ${data.length}`;
+      dataLenght = ` x ${Number(data.length).toFixed(2).replace(/([0-9]+(\.[0-9]+[1-9])?)(\.?0+$)/,'$1')}`;
     }
 
-    reference = `${productType.name.toUpperCase()} ${material.name.toUpperCase()} ${data.width}${afterWidth}${dataLenght}${afterLength}`;
+    reference = `${productType.name.toUpperCase()} ${material.name.toUpperCase()} ${Number(data.width).toFixed(2).replace(/([0-9]+(\.[0-9]+[1-9])?)(\.?0+$)/,'$1')}${afterWidth}${dataLenght}${afterLength}`;
 
     if (data.caliber > 0) {
-      reference += ` CAL ${data.caliber} ${afterAll}`;
+      reference += ` CAL ${Number(data.caliber).toFixed(2).replace(/([0-9]+(\.[0-9]+[1-9])?)(\.?0+$)/,'$1')} ${afterAll}`;
     }
 
     return reference;
@@ -257,11 +257,34 @@ export default function ReferencesPage() {
     const newFormData = { ...formData, [name]: value };
 
     if (name === 'gussets_type') {
-      if (Number(value) === 1) {
-        newFormData.die_cut_type = 2;
+        if (Number(value) === 1) {
+            newFormData.die_cut_type = 2; 
+        } else {
+            newFormData.die_cut_type = 0;
+            newFormData.first_gusset = null;
+            newFormData.second_gusset = null;
+        }
+
+        if (Number(value) === 1) {
+          newFormData.flap_type = 0; 
+          newFormData.flap_size = null; 
+        }
+    }
+
+    if(name === 'first_gusset') {
+      if (formData.gussets_type === 1) {
+        newFormData.second_gusset = Number(value);
       } else {
-        newFormData.die_cut_type = 0;
+        newFormData.second_gusset = 0;
       }
+    }
+
+    if (name === 'flap_type') {
+      if (Number(value) === 0) {
+        newFormData.flap_size = null; 
+      }
+      
+      newFormData.die_cut_type = 0;
     }
 
     if (['product_type', 'material', 'width', 'length', 'measure_unit', 'caliber',
@@ -301,6 +324,23 @@ export default function ReferencesPage() {
   const handleSelectChange = (name: string, option: { value: any, label: string } | null) => {
     const value = option?.value ?? 0;
     handleInputChange({ target: { name, value } } as any);
+
+    if (name === 'gussets_type') {
+        if (value !== 1) {
+            setFormData(prev => ({
+                ...prev,
+                first_gusset: null,
+                second_gusset: null,
+            }));
+        }
+    }
+
+    if (name === 'flap_type' && value === 0) {
+        setFormData(prev => ({
+            ...prev,
+            flap_size: null,
+        }));
+    }
   };
 
   const validateField = (name: string, value: any): string => {
@@ -389,7 +429,6 @@ export default function ReferencesPage() {
     const newErrors: ReferenceErrors = {};
     let isValid = true;
 
-    // Validar cada campo
     Object.keys(formData).forEach((key) => {
       const error = validateField(key, formData[key as keyof FormData]);
       if (error) {
@@ -413,9 +452,9 @@ export default function ReferencesPage() {
 
     const dataToSubmit = {
       ...formData,
-      film_color: materials.find(m => m.id === formData.material)?.name === 'Maíz'
-        ? 'SIN COLOR'
-        : (formData.film_color ? formData.film_color : 'SIN COLOR'),
+      film_color: materials.find(m => m.id === formData.material)?.name.toUpperCase() === ('MAÍZ' || 'MAIZ')
+        ? 'BEIGE'
+        : (formData.film_color ? formData.film_color : 'TRANSPARENTE'),
       dynas_treaty_faces: formData.has_print ? formData.dynas_treaty_faces : 0,
       pantones_quantity: formData.has_print ? formData.pantones_quantity : 0,
       pantones_codes: formData.has_print ? formData.pantones_codes.slice(0, formData.pantones_quantity) : []
@@ -738,9 +777,9 @@ export default function ReferencesPage() {
       <TextInput
         label="Color de Película"
         name="film_color"
-        value={materials.find(m => m.id === formData.material)?.name === 'Maíz' ? 'SIN COLOR' : formData.film_color}
+        value={materials.find(m => m.id === formData.material)?.name.toUpperCase() === ('MAÍZ' || 'MAIZ') ? 'BEIGE' : formData.film_color}
         onChange={handleInputChange}
-        disabled={materials.find(m => m.id === formData.material)?.name === 'Maíz'}
+        disabled={materials.find(m => m.id === formData.material)?.name.toUpperCase() === ('MAÍZ' || 'MAIZ')}
       />
     ),
     width: (
@@ -835,7 +874,6 @@ export default function ReferencesPage() {
         </div>
       ),
     die_cut_type: ['Bolsa'].includes(productTypes.find(pt => pt.id === formData.product_type)?.name) &&
-      formData.flap_type !== 4 && (
         <div>
           <SelectInput
             label="Tipo de Troquel"
@@ -856,15 +894,14 @@ export default function ReferencesPage() {
                 value: Number(key),
                 label: value
               }))}
-            disabled={formData.gussets_type === 1}
+            disabled={formData.gussets_type === 1 || formData.flap_type === 4}
           />
           {formData.gussets_type === 1 && (
             <p className="text-sm text-gray-500 mt-1 italic">
               El troquel se establece automáticamente como camiseta para bolsas con fuelle lateral
             </p>
           )}
-        </div>
-      ),
+        </div>,
     sealing_type: ['Bolsa'].includes(productTypes.find(pt => pt.id === formData.product_type)?.name) && (
       <SelectInput
         label="Tipo de Sellado"
@@ -1106,10 +1143,7 @@ export default function ReferencesPage() {
       }
 
       const bagFields2 = [];
-      if (formData.gussets_type !== 1 && formData.flap_type !== 4) {
-        bagFields2.push('die_cut_type');
-      }
-      bagFields2.push('sealing_type', 'caliber', 'roller_size');
+      bagFields2.push('die_cut_type', 'sealing_type', 'caliber', 'roller_size');
 
       return [
         commonFields,
@@ -1248,14 +1282,14 @@ export default function ReferencesPage() {
   };
 
   useEffect(() => {
-    if (materials.find(m => m.id === formData.material)?.name === 'Maíz') {
+    if (materials.find(m => m.id === formData.material)?.name.toUpperCase() === ('MAÍZ' || 'MAIZ')) {
       const newFormData = {
         ...formData,
-        film_color: 'SIN COLOR'
+        film_color: 'BEIGE'
       };
       setFormData(newFormData);
 
-      const error = validateField('film_color', 'SIN COLOR');
+      const error = validateField('film_color', 'TRANSPARENTE');
       setErrors(prev => ({
         ...prev,
         film_color: error

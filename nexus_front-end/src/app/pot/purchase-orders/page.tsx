@@ -206,14 +206,14 @@ export default function PurchaseOrdersPage() {
         if (materials.find(m => m.id === formDataPOD.material)?.name.toUpperCase() === ('MAÍZ' || 'MAIZ')) {
             setFormDataPOD(prev => ({
                 ...prev,
-                film_color: 'SIN COLOR'
+                film_color: 'BEIGE'
             }));
         }
 
         if (materials.find(m => m.id === formDataPOD.material)?.name.toUpperCase() !== ('MAÍZ' || 'MAIZ')) {
             setFormDataPOD(prev => ({
                 ...prev,
-                film_color: formDataPOD.film_color === 'SIN COLOR' ? 'TRANSPARENTE' : formDataPOD.film_color
+                film_color: formDataPOD.film_color === 'TRANSPARENTE' ? 'TRANSPARENTE' : formDataPOD.film_color
             }));
         }
     }, [formDataPOD.material]);
@@ -500,13 +500,14 @@ export default function PurchaseOrdersPage() {
         let afterLength = '';
 
         if (data.gussets_type === 1) {
-            if (data.first_gusset) afterWidth += ` + F${data.first_gusset} + F${data.first_gusset}`;
+            if (data.first_gusset) afterWidth += ` + FL${Number(data.first_gusset).toFixed(2).replace(/([0-9]+(\.[0-9]+[1-9])?)(\.?0+$)/, '$1')}`;
+            if (data.second_gusset) afterWidth += ` + FL${Number(data.first_gusset).toFixed(2).replace(/([0-9]+(\.[0-9]+[1-9])?)(\.?0+$)/, '$1')}`;
         } else if (data.gussets_type === 2) {
-            if (data.first_gusset) afterLength += ` + FF${data.first_gusset}`;
+            if (data.first_gusset) afterLength += ` + FF${Number(data.first_gusset).toFixed(2).replace(/([0-9]+(\.[0-9]+[1-9])?)(\.?0+$)/, '$1')}`;
         }
 
         if (data.flap_type !== 0 && data.flap_size) {
-            afterLength += ` + S${data.flap_size}`;
+            afterLength += ` + S${Number(data.flap_size).toFixed(2).replace(/([0-9]+(\.[0-9]+[1-9])?)(\.?0+$)/, '$1')}`;
         }
 
         afterLength += data.measure_unit === 0 ? ' CM' : ' PULG';
@@ -522,13 +523,13 @@ export default function PurchaseOrdersPage() {
         if (data.product_type === productTypes.find(pt => pt.name === 'Tubular')?.id || data.product_type === productTypes.find(pt => pt.name === 'Semi-tubular')?.id) {
             dataLenght = '';
         } else {
-            dataLenght = ` x ${data.length}`;
+            dataLenght = ` x ${Number(data.length).toFixed(2).replace(/([0-9]+(\.[0-9]+[1-9])?)(\.?0+$)/, '$1')}`;
         }
 
-        reference = `${productType.name.toUpperCase()} ${material.name.toUpperCase()} ${data.width}${afterWidth}${dataLenght}${afterLength}`;
+        reference = `${productType.name.toUpperCase()} ${material.name.toUpperCase()} ${Number(data.width).toFixed(2).replace(/([0-9]+(\.[0-9]+[1-9])?)(\.?0+$)/, '$1')}${afterWidth}${dataLenght}${afterLength}`;
 
         if (data.caliber > 0) {
-            reference += ` CAL ${data.caliber} ${afterAll}`;
+            reference += ` CAL ${Number(data.caliber).toFixed(2).replace(/([0-9]+(\.[0-9]+[1-9])?)(\.?0+$)/, '$1')} ${afterAll}`;
         }
 
         return reference;
@@ -577,6 +578,11 @@ export default function PurchaseOrdersPage() {
                             setPODErrors({});
                         }
                     }
+
+                    if (fieldName === 'material') {
+                        newState.film_color = ''
+                    }
+
                     if (fieldName === 'film_color') {
                         if (materials.find(m => m.id === formDataPOD.material)?.name.toUpperCase() !== ('MAÍZ' || 'MAIZ')) {
                             if (value === '' || value === null || value === undefined) {
@@ -1249,6 +1255,7 @@ export default function PurchaseOrdersPage() {
                     label: material.name
                 }))}
                 required
+                disabled
             />
         ),
         reference_internal: (
@@ -1279,9 +1286,9 @@ export default function PurchaseOrdersPage() {
             <TextInput
                 label="Color de Película"
                 name="pod_film_color"
-                value={materials.find(m => m.id === formDataPOD.material)?.name === 'Maíz' ? 'SIN COLOR' : formDataPOD.film_color}
+                value={materials.find(m => m.id === formDataPOD.material)?.name.toUpperCase() === ('MAÍZ' || 'MAIZ') ? 'BEIGE' : formDataPOD.film_color}
                 onChange={handleInputChange}
-                disabled={materials.find(m => m.id === formDataPOD.material)?.name === 'Maíz'}
+                disabled={materials.find(m => m.id === formDataPOD.material)?.name.toUpperCase() === ('MAÍZ' || 'MAIZ')}
             />
         ),
         measure_unit: (

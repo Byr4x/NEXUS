@@ -9,6 +9,58 @@ import FormModal from '@/components/modals/FormModal'
 import { TextInput, NumberInput, SelectInput, TextArea } from '@/components/ui/StyledInputs'
 import axios from 'axios'
 
+const measureUnitChoices = {
+  0: 'CM',
+  1: 'PULG'
+};
+
+const sealingTypeChoices = {
+  0: 'Sin sellado',
+  1: 'Lateral',
+  2: 'Fondo',
+  3: 'Manual',
+  4: 'Precorte',
+  5: 'En "V"'
+};
+
+const flapTypeChoices = {
+  0: 'Sin solapa',
+  1: 'Interna',
+  2: 'Interna doble',
+  3: 'Externa',
+  4: 'Volada'
+};
+
+const gussetsTypeChoices = {
+  0: 'Sin fuelles',
+  1: 'Lateral',
+  2: 'Fondo'
+};
+
+const tapeChoices = {
+  0: 'Sin cinta',
+  1: 'Resellable',
+  2: 'De seguridad'
+};
+
+const dieCutTypeChoices = {
+  0: 'Sin troquel',
+  1: 'Riñon',
+  2: 'Camiseta',
+  3: 'Perforaciones',
+  4: 'Banderin',
+  5: 'Cordon',
+  6: 'Cubrevestido',
+  7: 'Media luna',
+  8: 'Selle de refuerzo'
+};
+
+const dynasTreatyFacesChoices = {
+  0: 'Ninguna',
+  1: '1 cara',
+  2: '2 caras'
+};
+
 export default function ProductionPage() {
   const defaultPODetail: PODetailForm = {
     id: 0,
@@ -112,9 +164,11 @@ export default function ProductionPage() {
 
   const [POs, setPOs] = useState<PurchaseOrderForm[]>([]);
   const [poDetails, setPoDetails] = useState<PODetailForm[]>([]);
+  const [productTypes, setProductTypes] = useState<any[]>([]);
+  const [materials, setMaterials] = useState<any[]>([]);
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [employees, setEmployees] = useState<Employee[]>([]); 
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [extrusions, setExtrusions] = useState<Extrusion[]>([]);
   const [meQuantity, setMEQuantity] = useState<R_RawMaterial_Extrusion[]>([]);
   const [printings, setPrintings] = useState<Printing[]>([]);
@@ -142,6 +196,8 @@ export default function ProductionPage() {
   useEffect(() => {
     fetchPOs()
     fetchPODetails()
+    fetchProductTypes()
+    fetchMaterials()
     fetchWorkOrders()
     fetchEmployees()
     fetchCustomers()
@@ -187,6 +243,24 @@ export default function ProductionPage() {
       message.error('Error al cargar los detalles de OC')
     }
   }
+
+  const fetchProductTypes = async () => {
+    try {
+      const response = await axios.get('http://127.0.0.1:8000/beiplas/business/productTypes/');
+      setProductTypes(response.data);
+    } catch (error) {
+      message.error('Error al cargar los productos');
+    }
+  };
+
+  const fetchMaterials = async () => {
+    try {
+      const response = await axios.get('http://127.0.0.1:8000/beiplas/business/materials/');
+      setMaterials(response.data);
+    } catch (error) {
+      message.error('Error al cargar los materiales');
+    }
+  };
 
   const fetchWorkOrders = async () => {
     try {
@@ -424,27 +498,112 @@ export default function ProductionPage() {
     // Handle form submission logic based on current step
   };
 
-  const PODInfo: React.FC<{ data: PODetailForm }> = ({data}) => (
-    <div className="bg-gray-200 dark:bg-gray-700 shadow-md rounded-lg p-4">
-      <h5 className="text-2xl text-gray-900 dark:text-white"><strong>{customers.find(c => c.id === (POs.find(po => po.id === data.purchase_order)?.customer))?.company_name}</strong></h5>
-      <h5 className="text-xl text-gray-900 dark:text-white"><strong>Orden de compra:</strong> {POs.find(po => po.id === data.purchase_order)?.order_number || 'Unknown'}</h5>
-      <h5 className="text-md border-b border-black dark:border-white pb-2 mb-1 text-gray-900 dark:text-white"><strong>Asesor:</strong> {employees.find(e => e.id === (POs.find(po => po.id === data.purchase_order)?.employee))?.first_name} {employees.find(e => e.id === (POs.find(po => po.id === data.purchase_order)?.employee))?.last_name}</h5>
-      <h5 className="text-md mb-4 text-gray-900 dark:text-white"><strong>Información del pedido</strong></h5>
-      <p className="text-gray-700 dark:text-white"><strong>O.T. {data.wo_number}</strong></p>
-      <p className="text-gray-700 dark:text-white"><strong>Referencia:</strong> {data.reference_internal}</p>
-      <p className="text-gray-700 dark:text-white"><strong>Color de película:</strong> {data.film_color}</p>
-      <p className="text-gray-700 dark:text-white"><strong>Color de película:</strong> {data.film_color}</p>
-    </div>
-  );
+  const renderPODInfo = (data: PODetailForm) => {
+    const customer = customers.find(c => c.id === (POs.find(po => po.id === data.purchase_order)?.customer))
+    const po = POs.find(po => po.id === data.purchase_order)
+    const employee = employees.find(e => e.id === po?.employee)
+    const productType = productTypes.find(pt => pt.id === data.product_type)
+    const material = materials.find(m => m.id === data.material)
+
+    const InfoSection = ({ title, children }: { title: string; children: React.ReactNode }) => (
+      <div className='mb-6'>
+        <h3 className='text-lg font-semibold mb-3 text-gray-800 dark:text-gray-200 border-b border-gray-300 dark:border-gray-600 pb-2'>{title}</h3>
+        <div className='grid gap-1'>{children}</div>
+      </div>
+    )
+
+    const InfoItem = ({ label, secondaryLabel, thirdLabel, value, secondaryValue, thirdValue }: {
+      label: string;
+      secondaryLabel?: string;
+      thirdLabel?: string;
+      value: string | number | undefined;
+      secondaryValue?: string | number | undefined
+      thirdValue?: string | number | undefined;
+    }) => (
+      <div className={`bg-gray-200 dark:bg-gray-700 p-3 rounded-lg text-center ${secondaryLabel && secondaryValue && thirdLabel && thirdValue ? 'grid grid-cols-3' : secondaryLabel && secondaryValue ? 'grid grid-cols-2 ' : ''}`}>
+        <span className='block text-sm font-medium text-gray-600 dark:text-gray-400'>{label}</span>
+        {secondaryLabel && <span className='block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1'>{secondaryLabel}</span>}
+        {secondaryLabel && thirdLabel && <span className='block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1'>{thirdLabel}</span>}
+        <span className='text-base text-gray-900 dark:text-gray-100'>{value || 'N/A'}</span>
+        {secondaryLabel && secondaryValue && <span className='text-base text-gray-900 dark:text-gray-100'>{secondaryValue}</span>}
+        {secondaryLabel && secondaryValue && thirdLabel && thirdValue && <span className='text-base text-gray-900 dark:text-gray-100'>{thirdValue}</span>}
+      </div>
+    )
+
+    return (
+      <div className='bg-white dark:bg-gray-800 shadow-xl shadow-gray-400 dark:shadow-gray-950 rounded-lg'>
+        <div className='bg-blue-600 text-white p-6 rounded-t-lg'>
+          <h2 className='text-2xl font-bold mb-2'>{customer?.company_name}</h2>
+          <p className='text-lg'>
+            Orden de compra: <span className='font-semibold'>{po?.order_number || 'Unknown'}</span>
+          </p>
+          <p className='text-md opacity-80'>
+            Asesor: <span className='font-semibold'>{employee?.first_name} {employee?.last_name}</span>
+          </p>
+          <p className='text-md opacity-80 font-semibold'>
+            O.T.: <span className=''>{data.wo_number}</span>
+          </p>
+        </div>
+        <div className='p-6 max-h-auto overflow-y-auto'>
+          <InfoSection title='Información del Pedido'>
+            <InfoItem label='Referencia' value={data.reference_internal} />
+            <InfoItem label='Producto' value={productType?.name} secondaryLabel='Material' secondaryValue={material?.name} />
+          </InfoSection>
+
+          <InfoSection title='Especificaciones'>
+            <InfoItem label='Color de película' value={data.film_color} />
+            <InfoItem label='Ancho' value={`${data.width} ${measureUnitChoices[data.measure_unit as keyof typeof measureUnitChoices]}`} secondaryLabel={data.length > 0 ? 'Largo' : ''} secondaryValue={`${data.length} ${measureUnitChoices[data.measure_unit as keyof typeof measureUnitChoices]}`} />
+            <InfoItem label='Fuelle' value={gussetsTypeChoices[data.gussets_type as keyof typeof gussetsTypeChoices]} secondaryLabel={data.gussets_type !== 0 ? 'Tamaño' : ''} secondaryValue={`${data.first_gusset} ${measureUnitChoices[data.measure_unit as keyof typeof measureUnitChoices]}`} />
+            <InfoItem label='Solapa' value={flapTypeChoices[data.flap_type as keyof typeof flapTypeChoices]} secondaryLabel={data.flap_type !== 0 ? 'Tamaño' : ''} secondaryValue={`${data.flap_size} ${measureUnitChoices[data.measure_unit as keyof typeof measureUnitChoices]}`} />
+            {data.flap_type === 4 && (
+              <InfoItem label='Cinta' value={tapeChoices[data.tape as keyof typeof tapeChoices]} />
+            )}
+          </InfoSection>
+
+          <InfoSection title='Detalles Técnicos'>
+            <InfoItem label='Troquel' value={dieCutTypeChoices[data.die_cut_type as keyof typeof dieCutTypeChoices]} secondaryLabel='Tipo de sellado' secondaryValue={sealingTypeChoices[data.sealing_type as keyof typeof sealingTypeChoices]} />
+            <InfoItem label='Calibre' value={Number(data.caliber).toFixed(2).replace(/([0-9]+(\.[0-9]+[1-9])?)(\.?0+$)/, '$1')} secondaryLabel='Rodillo' secondaryValue={Number(data.roller_size).toFixed(2).replace(/([0-9]+(\.[0-9]+[1-9])?)(\.?0+$)/, '$1')} />
+          </InfoSection>
+
+          {data.additive.length > 0 && (
+            <InfoSection title='Aditivos'>
+              <div className='col-span-2 bg-gray-100 dark:bg-gray-700 p-3 rounded-lg'>
+                <ul className='list-disc pl-5 space-y-1'>
+                  {data.additive.map((item, index) => (
+                    <li key={index} className='text-sm text-gray-700 dark:text-gray-300'>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            </InfoSection>
+          )}
+
+          {data.pantones_quantity > 0 && (
+            <InfoSection title='Impresión'>
+              <InfoItem label='Caras' value={dynasTreatyFacesChoices[data.dynas_treaty_faces as keyof typeof dynasTreatyFacesChoices]} secondaryLabel='Pantones' secondaryValue={data.pantones_quantity} thirdLabel='¿Nuevo?' thirdValue={data.is_new_sketch ? 'SÍ' : 'NO'} />
+
+              <div className='bg-gray-100 dark:bg-gray-700 p-3 rounded-lg'>
+              <span className='block text-sm font-medium text-gray-600 dark:text-gray-400'>Códigos de pantones:</span>
+                <ul className='list-disc pl-5 space-y-1'>
+                  {data.pantones_codes.map((item, index) => (
+                    <li key={index} className='text-sm text-gray-700 dark:text-gray-300'>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            </InfoSection>
+          )}
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Gestión de Producción</h1>
+    <div className='p-6'>
+      <h1 className='text-2xl font-bold mb-6'>Gestión de Producción</h1>
 
       {/* Detalles de OC pendientes */}
-      <div className="mb-8">
-        <h2 className="text-xl font-semibold mb-4">Detalles de OC Pendientes</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className='mb-8'>
+        <h2 className='text-xl font-semibold mb-4'>Detalles de OC Pendientes</h2>
+        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
           {poDetails.map(detail => (
             <Card
               key={detail.id}
@@ -459,7 +618,7 @@ export default function ProductionPage() {
 
       {/* Lista de Órdenes de Trabajo */}
       <div>
-        <h2 className="text-xl font-semibold mb-4">Órdenes de Trabajo</h2>
+        <h2 className='text-xl font-semibold mb-4'>Órdenes de Trabajo</h2>
 
       </div>
 
@@ -467,7 +626,7 @@ export default function ProductionPage() {
       {/* Modal for creating/updating production details */}
       {isFormModalOpen && (
         <FormModal
-          title="Crear/Actualizar Producción"
+          title='Crear/Actualizar Producción'
           layout={[
             ['work_order_info'], // Step 1: Work Order Info
             ['extrusion_info'],   // Step 2: Extrusion Info
@@ -479,15 +638,15 @@ export default function ProductionPage() {
             work_order_info: (
               <div>
                 <NumberInput
-                  label="Número de OT"
-                  name="id"
+                  label='Número de OT'
+                  name='id'
                   value={formDataPOD.wo_number || 0}
                   onChange={handleInputChange}
                   required
                 />
                 <NumberInput
-                  label="Número de OT"
-                  name="id"
+                  label='Número de OT'
+                  name='id'
                   value={formDataWO.id}
                   onChange={handleInputChange}
                   required
@@ -498,8 +657,8 @@ export default function ProductionPage() {
             extrusion_info: (
               <div>
                 <NumberInput
-                  label="Cantidad de Rollos"
-                  name="rolls_quantity"
+                  label='Cantidad de Rollos'
+                  name='rolls_quantity'
                   value={formDataEXTR.rolls_quantity}
                   onChange={handleInputChange}
                   required
@@ -510,8 +669,8 @@ export default function ProductionPage() {
             printing_info: (
               <div>
                 <TextInput
-                  label="Observaciones de Impresión"
-                  name="printing_observations"
+                  label='Observaciones de Impresión'
+                  name='printing_observations'
                   value={formDataPRT.observations}
                   onChange={handleInputChange}
                 />
@@ -521,8 +680,8 @@ export default function ProductionPage() {
             sealing_info: (
               <div>
                 <NumberInput
-                  label="Hits"
-                  name="hits"
+                  label='Hits'
+                  name='hits'
                   value={formDataSEL.hits}
                   onChange={handleInputChange}
                   required
@@ -533,8 +692,8 @@ export default function ProductionPage() {
             handicraft_info: (
               <div>
                 <TextArea
-                  label="Observaciones de Manualidad"
-                  name="handicraft_observations"
+                  label='Observaciones de Manualidad'
+                  name='handicraft_observations'
                   value={formDataHND.observations}
                   onChange={handleInputChange}
                 />
@@ -544,13 +703,13 @@ export default function ProductionPage() {
           }}
           onSubmit={handleFormSubmit}
           onCancel={() => setFormModalOpen(false)}
-          submitLabel="Guardar"
+          submitLabel='Guardar'
           currentStep={currentStep}
           totalSteps={totalSteps}
           onNext={handleNext}
           onPrevious={handlePrevious}
-          additionalInfo={<PODInfo data={formDataPOD} />}
-          width='max-w-[75%]'
+          additionalInfo={renderPODInfo(formDataPOD)}
+          width='max-w-[80%]'
         />
       )}
     </div>
