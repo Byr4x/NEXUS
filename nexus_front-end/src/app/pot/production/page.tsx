@@ -61,6 +61,13 @@ const dynasTreatyFacesChoices = {
   2: '2 caras'
 };
 
+const rollTypeChoices = {
+  0: 'Tubular',
+  1: 'Semi-tubular',
+  2: 'Lamina',
+  3: 'Lami-doble'
+}
+
 export default function ProductionPage() {
   const defaultPODetail: PODetailForm = {
     id: 0,
@@ -491,17 +498,19 @@ export default function ProductionPage() {
 
   const handleNext = () => {
     if (currentStep < totalSteps) {
-      const nextStepIndex = cSteps.indexOf(currentStep) + 1;
-        setCurrentStepL(cSteps[nextStepIndex]); // Establecer el siguiente paso válido
+      const nextStepIndex = cSteps.indexOf(currentStepL) + 1;
+      setCurrentStepL(cSteps[nextStepIndex]);
+      console.log(cSteps[nextStepIndex])
       setCurrentStep(prev => prev + 1);
     }
   };
 
   const handlePrevious = () => {
     if (currentStep > 1) {
-      const prevStepIndex = cSteps.indexOf(currentStep) - 1; // Obtener el índice del paso actual y retroceder uno
+      const prevStepIndex = cSteps.indexOf(currentStepL) - 1; // Obtener el índice del paso actual y retroceder uno
       if (prevStepIndex >= 0) {
-        setCurrentStepL(cSteps[prevStepIndex]); // Establecer el paso anterior válido
+        setCurrentStepL(cSteps[prevStepIndex]);
+        console.log(cSteps[prevStepIndex])
       }
       setCurrentStep(prev => prev - 1);
     }
@@ -642,20 +651,33 @@ export default function ProductionPage() {
               currentStepL === 2 ? ['printing_info'] :
                 currentStepL === 3 ? ['sealing_info'] :
                   currentStepL === 4 ? ['handicraft_info'] :
-                  []
+                    []
           ]}
           inputs={{
             extrusion_info: (
-              <div>
-                <NumberInput
-                  label='Cantidad de Rollos'
-                  name='rolls_quantity'
-                  value={formDataEXTR.rolls_quantity}
-                  onChange={handleInputChange}
-                  required
-                />
-                {/* Add other extrusion fields as necessary */}
-              </div>
+              <>
+                <div>
+                  <SelectInput
+                    label="Tipo de rollo"
+                    name="extr_roll_type"
+                    value={{ value: formDataEXTR.roll_type, label: rollTypeChoices[formDataEXTR.roll_type as keyof typeof rollTypeChoices] }}
+                    onChange={(option) => handleInputChange({ target: { name: 'pod_measure_unit', value: option?.value || 0 } } as any)}
+                    options={Object.entries(rollTypeChoices).map(([key, value]) => ({
+                      value: Number(key),
+                      label: value
+                    }))}
+                  />
+                </div>
+                <div>
+                  <NumberInput
+                    label='Cantidad de Rollos'
+                    name='extr_rolls_quantity'
+                    value={formDataEXTR.rolls_quantity}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+              </>
             ),
             printing_info: (
               <div>
