@@ -338,6 +338,8 @@ export default function PurchaseOrdersPage() {
 
     // Función de validacin
     const validateField = (name: string, value: any): string => {
+        console.log(formDataPOD)
+
         const validations: { [key: string]: () => string } = {
             // Validaciones para PO
             'po_order_number': () => {
@@ -412,8 +414,9 @@ export default function PurchaseOrdersPage() {
             'pod_pantones_codes': () => {
                 if (formDataPOD.has_print && formDataPOD.pantones_quantity > 0) {
                     let codes = 0;
-                    formDataPOD.pantones_codes.map(code => code.length > 0 && codes++);
-                    if (codes === 0) {
+                    formDataPOD.pantones_codes.length > 0 && codes++;
+            
+                    if (formDataPOD.pantones_codes.every(code => !code)) {
                         return 'Los códigos Pantone no pueden estar vacíos';
                     }
 
@@ -1637,17 +1640,11 @@ export default function PurchaseOrdersPage() {
                                     pantones_codes: newPantoneCodes
                                 }));
 
-                                // Validar si todos los códigos requeridos están llenos
-                                const hasEmptyRequiredPantone = newPantoneCodes
-                                    .slice(0, formDataPOD.pantones_quantity)
-                                    .some(code => !code || code.trim() === '');
-
-                                // Actualizar errores
+                                // Validar los códigos Pantone
+                                const error = validateField('pod_pantones_codes', newPantoneCodes);
                                 setPODErrors(prev => ({
-                                    ...prev,
-                                    pantones_codes: hasEmptyRequiredPantone ?
-                                        'Todos los códigos Pantone son requeridos' :
-                                        ''
+                                   ...prev,
+                                    pantones_codes: error
                                 }));
                             }}
                             required

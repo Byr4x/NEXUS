@@ -190,7 +190,9 @@ export default function ProductionPage() {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [selectedDetail, setSelectedDetail] = useState<PODetailForm | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
+  const [currentStepL, setCurrentStepL] = useState(1);
   const [totalSteps, setTotalSteps] = useState(0);
+  const [cSteps, setCSteps] = useState<number[]>([]);
   const [isFormModalOpen, setFormModalOpen] = useState(false);
 
   useEffect(() => {
@@ -471,24 +473,36 @@ export default function ProductionPage() {
     }
   };
 
-
-  // Function to handle opening the modal
   const openModal = (detail: PODetailForm) => {
-    setFormDataPOD(detail); // Set initial data
+    const newSteps = [1];
+    detail.pantones_quantity > 0 && newSteps.push(2);
+    ['BOLSA'].includes(productTypes.find(pt => pt.id === detail.product_type)?.name.toUpperCase()) && newSteps.push(3);
+    if (detail.die_cut_type !== 0 || detail.sealing_type === 3) {
+      newSteps.push(4);
+    }
+
+    setCSteps(newSteps);
+    setFormDataPOD(detail);
     setSelectedDetail(detail);
-    setTotalSteps(2); // Total steps based on your next choices
+    setTotalSteps(newSteps.length);
     setCurrentStep(1);
     setFormModalOpen(true);
   };
 
   const handleNext = () => {
     if (currentStep < totalSteps) {
+      const nextStepIndex = cSteps.indexOf(currentStep) + 1;
+        setCurrentStepL(cSteps[nextStepIndex]); // Establecer el siguiente paso válido
       setCurrentStep(prev => prev + 1);
     }
   };
 
   const handlePrevious = () => {
     if (currentStep > 1) {
+      const prevStepIndex = cSteps.indexOf(currentStep) - 1; // Obtener el índice del paso actual y retroceder uno
+      if (prevStepIndex >= 0) {
+        setCurrentStepL(cSteps[prevStepIndex]); // Establecer el paso anterior válido
+      }
       setCurrentStep(prev => prev - 1);
     }
   };
@@ -532,16 +546,16 @@ export default function ProductionPage() {
 
     return (
       <div className='bg-white dark:bg-gray-800 shadow-xl shadow-gray-400 dark:shadow-gray-950 rounded-lg'>
-        <div className='bg-blue-600 text-white p-6 rounded-t-lg'>
+        <div className='bg-blue-600 text-white p-6 rounded-t-lg text-center'>
           <h2 className='text-2xl font-bold mb-2'>{customer?.company_name}</h2>
           <p className='text-lg'>
             Orden de compra: <span className='font-semibold'>{po?.order_number || 'Unknown'}</span>
           </p>
-          <p className='text-md opacity-80'>
+          <p className='text-md'>
             Asesor: <span className='font-semibold'>{employee?.first_name} {employee?.last_name}</span>
           </p>
-          <p className='text-md opacity-80 font-semibold'>
-            O.T.: <span className=''>{data.wo_number}</span>
+          <p className='text-md'>
+            O.T.: <span className='font-semibold'>{data.wo_number}</span>
           </p>
         </div>
         <div className='p-6 max-h-auto overflow-y-auto'>
@@ -558,9 +572,6 @@ export default function ProductionPage() {
             {data.flap_type === 4 && (
               <InfoItem label='Cinta' value={tapeChoices[data.tape as keyof typeof tapeChoices]} />
             )}
-          </InfoSection>
-
-          <InfoSection title='Detalles Técnicos'>
             <InfoItem label='Troquel' value={dieCutTypeChoices[data.die_cut_type as keyof typeof dieCutTypeChoices]} secondaryLabel='Tipo de sellado' secondaryValue={sealingTypeChoices[data.sealing_type as keyof typeof sealingTypeChoices]} />
             <InfoItem label='Calibre' value={Number(data.caliber).toFixed(2).replace(/([0-9]+(\.[0-9]+[1-9])?)(\.?0+$)/, '$1')} secondaryLabel='Rodillo' secondaryValue={Number(data.roller_size).toFixed(2).replace(/([0-9]+(\.[0-9]+[1-9])?)(\.?0+$)/, '$1')} />
           </InfoSection>
@@ -579,10 +590,9 @@ export default function ProductionPage() {
 
           {data.pantones_quantity > 0 && (
             <InfoSection title='Impresión'>
-              <InfoItem label='Caras' value={dynasTreatyFacesChoices[data.dynas_treaty_faces as keyof typeof dynasTreatyFacesChoices]} secondaryLabel='Pantones' secondaryValue={data.pantones_quantity} thirdLabel='¿Nuevo?' thirdValue={data.is_new_sketch ? 'SÍ' : 'NO'} />
-
+              <InfoItem label='Caras' value={dynasTreatyFacesChoices[data.dynas_treaty_faces as keyof typeof dynasTreatyFacesChoices]} secondaryLabel='Pantones' secondaryValue={data.pantones_quantity} thirdLabel='¿Nuevo?' thirdValue={data.has_print ? 'SÍ' : 'NO'} />
               <div className='bg-gray-100 dark:bg-gray-700 p-3 rounded-lg'>
-              <span className='block text-sm font-medium text-gray-600 dark:text-gray-400'>Códigos de pantones:</span>
+                <span className='block text-sm font-medium text-gray-600 dark:text-gray-400'>Códigos de pantones:</span>
                 <ul className='list-disc pl-5 space-y-1'>
                   {data.pantones_codes.map((item, index) => (
                     <li key={index} className='text-sm text-gray-700 dark:text-gray-300'>{item}</li>
@@ -626,34 +636,15 @@ export default function ProductionPage() {
       {/* Modal for creating/updating production details */}
       {isFormModalOpen && (
         <FormModal
-          title='Crear/Actualizar Producción'
+          title={`Programar producción - ${currentStepL === 1 ? 'Extrusión' : currentStepL === 2 ? 'Impresión' : currentStepL === 3 ? 'Sellado' : currentStepL === 4 ? 'Manualidad' : ''}`}
           layout={[
-            ['work_order_info'], // Step 1: Work Order Info
-            ['extrusion_info'],   // Step 2: Extrusion Info
-            ['printing_info'],    // Step 3: Printing Info
-            ['sealing_info'],     // Step 4: Sealing Info
-            ['handicraft_info'],  // Step 5: Handicraft Info
+            currentStepL === 1 ? ['extrusion_info'] :
+              currentStepL === 2 ? ['printing_info'] :
+                currentStepL === 3 ? ['sealing_info'] :
+                  currentStepL === 4 ? ['handicraft_info'] :
+                  []
           ]}
           inputs={{
-            work_order_info: (
-              <div>
-                <NumberInput
-                  label='Número de OT'
-                  name='id'
-                  value={formDataPOD.wo_number || 0}
-                  onChange={handleInputChange}
-                  required
-                />
-                <NumberInput
-                  label='Número de OT'
-                  name='id'
-                  value={formDataWO.id}
-                  onChange={handleInputChange}
-                  required
-                />
-                {/* Add other work order fields as necessary */}
-              </div>
-            ),
             extrusion_info: (
               <div>
                 <NumberInput
