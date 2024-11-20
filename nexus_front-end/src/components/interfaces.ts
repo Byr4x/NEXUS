@@ -47,7 +47,7 @@ export interface Payment {
 }
 
 export interface PODetail {
-    id: number;
+    id?: number;
     purchase_order: number;
     reference: number;
     product_type: number;
@@ -89,7 +89,7 @@ export interface PurchaseOrderForm extends PurchaseOrder {
 }
 
 export interface PODetailForm extends PODetail {
-    has_print: boolean;
+    has_print?: boolean;
 }
 
 // Interfaces para errores

@@ -338,8 +338,6 @@ export default function PurchaseOrdersPage() {
 
     // Función de validacin
     const validateField = (name: string, value: any): string => {
-        console.log(formDataPOD)
-
         const validations: { [key: string]: () => string } = {
             // Validaciones para PO
             'po_order_number': () => {
@@ -718,6 +716,7 @@ export default function PurchaseOrdersPage() {
                                     second_gusset: detailData.second_gusset || 0,
                                     flap_size: detailData.flap_size || 0
                                 };
+                                console.log(detail)
                                 await axios.put(`http://127.0.0.1:8000/beiplas/business/poDetails/${detailData.id}/`, detail);
                             } catch (error) {
                                 console.error("Error updating detail:", error);
@@ -770,7 +769,7 @@ export default function PurchaseOrdersPage() {
                                     first_gusset: detailData.first_gusset || 0,
                                     second_gusset: detailData.second_gusset || 0,
                                     flap_size: detailData.flap_size || 0
-                                };
+                                }; 
                                 await axios.post('http://127.0.0.1:8000/beiplas/business/poDetails/', detail);
                             } catch (error) {
                                 console.error("Error creating detail:", error);
@@ -1502,7 +1501,7 @@ export default function PurchaseOrdersPage() {
                         additive: Array(value).fill('')
                     }));
                 }}
-                options={[1, 2, 3, 4].map(num => ({
+                options={[0, 1, 2, 3, 4].map(num => ({
                     value: num,
                     label: num.toString()
                 }))}

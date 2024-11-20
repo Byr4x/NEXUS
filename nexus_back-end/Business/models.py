@@ -264,7 +264,7 @@ class PODetail(models.Model):
     }
     dynas_treaty_faces = models.PositiveIntegerField(choices=dynas_treaty_faces_choices, default=0)
     pantones_quantity = models.PositiveBigIntegerField()
-    pantones_codes = ArrayField(models.PositiveIntegerField(), null=True, blank=True)
+    pantones_codes = ArrayField(models.CharField(), null=True, blank=True)
     production_observations = models.TextField(null=True, blank=True)
     delivery_location = models.CharField(max_length=150)
     is_new_sketch = models.BooleanField(default=False)

@@ -7,6 +7,7 @@ import { Customer, Employee, PurchaseOrderForm, PODetailForm, WorkOrder, WOError
 import { LuCalendarClock } from 'react-icons/lu'
 import FormModal from '@/components/modals/FormModal'
 import { TextInput, NumberInput, SelectInput, TextArea } from '@/components/ui/StyledInputs'
+import { showToast } from '@/components/ui/Alerts'
 import axios from 'axios'
 
 const measureUnitChoices = {
@@ -194,7 +195,6 @@ export default function ProductionPage() {
   const [prtErrors, setPRTErrors] = useState<PRTErrors>({});
   const [selErrors, setSELErrors] = useState<SELErrors>({});
   const [hndErrors, setHNDErrors] = useState<HNDErrors>({});
-  const [isModalVisible, setIsModalVisible] = useState(false);
   const [selectedDetail, setSelectedDetail] = useState<PODetailForm | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [currentStepL, setCurrentStepL] = useState(1);
@@ -491,6 +491,10 @@ export default function ProductionPage() {
     setCSteps(newSteps);
     setFormDataPOD(detail);
     setSelectedDetail(detail);
+    setFormDataEXTR(prev => ({ ...prev, work_order: detail.wo_number ?? 0}));
+    setFormDataPRT(prev => ({ ...prev, work_order: detail.wo_number ?? 0}));
+    setFormDataSEL(prev => ({...prev, work_order: detail.wo_number ?? 0}));
+    setFormDataHND(prev => ({...prev, work_order: detail.wo_number ?? 0}));
     setTotalSteps(newSteps.length);
     setCurrentStep(1);
     setFormModalOpen(true);
@@ -513,6 +517,32 @@ export default function ProductionPage() {
         console.log(cSteps[prevStepIndex])
       }
       setCurrentStep(prev => prev - 1);
+    }
+  };
+
+  const handleCancel = (toast: boolean = true) => {
+    setFormDataPOD(defaultPODetail);
+    setFormDataWO(defaultWorkOrder);
+    setFormDataEXTR(defaultExtrusion);
+    setFormDataMEQUANTITY(defaultR_RawMaterial_Extrusion);
+    setFormDataPRT(defaultPrinting);
+    setFormDataSEL(defaultSealing);
+    setFormDataHND(defaultHandicraft);
+    setWOErrors({});
+    setEXTRErrors({});
+    setMeQuantityErrors({});
+    setPRTErrors({});
+    setSELErrors({});
+    setHNDErrors({});
+    setSelectedDetail(null);
+    setCurrentStep(1);
+    setCurrentStepL(1);
+    setTotalSteps(0);
+    setCSteps([]);
+    setFormModalOpen(false);
+
+    if (toast) {
+      showToast('Acción cancelada', 'info');
     }
   };
 
@@ -576,12 +606,16 @@ export default function ProductionPage() {
           <InfoSection title='Especificaciones'>
             <InfoItem label='Color de película' value={data.film_color} />
             <InfoItem label='Ancho' value={`${data.width} ${measureUnitChoices[data.measure_unit as keyof typeof measureUnitChoices]}`} secondaryLabel={data.length > 0 ? 'Largo' : ''} secondaryValue={`${data.length} ${measureUnitChoices[data.measure_unit as keyof typeof measureUnitChoices]}`} />
-            <InfoItem label='Fuelle' value={gussetsTypeChoices[data.gussets_type as keyof typeof gussetsTypeChoices]} secondaryLabel={data.gussets_type !== 0 ? 'Tamaño' : ''} secondaryValue={`${data.first_gusset} ${measureUnitChoices[data.measure_unit as keyof typeof measureUnitChoices]}`} />
-            <InfoItem label='Solapa' value={flapTypeChoices[data.flap_type as keyof typeof flapTypeChoices]} secondaryLabel={data.flap_type !== 0 ? 'Tamaño' : ''} secondaryValue={`${data.flap_size} ${measureUnitChoices[data.measure_unit as keyof typeof measureUnitChoices]}`} />
-            {data.flap_type === 4 && (
-              <InfoItem label='Cinta' value={tapeChoices[data.tape as keyof typeof tapeChoices]} />
+            {productType?.name.toUpperCase() === "BOLSA" && (
+              <>
+                <InfoItem label='Fuelle' value={gussetsTypeChoices[data.gussets_type as keyof typeof gussetsTypeChoices]} secondaryLabel={data.gussets_type !== 0 ? 'Tamaño' : ''} secondaryValue={`${data.first_gusset} ${measureUnitChoices[data.measure_unit as keyof typeof measureUnitChoices]}`} />
+                <InfoItem label='Solapa' value={flapTypeChoices[data.flap_type as keyof typeof flapTypeChoices]} secondaryLabel={data.flap_type !== 0 ? 'Tamaño' : ''} secondaryValue={`${data.flap_size} ${measureUnitChoices[data.measure_unit as keyof typeof measureUnitChoices]}`} />
+                {data.flap_type === 4 && (
+                  <InfoItem label='Cinta' value={tapeChoices[data.tape as keyof typeof tapeChoices]} />
+                )}
+                <InfoItem label='Troquel' value={dieCutTypeChoices[data.die_cut_type as keyof typeof dieCutTypeChoices]} secondaryLabel='Tipo de sellado' secondaryValue={sealingTypeChoices[data.sealing_type as keyof typeof sealingTypeChoices]} />
+              </>
             )}
-            <InfoItem label='Troquel' value={dieCutTypeChoices[data.die_cut_type as keyof typeof dieCutTypeChoices]} secondaryLabel='Tipo de sellado' secondaryValue={sealingTypeChoices[data.sealing_type as keyof typeof sealingTypeChoices]} />
             <InfoItem label='Calibre' value={Number(data.caliber).toFixed(2).replace(/([0-9]+(\.[0-9]+[1-9])?)(\.?0+$)/, '$1')} secondaryLabel='Rodillo' secondaryValue={Number(data.roller_size).toFixed(2).replace(/([0-9]+(\.[0-9]+[1-9])?)(\.?0+$)/, '$1')} />
           </InfoSection>
 
@@ -613,6 +647,89 @@ export default function ProductionPage() {
         </div>
       </div>
     )
+  }
+
+  const inputs = {
+    production_observations: (
+      <div>
+        <TextInput
+          label='Observaciones de Producción'
+          name='wo_production_observations'
+          value={formDataWO.production_observations || ''}
+          onChange={handleInputChange}
+        />
+      </div>
+    ),
+    surplus_percentage: (
+      <div>
+        <NumberInput
+          label='Porcentaje de sobresaliente'
+          name='surplus_percentage'
+          value={formDataWO.surplus_percentage}
+          onChange={handleInputChange}
+          required
+        />
+      </div>
+    ),
+    roll_type: (
+      <div>
+        <SelectInput
+          label="Tipo de rollo"
+          name="extr_roll_type"
+          value={{ value: formDataEXTR.roll_type, label: rollTypeChoices[formDataEXTR.roll_type as keyof typeof rollTypeChoices] }}
+          onChange={(option) => handleInputChange({ target: { name: 'extr_roll_type', value: option?.value || 0 } } as any)}
+          options={Object.entries(rollTypeChoices).map(([key, value]): { value: number; label: string } => ({
+            value: Number(key),
+            label: value
+          }))}
+        />
+      </div>
+    ),
+    rolls_quantity: (
+      <div>
+        <NumberInput
+          label='Cantidad de Rollos'
+          name='extr_rolls_quantity'
+          value={formDataEXTR.rolls_quantity}
+          onChange={handleInputChange}
+          required
+        />
+      </div>
+    ),
+    printing_info: (
+      <div>
+        <TextInput
+          label='Observaciones de Impresión'
+          name='printing_observations'
+          value={formDataPRT.observations}
+          onChange={handleInputChange}
+        />
+        {/* Add other printing fields as necessary */}
+      </div>
+    ),
+    sealing_info: (
+      <div>
+        <NumberInput
+          label='Hits'
+          name='hits'
+          value={formDataSEL.hits}
+          onChange={handleInputChange}
+          required
+        />
+        {/* Add other sealing fields as necessary */}
+      </div>
+    ),
+    handicraft_info: (
+      <div>
+        <TextArea
+          label='Observaciones de Manualidad'
+          name='handicraft_observations'
+          value={formDataHND.observations}
+          onChange={handleInputChange}
+        />
+        {/* Add other handicraft fields as necessary */}
+      </div>
+    ),
   }
 
   return (
@@ -653,69 +770,9 @@ export default function ProductionPage() {
                   currentStepL === 4 ? ['handicraft_info'] :
                     []
           ]}
-          inputs={{
-            extrusion_info: (
-              <>
-                <div>
-                  <SelectInput
-                    label="Tipo de rollo"
-                    name="extr_roll_type"
-                    value={{ value: formDataEXTR.roll_type, label: rollTypeChoices[formDataEXTR.roll_type as keyof typeof rollTypeChoices] }}
-                    onChange={(option) => handleInputChange({ target: { name: 'pod_measure_unit', value: option?.value || 0 } } as any)}
-                    options={Object.entries(rollTypeChoices).map(([key, value]) => ({
-                      value: Number(key),
-                      label: value
-                    }))}
-                  />
-                </div>
-                <div>
-                  <NumberInput
-                    label='Cantidad de Rollos'
-                    name='extr_rolls_quantity'
-                    value={formDataEXTR.rolls_quantity}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-              </>
-            ),
-            printing_info: (
-              <div>
-                <TextInput
-                  label='Observaciones de Impresión'
-                  name='printing_observations'
-                  value={formDataPRT.observations}
-                  onChange={handleInputChange}
-                />
-                {/* Add other printing fields as necessary */}
-              </div>
-            ),
-            sealing_info: (
-              <div>
-                <NumberInput
-                  label='Hits'
-                  name='hits'
-                  value={formDataSEL.hits}
-                  onChange={handleInputChange}
-                  required
-                />
-                {/* Add other sealing fields as necessary */}
-              </div>
-            ),
-            handicraft_info: (
-              <div>
-                <TextArea
-                  label='Observaciones de Manualidad'
-                  name='handicraft_observations'
-                  value={formDataHND.observations}
-                  onChange={handleInputChange}
-                />
-                {/* Add other handicraft fields as necessary */}
-              </div>
-            ),
-          }}
+          inputs={inputs}
           onSubmit={handleFormSubmit}
-          onCancel={() => setFormModalOpen(false)}
+          onCancel={handleCancel}
           submitLabel='Guardar'
           currentStep={currentStep}
           totalSteps={totalSteps}
