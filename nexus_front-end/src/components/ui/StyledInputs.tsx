@@ -46,6 +46,7 @@ interface NumberInputProps {
   step?: number;
   disabled?: boolean;
   formatter?: (value: number) => string;
+  width?: string;
 }
 
 export const NumberInput: React.FC<NumberInputProps> = ({ 
@@ -59,7 +60,8 @@ export const NumberInput: React.FC<NumberInputProps> = ({
   min, 
   step, 
   disabled,
-  formatter 
+  formatter,
+  width
 }) => {
   const [isFocused, setIsFocused] = React.useState(false);
 
@@ -82,7 +84,7 @@ export const NumberInput: React.FC<NumberInputProps> = ({
           value={formatter ? (isFocused ? value || '' : '') : value}
           onChange={onChange}
           placeholder={placeholder}
-          className="w-full p-2 rounded-md border border-gray-300 bg-white text-gray-900 shadow-sm focus:border-sky-500 focus:ring-sky-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-sky-400 dark:focus:ring-sky-400"
+          className={`${ width ? width : 'w-full' } p-2 rounded-md border border-gray-300 bg-white text-gray-900 shadow-sm focus:border-sky-500 focus:ring-sky-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-sky-400 dark:focus:ring-sky-400`}
           onFocus={handleFocus}
           onBlur={handleBlur}
           min={min}

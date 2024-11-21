@@ -8,6 +8,7 @@ import { LuCalendarClock } from 'react-icons/lu'
 import FormModal from '@/components/modals/FormModal'
 import { TextInput, NumberInput, SelectInput, TextArea } from '@/components/ui/StyledInputs'
 import { showToast } from '@/components/ui/Alerts'
+import { Switch } from '@/components/ui/Switch'
 import axios from 'axios'
 
 const measureUnitChoices = {
@@ -67,6 +68,26 @@ const rollTypeChoices = {
   1: 'Semi-tubular',
   2: 'Lamina',
   3: 'Lami-doble'
+}
+
+const statusChoices = {
+  0: 'Sin iniciar',
+  1: 'En extrusión',
+  2: 'En impresión',
+  3: 'En sellado',
+  4: 'En manualidad',
+  5: 'En bodega',
+  6: 'Terminado',
+  7: 'Cancelado',
+  8: 'Sin estado'
+}
+
+const nextChoices = {
+  0: 'Terminado',
+  1: 'Extrusión',
+  2: 'Impresión',
+  3: 'Sellado',
+  4: 'Manualidad'
 }
 
 export default function ProductionPage() {
@@ -174,6 +195,8 @@ export default function ProductionPage() {
   const [poDetails, setPoDetails] = useState<PODetailForm[]>([]);
   const [productTypes, setProductTypes] = useState<any[]>([]);
   const [materials, setMaterials] = useState<any[]>([]);
+  const [rawMaterials, setRawMaterials] = useState<any[]>([]);
+  const [machines, setMachines] = useState<any[]>([]);
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -186,6 +209,9 @@ export default function ProductionPage() {
   const [formDataWO, setFormDataWO] = useState<WorkOrder>(defaultWorkOrder);
   const [formDataEXTR, setFormDataEXTR] = useState<Extrusion>(defaultExtrusion);
   const [formDataMEQUANTITY, setFormDataMEQUANTITY] = useState<R_RawMaterial_Extrusion>(defaultR_RawMaterial_Extrusion);
+  const [rawMaterialEntries, setRawMaterialEntries] = useState<{ rawMaterial: number; quantity: number }[]>([
+    { rawMaterial: 0, quantity: 0 }
+  ]);
   const [formDataPRT, setFormDataPRT] = useState<Printing>(defaultPrinting);
   const [formDataSEL, setFormDataSEL] = useState<Sealing>(defaultSealing);
   const [formDataHND, setFormDataHND] = useState<Handicraft>(defaultHandicraft);
@@ -207,6 +233,8 @@ export default function ProductionPage() {
     fetchPODetails()
     fetchProductTypes()
     fetchMaterials()
+    fetchRawMaterials()
+    fetchMachines()
     fetchWorkOrders()
     fetchEmployees()
     fetchCustomers()
@@ -261,6 +289,24 @@ export default function ProductionPage() {
       message.error('Error al cargar los productos');
     }
   };
+
+  const fetchRawMaterials = async () => {
+    try {
+      const response = await axios.get('http://127.0.0.1:8000/beiplas/production/rawMaterials/');
+      setRawMaterials(response.data);
+    } catch (error) {
+      message.error('Error al cargar las materias primas');
+    }
+  };
+
+  const fetchMachines = async () => {
+    try {
+      const response = await axios.get('http://127.0.0.1:8000/beiplas/production/machines/')
+      setMachines(response.data)
+    } catch (error) {
+      message.error('Error al cargar las maquinas')
+    }
+  }
 
   const fetchMaterials = async () => {
     try {
@@ -418,6 +464,21 @@ export default function ProductionPage() {
     return validations[name] ? validations[name]() : '';
   }
 
+  const handleAddMaterialEntry = () => {
+    setRawMaterialEntries([...rawMaterialEntries, { rawMaterial: 0, quantity: 0 }]);
+  };
+
+  const handleMaterialChange = (index: number, field: 'rawMaterial' | 'quantity', value: any) => {
+    const newEntries = [...rawMaterialEntries];
+    newEntries[index][field] = value;
+    setRawMaterialEntries(newEntries);
+  };
+
+  const handleRemoveMaterialEntry = (index: number) => {
+    const newEntries = rawMaterialEntries.filter((_, i) => i !== index);
+    setRawMaterialEntries(newEntries);
+  };
+
   const handleInputChange = (
     e: { target: { name: string; value: string | Date | null } }
   ) => {
@@ -491,10 +552,10 @@ export default function ProductionPage() {
     setCSteps(newSteps);
     setFormDataPOD(detail);
     setSelectedDetail(detail);
-    setFormDataEXTR(prev => ({ ...prev, work_order: detail.wo_number ?? 0}));
-    setFormDataPRT(prev => ({ ...prev, work_order: detail.wo_number ?? 0}));
-    setFormDataSEL(prev => ({...prev, work_order: detail.wo_number ?? 0}));
-    setFormDataHND(prev => ({...prev, work_order: detail.wo_number ?? 0}));
+    setFormDataEXTR(prev => ({ ...prev, work_order: detail.wo_number ?? 0 }));
+    setFormDataPRT(prev => ({ ...prev, work_order: detail.wo_number ?? 0 }));
+    setFormDataSEL(prev => ({ ...prev, work_order: detail.wo_number ?? 0 }));
+    setFormDataHND(prev => ({ ...prev, work_order: detail.wo_number ?? 0 }));
     setTotalSteps(newSteps.length);
     setCurrentStep(1);
     setFormModalOpen(true);
@@ -671,6 +732,30 @@ export default function ProductionPage() {
         />
       </div>
     ),
+    wo_status: (
+      <div>
+        <SelectInput
+          label='Estatus de la Orden de Work'
+          name='wo_status'
+          value={{ value: formDataWO.status, label: statusChoices[formDataWO.status as keyof typeof statusChoices] }}
+          onChange={(option) => handleInputChange({ target: { name: 'wo_status', value: option?.value || 0 } } as any)}
+          options={Object.entries(statusChoices).map(([key, value]): { value: number; label: string } => ({
+            value: Number(key),
+            label: value
+          }))}
+        />
+      </div>
+    ),
+    termination_reason: (
+      <div>
+        <TextInput
+          label='Razón de terminación'
+          name='wo_termination_reason'
+          value={formDataWO.termination_reason}
+          onChange={handleInputChange}
+        />
+      </div>
+    ),
     roll_type: (
       <div>
         <SelectInput
@@ -696,6 +781,171 @@ export default function ProductionPage() {
         />
       </div>
     ),
+    extr_width: (
+      <div>
+        <NumberInput
+          label='Ancho'
+          name='extr_width'
+          value={formDataEXTR.width}
+          onChange={handleInputChange}
+          required
+        />
+      </div>
+    ),
+    caliber: (
+      <div>
+        <NumberInput
+          label='Calibre'
+          name='extr_caliber'
+          value={formDataEXTR.caliber}
+          onChange={handleInputChange}
+          required
+        />
+      </div>
+    ),
+    extr_observations: (
+      <div>
+        <TextInput
+          label='Observaciones de Extrusión'
+          name='extr_observations'
+          value={formDataEXTR.observations}
+          onChange={handleInputChange}
+        />
+      </div>
+    ),
+    raw_materials: (
+      <div>
+        {rawMaterialEntries.map((entry, index) => (
+          <div key={index} className="flex items-center space-x-2 mb-2">
+            <SelectInput
+              label="Materia Prima"
+              name={`meQuantity_raw_material_${index}`}
+              value={{ value: entry.rawMaterial, label: rawMaterials.find(rm => rm.id === entry.rawMaterial)?.name }}
+              onChange={(option) => handleMaterialChange(index, 'rawMaterial', option?.value || 0)}
+              options={rawMaterials.map(material => ({
+                value: material.id,
+                label: material.name
+              }))}
+              required
+            />
+            <NumberInput
+              label="Cantidad (kg)"
+              name={`meQuantity_quantity_${index}`}
+              value={entry.quantity}
+              onChange={(e) => handleMaterialChange(index, 'quantity', parseFloat(e.target.value))}
+              required
+              min={0}
+              step={0.01}
+              placeholder="0.00 kg"
+              formatter={(value) => `${Number(value).toLocaleString('es-CO', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+              })} kg`}
+              width="w-32"
+            />
+            <button
+              type="button"
+              onClick={() => handleRemoveMaterialEntry(index)}
+              className="ml-2 bg-red-500 text-white p-2 rounded"
+            >
+              Eliminar
+            </button>
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={handleAddMaterialEntry}
+          className="mt-2 bg-blue-500 text-white p-2 rounded"
+        >
+          Agregar Materia Prima
+        </button>
+      </div>
+    ),
+    extr_machine: (
+      <div>
+        <SelectInput
+          label='Máquina de Extracción'
+          name='extr_machine'
+          value={{ value: formDataEXTR.machine, label: machines[formDataEXTR.machine as keyof typeof machines] }}
+          onChange={(option) => handleInputChange({ target: { name: 'extr_machine', value: option?.value || 0 } } as any)}
+          options={Object.entries(machines).map(([key, value]): { value: number; label: string } => ({
+            value: Number(key),
+            label: value
+          }))}
+        />
+      </div>
+    ),
+    extr_next: (
+      <div>
+        <SelectInput
+          label='Siguiente Etapa'
+          name='extr_next'
+          value={{ value: formDataEXTR.next, label: nextChoices[formDataEXTR.next as keyof typeof nextChoices] }}
+          onChange={(option) => handleInputChange({ target: { name: 'extr_next', value: option?.value || 0 } } as any)}
+          options={Object.entries(nextChoices).map(([key, value]): { value: number; label: string } => ({
+            value: Number(key),
+            label: value
+          }))}
+        />
+      </div>
+    ),
+    is_new: (
+      <div className="flex items-center space-x-2">
+        <label htmlFor="is_new" className="text-sm font-medium">
+          Diseño nuevo
+        </label>
+        <Switch
+          id="is_new"
+          checked={formDataPRT.is_new || false}
+          onCheckedChange={(checked) => {
+            setFormDataPRT(prev => ({
+              ...prev,
+              is_new: checked
+            }));
+          }}
+        />
+      </div>
+    ),
+    prt_observations: (
+      <div>
+        <TextInput
+          label='Observaciones de Impresión'
+          name='prt_observations'
+          value={formDataPRT.observations}
+          onChange={handleInputChange}
+        />
+        {/* Add other printing fields as necessary */}
+      </div>
+    ),
+    prt_machine: (
+      <div>
+        <SelectInput
+          label='Máquina de Impresión'
+          name='prt_machine'
+          value={{ value: formDataPRT.machine, label: machines[formDataPRT.machine as keyof typeof machines] }}
+          onChange={(option) => handleInputChange({ target: { name: 'prt_machine', value: option?.value || 0 } } as any)}
+          options={Object.entries(machines).map(([key, value]): { value: number; label: string } => ({
+            value: Number(key),
+            label: value
+          }))}
+        />
+      </div>
+    ),
+    prt_next: (
+      <div>
+        <SelectInput
+          label='Siguiente Etapa'
+          name='prt_next'
+          value={{ value: formDataPRT.next, label: nextChoices[formDataPRT.next as keyof typeof nextChoices] }}
+          onChange={(option) => handleInputChange({ target: { name: 'prt_next', value: option?.value || 0 } } as any)}
+          options={Object.entries(nextChoices).map(([key, value]): { value: number; label: string } => ({
+            value: Number(key),
+            label: value
+          }))}
+        />
+      </div>
+    ),
+    
     printing_info: (
       <div>
         <TextInput
@@ -784,4 +1034,4 @@ export default function ProductionPage() {
       )}
     </div>
   )
-}
+} 
